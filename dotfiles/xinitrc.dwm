@@ -1,0 +1,6 @@
+# xinitrc for dwm
+while true; do
+        xsetroot -name "$(date +'%D %r') | $(acpi -b |awk '{ print $3 " " $4 }' |tr -d ',')"
+        sleep 1m
+done &
+exec dwm
