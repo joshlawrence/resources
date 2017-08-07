@@ -1,0 +1,18 @@
+# openbsd setup notes
+
+- download the 6.1 installer:  https://mirror.esc7.net/pub/OpenBSD/
+
+partitioning:
+
+(W) whole disk, (C) custom layout.  ? for help, p to print all partitions, z to delete, a to add.
+
+add partition b first for swap, partition a second for primary partition.
+
+reboot.
+
+## setup
+
+- check `/etc/installurl` to make sure the path for packages is correct.
+- copy `/etc/examples/doas.conf` to `/etc`.  `groups $user` to make sure your user is in the wheel group.
+
+(notes on installing packages here)
