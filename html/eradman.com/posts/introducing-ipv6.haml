@@ -1,0 +1,149 @@
+%h1 Introducing IPv6
+
+%h2 Trial Configuration - Server
+
+%p
+  If your provider doesn't have native IPv6 support you can use a tunnel broker
+  such as <a href="http://sixxs.net/">sixxs.net</a>.  Add the tunnel configuration
+  to <em>/etc/hostname.gif0</em>.
+
+:codeblock
+  mtu 1280
+  tunnel 65.49.80.28 216.14.98.22
+  inet6 2001:4978:f:18::2 128
+  dest 2001:4978:f:18::1
+  !/sbin/route add -inet6 default ::1
+  !/sbin/route change -inet6 default -ifp gif0
+
+%p
+  If you want to respond to reverse delegations, then you have to use an
+  address from the /64 subnet supplied by the tunnel broker. I added the IPv6
+  address to <em>hostname.vic0</em>, but any interface would work.
+
+:codeblock
+  inet 65.49.80.28 255.255.255.192
+  inet6 2001:4978:f:8018::1/64
+
+%h2
+  Services - HTTP
+
+:codeblock
+  :::nginx
+  http {
+      server {
+          listen [::]:80;
+          listen *:80;
+      }
+  }
+
+%h2 Services - DNS
+
+%h3
+  Secondary Nameservers
+
+:codeblock
+  :::named
+  #/var/named/etc/named.conf
+  options {
+      allow-transfer {
+                  # transfer.buddyns.com
+          2607:f0d0:1005:72::100;
+          2a01:4f8:d12:d01::10:100;
+      };
+  }
+
+
+%h3
+  Reverse Zones
+
+:codeblock
+  :::bindzone
+  zone "8.1.0.8.f.0.0.0.8.7.9.4.1.0.0.2.ip6.arpa" {
+          type master;
+          file "master/8.1.0.8.f.0.0.0.8.7.9.4.1.0.0.2.ip6.arpa";
+  };
+
+  $ORIGIN 8.1.0.8.f.0.0.0.8.7.9.4.1.0.0.2.ip6.arpa.
+  $TTL 6h
+
+  @       IN      SOA     localhost. root.localhost. (
+                          2       ; serial
+                          1h      ; refresh
+                          30m     ; retry
+                          7d      ; expiration
+                          1h )    ; minimum
+
+                  NS      vm.eradman.com.
+
+  1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0 PTR vm.eradman.com.
+
+
+%p
+  First, there isn't 128 bits of routable address space. Without NAT every end
+  user needs a /48.
+
+:codeblock
+  # /etc/hostname.dc0
+  inet 192.168.0.1/24
+  inet6 2001:470:a020::1/48
+
+%p
+  Why? A subnet cannot be smaller than a /64 without breaking neighbor
+  discovery, stateless autoconfiguration, and so on. Therefore every end site
+  needs a /56 or /48.
+
+:codeblock
+  # /etc/hostname.hme0
+  # My LAN
+  inet 192.168.0.1/24
+  inet6 2001:470:a020:1::1/64
+
+:codeblock
+  # /etc/hostname.hme1
+  # Guest wireless
+  inet 192.168.1.1/24
+  inet6 2001:470:a020:2::1/64
+
+%h2 IPv6 is 45 bits
+
+%p
+  It turns out that you can't use the first 3 bits either, the format prefix is
+  functionally used as a protocol ID, only 2001:: is world-routable.</p>
+
+:codeblock
+  $ ping6 -S fe80::216:cfff:fe43:4d09 ipv6.eradman.com
+  ping6: bind: Can't assign requested address
+
+
+%p
+  It's interesting to note that with private IP addresses there's no confusion
+  about what consitutes a valid source address
+
+:codeblock
+  $ ping -S 192.168.0.4 eradman.com
+  PING eradman.com (65.49.80.28): 56 data bytes
+  64 bytes from 65.49.80.28: icmp_seq=0 ttl=242 time=101.431 ms
+  64 bytes from 65.49.80.28: icmp_seq=1 ttl=242 time=97.135 ms
+
+
+%h2 Stale Routes
+
+%p
+  If you move from one network to another you may discover that you
+%em
+  dhclient</em> has renewed your IP address, but left stale IPv6 addresses in
+  place. To solve this manually flush out the IPv6 routes
+
+:codeblock
+  $ doas route -n flush -inet6
+
+%p
+  And then zero out each interface
+
+:codeblock
+  $ doas ifconfig wpi0 -inet6
+  $ doas ifconfig em0 -inet6
+
+%h2 References
+%p
+  <a href="http://eradman.com/library/is_the_ipv6_address_space_too_small_.pdf">Why IPv6 Address Space is Too Small</a>

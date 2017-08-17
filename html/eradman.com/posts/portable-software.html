@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Write Portable Software
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Write Portable Software</h1>
+      <p>
+        Many utilities and applications are designed around languages and frameworks
+        that claim to make the programmer's job easy. It's time to reverse these
+        priorities by choosing a strategy that is capable of providing a smooth
+        experience for the user.
+      </p>
+      <p>
+        The following principles represent some of the lessons learned while
+        developing <a href="http://entrproject.org/">entr(1)</a>, a utility for BSD and
+        Linux that executes commands or writes to a FIFO when files change.
+      </p>
+      <h2>Provide Static Binaries</h2>
+      <p>
+        Nearly all Linux distributions insist that all utilities be built with shared
+        libraries. This viewpoint is not concerned in the least with the experience
+        of the common user or the task of system administrators.
+      </p>
+      <p>
+        It's not unusual to have NFS-mounted home directories that are accessed from
+        a mix of OS releases (Cent5 and Cent6 for example). Static builds make running
+        applications on multiple versions easy.  Some users will similarly benefit from
+        a portable app that they can copy using Dropbox or rsync.
+      </p>
+      <p>
+        Static binaries not only give users a smooth experience, they also greatly
+        simplify the task of securing environments using chroots.
+      </p>
+      <h2>Choose an Interface</h2>
+      <p>
+        Sometimes an attempt at supporting multiple platforms is made by sprinkling
+        the source with compile-time or runtime conditional checks. If not used
+        carefully they can easily create software that doesn't have a clear design
+        and is ultimately less portable. Consider the following:
+      </p>
+      <pre>&#x000A;<span class="cPreCondit">#ifndef HAVE_STRLCPY</span>&#x000A;    strncpy(buf, input, <span class="Statement">sizeof</span>(buf) - <span class="Constant">1</span>);&#x000A;    buf[<span class="Statement">sizeof</span>(buf) - <span class="Constant">1</span>] = <span class="Special">'\0'</span>;&#x000A;<span class="cPreCondit">#else</span>&#x000A;    strlcpy(buf, input, <span class="Statement">sizeof</span>(buf));&#x000A;<span class="cPreCondit">#endif</span>&#x000A;</pre>
+      <p>
+        It's usually much better to pick one interface and emulate it's behavior on
+        platforms without the native capability. In this way code paths will also be
+        less susceptible to brittle or stale code paths.
+      </p>
+      <p>
+        From it's inception <em>entr</em> was designed around <a
+        href="http://www.openbsd.org/cgi-bin/man.cgi?query=kqueue&amp;manpath=OpenBSD+Current&amp;format=html">kqueue(2)</a>
+        since it was already very well designed for the purpose of this utility.
+      </p>
+      <h2>Eschew Compatibility Libraries</h2>
+      <p>
+        The first and most obvious reason to bundle functionality is to eliminate
+        obstacles for the common user.
+      </p>
+      <p>
+        In other cases the facilities provided by a compatibility library are
+        incomplete or wrong. The software builds and runs this may be acceptable, but
+        taking ownership for the end-to-end behavior of the system requires that you
+        bundle or statically link functionality that is not provided by the target
+        platform.
+      </p>
+      <p>
+        This is the strategy followed by a great deal of software that you may be
+        familiar with, such as OpenSSH and PostgreSQL. The following directory listing
+        is from <em>ruby-2.0.0-p247/missing/</em>:
+      </p>
+      <pre>&#x000A;acosh.c         erf.c           isinf.c         setproctitle.c  strtol.c&#x000A;alloca.c        ffs.c           isnan.c         signbit.c       tgamma.c&#x000A;cbrt.c          file.h          langinfo.c      strchr.c        x86_64-chkstk.s&#x000A;close.c         fileblocks.c    lgamma_r.c      strerror.c&#x000A;crt_externs.h   finite.c        memcmp.c        strlcat.c&#x000A;crypt.c         flock.c         memmove.c       strlcpy.c&#x000A;dup2.c          hypot.c         os2.c           strstr.c&#x000A;&#x000A;</pre>
+      <p>
+        Linking against a compatibility library such as <a
+        href="http://libbsd.freedesktop.org/wiki/">libbsd</a> may be an order of
+        magnitude harder because as the developer you may be forced to deal with up with
+        distributions and packing systems that use an old or broken version. In some
+        cases a vendor will refuse to package a library (libkqueue <a
+        href="https://bugzilla.redhat.com/show_bug.cgi?id=889505">suffered this
+        fate</a>). For the benefit of your users, anticipate this circumstance and
+        attempt to bundle the behavior your application requires.
+      </p>
+      <h2>
+        Employ Separate Scripts for Each Platform
+      </h2>
+      <p>
+        One of problems with Autoconf/CMake/SCons is they tend to be full of
+        cross-cutting concerns and conditional parameters.  What is the alternative?
+        Separate builds for each platform!
+      </p>
+      <code>Makefile.bsd
+      Makefile.linux
+      Makefile.macos</code>
+      <p>
+        Writing separate makefiles makes it possible to experiment with a new
+        platform without complicating the entire build. In this case we simply clone an
+        existing build and adapt accordingly
+      </p>
+      <code>Makefile.sunos</code>
+      <h2>
+        Carrying to Much Bagage
+      </h2>
+      <p>
+        It's comical how many dependencies simple utilities sometimes carry
+      </p>
+      <code>$ pkg_add -n redshift
+      redshift-1.7p4:libelf-0.8.13p1: ok
+      redshift-1.7p4:libffi-3.0.9p3: ok
+      redshift-1.7p4:lzo2-2.06p0: ok
+      redshift-1.7p4:libf2c-3.3.6p1: ok
+      redshift-1.7p4:blas-1.0p6: ok
+      redshift-1.7p4:lapack-3.1.1p4: ok
+      redshift-1.7p4:libdaemon-0.14: ok
+      redshift-1.7p4:hicolor-icon-theme-0.12p2: ok</code>
+      <p>
+        Users are not serviced well by such simple utilities that carry a large
+        dependency chain. This otherwise nifty utility is hampered by too much
+        bagage.
+      </p>
+      <p>
+        Among source control systems Subversion made the same mistake by useful,
+        because it carries a cart-load of requirements.
+      </p>
+      <h2>
+        Respect the User's Build Environment
+      </h2>
+      <p>
+        Another very common practice that hampers portability is the inclusion of
+        GCC-specific options in makefiles. Some compilers such as <em>pcc</em> will
+        ignore <em>-W</em> options it doesn't recognize while <em>gcc</em> will abort.
+        Some of these options are useful, but instead of overwriting the user's
+        environment provide an alternate build option to exercise these additional
+        checks and optimizations.
+      </p>
+      <pre>&#x000A;<span class="Identifier">gcc-lint:</span> clean&#x000A;<span class="Special">        @</span>CFLAGS=<span class="Constant">&quot;-pedantic -Wall -Wpointer-arith -Wbad-function-cast&quot;</span> make test&#x000A;&#x000A;</pre>
+      <h2>
+        Improve Conditions Upstream
+      </h2>
+      <p>
+        Once you've assembled something that works you have an opportunity to leave
+        the world in better shape than when you started. Vendors (Apple, Redhat) may or
+        may not pay attention to a bug report, but you don't know if you don't try.
+        Provide links to code with a license they can use and maybe somebody there will
+        agree to support the best standards available.
+      </p>
+      <h2>
+        Let The Configure Stage Pick the Platform
+      </h2>
+      <p>
+        Here is another pattern that is not portable:
+      </p>
+      <pre>&#x000A;<span class="cPreCondit">#if defined(__FreeBSD__) || defined (__DragonflyBSD__) || defined(__OpenBSD__)</span>&#x000A;<span class="cPreCondit">#endif</span>&#x000A;&#x000A;</pre>
+      <p>
+        If what is meant is that "this code runs on BSD", then say so
+      </p>
+      <pre>&#x000A;<span class="Identifier">CFLAGS</span>+=-D_BSD_PORT&#x000A;</pre>
+      <h2>
+        Get User Feedback Early
+      </h2>
+      <p>
+        Building software that works requires some user feedback because it's the
+        only way to understand what the system is supposed to do. The first iteration of
+        a utility or service is successful if it provides a means of discovering what is
+        important and what is unimportant to the people who will use it.
+      </p>
+      <p>
+        Another way to get this feedback is to be the first user. For example if you
+        mainly use a utility interactively, try scripting with it.  You'll quickly
+        discover the problems that would prevent an early adopter from giving you
+        valuable feedback.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

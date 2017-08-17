@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Exploring JSON on the Command Line
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Exploring JSON on the Command Line</h1>
+      <h2>With Your Favorite Scripting Language</h2>
+      <p>
+        JSON has become the standard data interchange format of our time, and like XML
+        it is not easily interpreted at the command line. For this reason I have often
+        opened up a Ruby or Python interpreter and used the REPL to manually explore a
+        structure in order to create a one-liner capable of parsing
+      </p>
+      <pre>&#x000A;&gt;&gt;&gt; <span class="PreProc">import</span> json&#x000A;&gt;&gt;&gt; j = json.loads(<span class="Identifier">open</span>(<span class="Constant">'</span><span class="Constant">github-tag.json</span><span class="Constant">'</span>).read())&#x000A;&gt;&gt;&gt; j.keys()&#x000A;[<span class="Constant">u'</span><span class="Constant">forced</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">compare</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">pusher</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">sender</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">repository</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">created</span><span class="Constant">'</span>,&#x000A;<span class="Constant">u'</span><span class="Constant">deleted</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">commits</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">after</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">head_commit</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">ref</span><span class="Constant">'</span>, <span class="Constant">u'</span><span class="Constant">base_ref</span><span class="Constant">'</span>,&#x000A;<span class="Constant">u'</span><span class="Constant">before</span><span class="Constant">'</span>]&#x000A;</pre>
+      <p>
+        If you want to browse around in your favorite editor instead you can get
+        Python to pretty-print it
+      </p>
+      <pre>&#x000A;$ python -mjson.tool &lt; github-tag.json &gt; github-tag-pretty.json&#x000A;$ vim github-tag-pretty.json&#x000A;</pre>
+      <p>
+        If you know the path of keys and indexes that you want to pull out of a JSON
+        file your it your favorite scripting language has a way of extracting the data
+        in one line
+      </p>
+      <pre>&#x000A;$ ruby22 -r json -e 'puts JSON.parse(ARGF.read)[&quot;pusher&quot;]' github-tag.json&#x000A;{&quot;email&quot;=&gt;&quot;ericshane@eradman.com&quot;, &quot;name&quot;=&gt;&quot;eradman&quot;}&#x000A;&#x000A;</pre>
+      <h2>sed for JSON data</h2>
+      <p>
+        Another tool, <a
+        href="https://stedolan.github.io/jq/">jq</a> was created expressly for the
+        purpose of slicing and transforming JSON structures. Like <em>sed</em>,
+        learning <em>jq</em> comes with it's own domain-specific language which
+        provides enumerable ways of producing surprising results.
+      </p>
+      <h2>Flattened JSON</h2>
+      <p>
+        None of the aforementioned methods provide an easy way of exploring the layout
+        of a complex JSON file. One solution to this is separate formatting from
+        parsing. <a href="https://bitbucket.org/eradman/flattenjs">flattenjs</a>
+        provides by formatting using the PostgreSQL path selection syntax which easily
+        navigates hashes and lists:
+      </p>
+      <pre>&#x000A;  <span class="Statement">SELECT</span> my_json#&gt;&gt;<span class="Constant">'{push,changes,0,new,target,message}'</span> <span class="Special">FROM</span> ... ;&#x000A;</pre>
+      <p>
+        <em>flattenjs</em> transforms an input to this structure which can be pasted
+        into a PostgreSQL query directly, or processed with <em>awk</em> and
+        <em>grep</em>
+      </p>
+      <pre>&#x000A;$ flattenjs &lt; github-tag.json | grep tag0001&#x000A;{compare} <a href="https://github.com/eradman/hook-test/compare/tag0001">https://github.com/eradman/hook-test/compare/tag0001</a>&#x000A;{ref} refs/tags/tag0001&#x000A;</pre>
+      <p>
+        Because of the line-oriented syntax, pulling values out is trivial, and we can
+        use our favorite command line tool to filer by key and select a value:
+      </p>
+      <pre>&#x000A;$ flattenjs &lt; tests/github-tag.json | awk '/{head_commit,id}/ { print $NF }'&#x000A;188260313028f69fb427ba31de714a924b16f951</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

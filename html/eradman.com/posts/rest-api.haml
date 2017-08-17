@@ -1,0 +1,203 @@
+%h1 REST APIs based on PostgreSQL Schemas
+
+%p
+  A standard REST API for PostgreSQL have been <a
+  href="https://wiki.postgresql.org/wiki/HTTP_API">discussed</a> for some
+  time, and thanks for <a href="http://postgrest.com/">PostgREST</a> there is
+  now an implementation that works very well.
+
+%h2 Alternate Strategies
+
+%p
+  Once upon a time we would spend weeks and months creating elaborate getters
+  and setters that essentially map a URL to a function which would use "model"
+  objects to spawn queries to the database an then return a list of maps.
+
+%h2 Building PostgREST
+
+%p
+  First install the GHC compiler and Cabal packaging system
+
+:codeblock
+  pkg_add ghc cabal-install git postgresql-server
+  cabal update
+  cabal install -j --disable-documentation stack
+
+%p
+  Next checkout the latest release branch
+
+:codeblock
+  git clone https://github.com/begriffs/postgrest.git
+  cd postgrest
+  ~/.cabal/bin/stack setup
+  git checkout v0.3.2.0
+  ~/.cabal/bin/stack build
+  ~/.cabal/bin/stack test
+
+%h2 Database Schemas
+
+%p
+  Each instance of PostgREST will explicitly use the schema specified at server
+  startup. List schemas using
+
+:codeblock
+  :::sql
+  SELECT nspname FROM pg_catalog.pg_namespace;
+  -- or
+  \dn
+
+%p
+  Creating a mapping from a new schema to the default is <em>public</em>
+  is simple
+
+:codeblock
+  :::sql
+    CREATE SCHEMA api1;
+    CREATE VIEW api1.machine AS SELECT * FROM machine;
+
+%p
+  Schemas and all of their contents can also be erased for easy reconstruction
+
+:codeblock
+  :::sql
+    DROP SCHEMA api1 CASCADE;
+
+%h2 Adding and Updating Records
+
+%p
+  If you do a lot of interaction with a REST service, especially one that
+  accepts JSON, then you may find that <a
+  href="https://github.com/jkbrzt/httpie">httpie</a> is easier than
+  <a href="https://curl.haxx.se/">curl</a>. The command By default <em>http</em>
+  (what an unfortunate name) lists the reply headers and pretty-prints the
+  payload.
+
+%p
+  Adding a record
+
+:codeblock
+  $ http POST "$url/farmer" org_name='New Farm' city=Owego state=NY zip=1111
+:codeblock
+  HTTP/1.1 201 Created
+  Date: Tue, 05 Jul 2016 20:56:30 GMT
+  Location: /farmer?farmer_id=eq.6
+  Server: postgrest/0.3.2.0
+  Transfer-Encoding: chunked
+
+%p
+  Updating a record
+
+:codeblock
+  $ http PATCH "$url/farmer?farmer_id=eq.6" zip=13827
+:codeblock
+  HTTP/1.1 204 No Content
+  Content-Range: 0-0/1
+  Date: Tue, 05 Jul 2016 21:04:13 GMT
+  Server: postgrest/0.3.2.0
+
+%h2 Calling Functions
+
+%p
+  Any function that is visible in the schema can be called directly:
+
+:codeblock
+  $ curl -d '' -X POST "$url/rpc/first_friday"
+:codeblock
+  :::json
+  [{"first_friday":"2016-01-01T00:00:00"}]
+
+/
+  $ http POST "$url/rpc/first_friday" \
+  Content-Type:application/x-www-form-urlencoded
+
+  HTTP/1.1 200 OK
+  Content-Encoding: gzip
+  Content-Range: 0-0/1
+  Content-Type: application/json; charset=utf-8
+  Date: Thu, 30 Jun 2016 19:02:32 GMT
+  Server: postgrest/0.3.2.0
+  Transfer-Encoding: chunked
+  [{ "first_friday": "2016-01-01T00:00:00" }]
+
+
+%h2 Using Python requests
+
+%p
+  The <a href="https://pypi.python.org/pypi/requests">requests module for
+  Python</a> makes interacting with PostgREST very smooth. All of the common
+  http verbs are supported out of the box. This example uses <em>PATCH</em> to
+  update a record:
+
+:codeblock
+  :::python
+  import yaml
+  import requests
+
+  conf = yaml.load(open("/path/endpoints.yaml"))
+  url = conf['rest-writer-url']
+  r = requests.patch(url + "/rack", params={"id": "eq.26"},
+    json={"fan_speed": 80})
+
+%p
+  Similarly, fetching data is as easy as supplying some selection criteria and
+  parsing the reply
+
+:codeblock
+  :::python
+
+  r = requests.get(url + "/rack", params={"fan_speed": "eq.80"})
+  for row in r.json():
+      print row
+
+%h2 Disarming a Trap
+
+%p
+  The documentation for PostgREST acknowledges that updating or deleting records
+  <a href="https://postgrest.readthedocs.io/en/v0.4/admin.html#block-full-table-operations">
+  is dangerous</a>, but it is only so because postgrest accepts <em>PATCH</em>
+  and <em>DELETE</em> without criteria:
+
+:codeblock
+  $ curl -s -X PATCH $url/employees \
+      -H "Content-Type: application/json" -d '{"first_name": "John"}'
+
+%p
+  There are a couple workarounds for this. The first is to front HTTP requests
+  using a web server and do assert that a query string was provided
+
+:codeblock
+  :::nginx
+  # nginx.conf
+  server {
+      listen  *:80 default_server;
+
+      set $is_bad "";
+      if ( $request_method = PATCH ) { set $is_bad "PATCH"; }
+      if ( $request_method = DELETE ) { set $is_bad "DELETE"; }
+      if ( $args = "" ) { set $is_bad "${is_bad}:noid"; }
+      if ( $is_bad = "PATCH:noid" ) {
+          return 400 '{"details":"no records specified for PATCH"}';
+      }
+      if ( $is_bad = "DELETE:noid" ) {
+          return 400 '{"details":"no records specified for DELETE"}';
+      }
+
+      location /api1/ {
+          proxy_pass http://localhost:5002/;
+      }
+  }
+
+%p
+  This is provides some safety, but if the url includes any non-filter
+  parameters such as <em>select=field1,field2</em> then this check is
+  effectively disabled.
+
+%p
+  The second solution is to use the Postgres extension <a
+  href="https://bitbucket.org/eradman/pg-safeupdate/">pg-safeupdate</a> to
+  prohibit this behavior on the database server.
+
+:codeblock
+  :::yaml
+  # postgresql.conf
+  shared_preload_libraries=safeupdate

@@ -1,0 +1,216 @@
+%h1 Advanced Features in PostgreSQL
+
+%h2 Establishing Global IDs
+
+%p
+  Sometimes multiple generations of a particular application warrant separate
+  databases, but there may still be requirement that some counters be site-local,
+  or even global. Sequence counters have a table-like representation, but they're
+  not tables, so creating a remote table using foreign data wrappers won't work.
+  Instead we can establish a mapping to a remote server by enabling
+  <em>dblink</em>
+
+:codeblock
+  :::sql
+  CREATE EXTENSION dblink;
+  CREATE SERVER main_app_server
+    FOREIGN DATA WRAPPER dblink_fdw
+    OPTIONS (host 'db1.domain.com', dbname 'app1');
+  CREATE USER MAPPING FOR user2
+    SERVER main_app_server
+    OPTIONS (user 'user1', password '123456');
+
+%p
+  Now grant permission to the user on the second database
+
+:codeblock
+  :::sql
+  GRANT USAGE ON FOREIGN SERVER main_app_server TO user2;
+  GRANT SELECT ON TABLE task_id_seq TO user2;
+
+%p
+  Now we'll write a function that makes the connection, and returns a
+  result
+
+:codeblock
+  :::sql
+  CREATE OR REPLACE FUNCTION next_user1_id(regclass) RETURNS integer
+  AS $$
+  DECLARE
+      new_id integer;
+  BEGIN
+      PERFORM dblink_connect('seq_conn', 'main_app_server');
+      SELECT INTO new_id
+          netxtval FROM dblink('seq_conn', E'select nextval(\'' || $1 || E'\')')
+              AS t(netxtval regclass);
+      PERFORM dblink_disconnect('seq_conn');
+      RETURN new_id;
+  END;
+  $$ LANGUAGE plpgsql;
+
+%p
+  Finally switch to new sequence generator
+
+:codeblock
+  :::sql
+  ALTER TABLE task ALTER COLUMN id SET DEFAULT next_user1_id('task_id_seq');
+
+%p
+  Only a superuser can use dblink with <em>trust</em> authentication, so change
+  TCP connections to <em>password</em> for <em>localhost</em> in
+  <em>pg_hba.conf</em>
+
+:codeblock
+  local   all             all                                     trust
+  host    all             all             127.0.0.1/32            password
+  host    all             all             ::1/128                 password
+
+%h2
+  Using PL/Python to Build Custom Selectors
+
+%p
+  A number of presentations have pointed out the exciting possiblities of using
+  V8
+  to parse text stored as JSON in PostgreSQL, but it's worth noting that the other
+  supported languages can do this just as easily, including <a
+  href="http://www.postgresql.org/docs/current/static/plpython.html">PL/Python</a>.
+
+%p
+  First create the language extension, and enable access to it
+
+:codeblock
+  :::sql
+  CREATE EXTENSION plpythonu;
+  UPDATE pg_language SET lanpltrusted = true WHERE lanname = 'plpythonu';
+  GRANT USAGE ON LANGUAGE plpython2u TO user;
+
+%p
+  Next define a function that takes a field and returns a string representation
+  of that member.
+
+:codeblock
+  :::sql
+  CREATE OR REPLACE FUNCTION jsel(json_text json, key text)
+    RETURNS json
+    LANGUAGE plpythonu
+    IMMUTABLE
+  AS $$
+  if json_text == None or key == None:
+      return
+  import json
+  j = json.loads(json_text)
+  tup = key.split(".")
+  for k in tup:
+      if not j.has_key(k):
+          return None
+      j = j[k]
+  return j
+  $$;
+
+%p
+  This function assumes that the data sorted is either null or a hash. In
+  Postgres the <em>json</em> type is just text with validation to ensure that it's
+  JSON. The same is true for the <em>xml</em> type. This selector function may be
+  as simple or as versatile as you'd like. Use it thusly
+
+:codeblock
+  :::sql
+  -- '{"qos": "high", ...}
+  SELECT jsel(options, 'qos') AS qos FROM job;
+
+:codeblock
+  :::sql
+  -- '{"address": {"link": {"href": "", ...} ...}, ...}'
+  SELECT jsel(contact, 'address.link.href') AS contact_hef FROM job;
+
+%p
+  Since Postgres can create indexes using user defined functions it is also
+  capable of fast indexing of custom data types that it has no inherent knowledge
+  of!
+
+:codeblock
+  :::sql
+  CREATE INDEX qos_in_json ON job (jsel(options, 'qos'));
+
+%p
+  Starting with 9.3, Postgres includes a number of functions and operators
+  specifically for handling JSON fields
+
+:codeblock
+  :::sql
+  SELECT contact->'address'->'link'->>'href' FROM job;
+
+%p
+  or
+
+:codeblock
+  :::sql
+  SELECT contact#>>'{address,link,href}' FROM job;
+
+%h2 Interpolation
+
+%p
+  <a
+  href="https://www.postgresql.org/docs/9.6/static/app-psql.html#APP-PSQL-INTERPOLATION">Variable
+  interpolation</a> is a feature of the `psql` client, and can be used to define
+  aliases for a command to be run or for arbitrary values.  One common use is to
+  update a column with a chunk of data
+
+:codeblock
+  :::sql
+  \set content `cat /tmp/1k.json.new`
+  UPDATE anton_wiringplan SET wiring_plan=:'content'
+  WHERE size_x=8 and size_y=8 and size_z=16;
+
+%p
+  The command is executed on the client where local files and utilities are
+  available.
+
+%h2 Simple Triggers
+
+%p
+  I put the word "advanced" in the title of this page, but a simple use of
+  triggers can add information that enables applications to work together. This
+  trigger keeps a column updated with a timestamp (PG keeps everything in UTC)
+  any time a record is changed.
+
+:codeblock
+  :::sql
+  CREATE OR REPLACE FUNCTION update_mtime_column()
+  RETURNS TRIGGER AS $$
+  BEGIN
+     NEW.mtime = now();
+     RETURN NEW;
+  END;
+  $$ language 'plpgsql';
+
+  CREATE TRIGGER update_mtime_column BEFORE UPDATE
+  ON pending_tasks
+  FOR EACH ROW EXECUTE PROCEDURE update_mtime_column();
+
+%p
+  Triggers are also an excellent way to maintain a series of records that
+  maintain a duration.
+
+:codeblock
+  :::sql
+  CREATE OR REPLACE FUNCTION update_prev_task_history()
+  RETURNS TRIGGER AS $$
+  BEGIN
+     UPDATE anton_task_history SET etime = NEW.ctime
+     WHERE etime IS NULL AND category_id=NEW.category_id;
+     RETURN NEW;
+  END;
+  $$ language 'plpgsql';
+
+  CREATE TRIGGER update_prev_task_history BEFORE INSERT
+  ON task_history
+  FOR EACH ROW EXECUTE PROCEDURE update_prev_task_history();
+
+%p
+  Without such automated maintenance queries become difficult (join on self and
+  compare id or timestamps with <em>&lt;</em> or <em>&gt</em>).
+
+/ -- To use the built-in contrib version of hstore
+/ SELECT hstore('')::json;
+/ CREATE EXTENSION hstore SCHEMA public FROM unpackaged;

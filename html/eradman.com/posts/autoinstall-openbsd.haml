@@ -1,0 +1,147 @@
+%h1 OpenBSD Auto-Install
+
+%p
+  One of the features that may be underutilized is OpenBSD's uncomplicated
+  auto-installer. I do not mean that all of the mechanisms that need to be in
+  place for a real-world use case are simple, but the OpenBSD parts are simple.
+
+%h2 TFTP Boot
+
+%p
+  The first task of booting via PXE is to hand out an address and name the file
+  to fetch over TFTP
+
+:codeblock
+  # /etc/dhcpd.conf
+  subnet 192.168.1.0 netmask 255.255.255.0 {
+      option routers 192.168.1.1;
+      range 192.168.1.32 192.168.1.127;
+
+      # T4300
+      host pxe-client {
+              hardware ethernet 00:1e:c9:4c:69:59;
+              filename "auto_install"
+              next-server 192.168.1.1;
+      }
+  }
+
+%p
+  The filename <em>auto_install</em> is not arbitrary, this causes the
+  <em>install</em> script in <em>bsd.rd</em> to start the automated install by
+  pulling configuration over HTTP. The complete layout for <em>/tftpboot</em>
+  might look like this:
+
+:codeblock
+  drwxr-xr-x   2 root  eradman      512 May 16 15:54 .
+  drwxr-xr-x  16 root  wheel       1024 May 13 01:26 ..
+  lrwxr-xr-x   1 root  eradman       13 May 16 15:52 auto_install -> pxeboot.amd64
+  lrwxr-xr-x   1 root  eradman       12 May 16 15:54 bsd -> bsd.rd.amd64
+  -rw-r--r--   1 root  eradman  7763412 May 13 10:07 bsd.rd.amd64
+  -rw-r--r--   1 root  eradman    82300 May 13 10:07 pxeboot.amd64
+
+%h2 Per-Host Install Options
+
+%p
+  The <em>next-server</em> entry specified by the DHCP server points to the
+  path where answers file can be found:
+
+:codeblock
+  default 192.168.1.37 - - [16/May/2016:15:55:54 -0400]
+    "GET /00:1e:c9:4c:69:59-install.conf?path=5.9/amd64 HTTP/1.0" 200 314
+
+%p
+  The answers file contains strings which match the questions from the
+  installer
+
+:codeblock
+  :::cfg
+  # /var/www/htdocs/00:1e:c9:4c:69:59-install.conf
+  System hostname = t3400
+  Password for root = 123456
+  Network interfaces = bge0
+  IPv4 address for bge0 = dhcp
+  Setup a user = eradman
+  Password for user = 123456
+  Public ssh key for user = ssh-ed25519 XYZ123... eradman@t60.eradman.com
+  What timezone are you in = US/Eastern
+  Location of sets = http
+  Server = 192.168.1.1
+  Server directory = pub/OpenBSD/5.9/amd64
+
+%p
+  If you don't specify a line then a default will be used. If more options are
+  available you can make further choices:
+
+:codeblock
+  :::cfg
+  Which disk is the root disk = sd1
+
+%h2 Hotplug
+
+%p
+  To make this mechanism portable I run these services from my laptop. Here is
+  how. First I enable the hotplug daemon
+
+:codeblock
+  # rcctl enable hotplugd
+
+%p
+  Next I create <em>/etc/hotplug/attach</em> to assign an address to my
+  USB-to-Ethernet adapter when plugged in
+
+:codeblock
+  :::sh
+  #!/bin/sh
+
+  DEVCLASS=$1
+  DEVNAME=$2
+
+  case $DEVCLASS in
+  3)
+      ifconfig axe0 192.168.1.1/24
+      daemon_flags="$DEVNAME" /etc/rc.d/dhcpd -f start
+      daemon_flags="/tftp" /etc/rc.d/tftpd -f start
+      ;;
+  esac
+
+%p
+  <em>DEVCLASS 3</em> is a network interface. Similarly,
+  <em>/etc/hotplug/detach</em> disables these services using the opposite
+  actions.
+
+%h2 Custom Sets
+
+%p
+  OpenBSD allows for custom software to be installed by adding a <a
+  href="http://www.openbsd.org/faq/faq4.html#site">site-specific tgz file</a>.
+  If <em>index.txt</em> includs the new file it will appear in the menu; we
+  only need to select the new package in <em>*install.conf</em>
+
+:codeblock
+  :::cfg
+  Set name(s) = site59.tgz
+
+%p
+  To make this easy I am allowing for this one package to be installed without
+  being signed.
+
+:codeblock
+  :::cfg
+  Checksum test for site59.tgz failed. Continue anyway = yes
+  Unverified sets: site59.tgz. Continue without verification = yes
+
+%h2 rc.firsttime
+
+%p
+  One of the most interesting files that can be installed with
+  <em>siteNN.tgz</em> is <em>/etc/rc.firsttime</em>. This is executed the first
+  time a system boots up in multi-user mode, and is a very convenient way to
+  make sure some bits of essential post-install configuration occur. This
+  example fetches and installs ports on first boot
+
+:codeblock
+  :::sh
+  ftp -o - http://192.168.1.1/pub/OpenBSD/5.9/ports.tar.gz | tar -zxf - -C /usr
+
+%p
+  Handling the installation of packages could be handled similarly.

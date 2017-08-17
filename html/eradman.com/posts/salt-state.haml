@@ -1,0 +1,464 @@
+%h1 Repeatable State with Salt
+
+%h2 Executable Documentation
+
+%p
+  If you have stood up services and then tried to document the steps that you
+  will realize that communicating the changes to others or your future self is
+  not easy. At least it's not easy if you care about the documentation being
+  correct or relatively complete.
+
+  <a href=" http://saltstack.com">Salt Stack</a> is an automation framework that
+  works for large scale deployments, but also gives you a nice way to capture
+  the configuration state of small-scale deployments such as your home firewall
+  or personal web server. Salt has such readable configuration that it's like
+  documentation that you can execute.
+
+%h2 Commands
+
+%p
+  There are four commands that you need to know about
+
+%table
+  %tr
+    %th Command
+    %th Description
+  %tr
+    %td <em>salt-key</em>
+    %td Manage minion connections
+  %tr
+    %td <em>salt</em>
+    %td Run rules by using salt master to push changes to the minions
+  %tr
+    %td <em>salt-call</em>
+    %td Pull rules from the salt master and apply locally
+  %tr
+    %td <em>salt-ssh</em>
+    %td Upload configuration and apply state over SSH
+
+%h2 Pushing changes with SSH
+
+%p
+  Salt is popular for it's scalable master-minion model, but it can be used with
+  SSH as well. <em>salt-ssh</em> reads a configuration file called
+  <em>Saltfile</em>
+
+:codeblock
+  :::yaml
+  ---
+  salt-ssh:
+    config_dir: ./etc
+
+%p
+  In the file <em>etc/master</em> we can then specify where the repository is
+  (<em>.</em> for the current directory). <em>state_verbose: False</em>
+  produces a detailed report only for changes.
+
+:codeblock
+  :::yaml
+  ---
+  file_roots:
+    base:
+          - .
+  state_verbose: False
+
+%p
+  There several downsides to using SSH. This mode is slow, and errors from the
+  remote end (incomplete sudo configuration, missing python) tend to be
+  obscure. <em>/etc/roster</em> specifies a list of hosts
+
+:codeblock
+  :::yaml
+  ---
+  home:
+    host: home.eradman.com
+    user: eradman
+    sudo: True
+
+%h2 Basic Configuration
+
+%p
+  To do a dry-run, use <em>test=True</em> with <em>state.highstate</em> or
+  <em>state.sls</em>. The <em>highstate</em> method from the <em>state</em>
+  module, applies all rules.
+
+:codeblock
+  $ salt-ssh home state.highstate test=True
+
+%p
+  The rules are first defined in <em>top.sls</em>, which is a YAML file that
+  maps hosts to rules.
+
+:codeblock
+  :::yaml
+  ---
+  base:
+    'workstation or t60.eradman.com':
+      - openbsd-common
+      - workstation
+    'home':
+      - openbsd-common
+      - home
+
+%p
+  The rule defined as <em>openbsd-common</em> can either be a YAML file called
+  <em>openbsd-common.sls</em> or a directory containing
+  <em>openbsd-common/init.sls</em>. The directory structure provides a logical
+  place to put other files that you will reference, but that's up to you.
+  intend to.
+
+%p
+  The name of each rule can be arbitrary
+
+:codeblock
+  :::yaml
+  www-account:
+    user.present:
+      - name: www
+      - group: www
+      - fullname: HTTP Server
+      - home: /home/www
+      - shell: /sbin/nologin
+
+%p
+  Or the <em>name</em> paramter will default to the rule name
+
+:codeblock
+  :::yaml
+  www:
+    user.present:
+      - group: www
+      - fullname: HTTP Server
+      - home: /home/www
+      - shell: /sbin/nologin
+
+%p
+  This is a shortcut, but another implication is that if we wanted to apply
+  more than one rule to the same target we need to give the rule a unique name.
+
+%p
+  The <em>source</em> path can refer to any location in this repo, this example
+  expects a folder called <em>files</em>.
+
+%h2 Master-Minion
+
+%p
+  Even on a small scale this mode really shines because of it's speed. The
+  configuration for the master consists of the following changes to
+  <em>/etc/salt/master</em>
+
+:codeblock
+  :::yaml
+  interface: 0.0.0.0
+  state_verbose: False
+  file_roots:
+    base:
+      - /srv/salt
+    eradman:
+      - /home/eradman/hg/config
+
+%p
+  Now the trick is to write a top file that allows you to run against a specific
+  environment.
+
+:codeblock
+  :::yaml
+  {{saltenv}}:
+    '*':
+        - defaults
+
+%p
+  All service files in Salt are processed as Jinja2 templates, so {{saltenv}}
+  will be replaced with the value of <em>env</em> on the command line
+
+:codeblock
+  $ sudo salt '*' state.highstate test=True saltenv=$USER
+
+%p
+  As you might guess, <em>$USER</em> can be <em>devel</em> or any other path
+  you define in <em>file_roots</em>.
+
+%p
+  Special variables such as passwords are normally retrieved using a pillar
+  module. One such module is <em>cmd_yaml</em>, which simply expects a command
+  with formatted output. This is from `/etc/salt/master`
+
+:codeblock
+  :::yaml
+  ext_pillar:
+    - cmd_yaml: lom_credentials.yaml
+
+%p
+  Now the values defined in this file can be rendered in templates, or viewed
+  using
+
+:codeblock
+  $ sudo salt $HOSTNAME pillar.items
+
+%h2 Templates
+
+%p
+  Every time a template is rendered it has access to range of variables that
+  pertian to the host it will be installed on. To see a list this list of
+  values, run the <em>grains.items</em> rule
+
+:codeblock
+  $ sudo salt $HOSTNAME grains.items
+
+%p
+  Now you can reference any of these values in your template
+
+:codeblock
+  :::apache
+  <VirtualHost *:80>
+     ServerName {{ grains['localhost'] }}
+     DocumentRoot /var/www/html
+  </VirtualHost>
+
+%p
+  Since service files are processed as templates, you can build various
+shortcuts by using loops
+
+:codeblock
+  :::yaml
+  {% for interface in ["athn0", "bridge0", "em0", "gif0", "vether0"] %}
+  /etc/hostname.{{interface}}:
+    file.managed:
+      - source: salt://home/hostname.{{interface}}
+      - user: root
+      - group: wheel
+      - mode: 640
+  {% endfor %}
+
+%p
+  There are a number of <a
+  href="http://jinja.pocoo.org/docs/dev/templates/#builtin-filters">built-in
+  filters</a> that you can employ them to remap all sorts of data. Here I'm
+  using <em>replace</em> to map a paths to the naming convetion in my local
+  repository
+
+:codeblock
+  :::yaml
+  {% for file in ["miniupnpd.conf", "dhcpd.conf", "mail/smtpd.conf"] %}
+  /etc/{{file}}:
+    file.managed:
+      - source: salt://home/{{file|replace('/', '_')}}
+
+
+%h2 Precheckin Validation
+
+%p
+  Salt doesn't provide a check-syntax flag, but several state modules provide a
+  <em>mock</em> flag that enables you to process rules without hitting the
+  network
+
+:codeblock
+  :::sh
+  #!/bin/sh -e
+  sudo salt-call state.highstate \
+    --file-root=$(dirname $0) \
+    --local --retcode-passthrough \
+    mock=True
+
+%h2 Running Salt's Development Branch
+
+%p
+  If you want to run salt's development branch or test a modification it is
+  easy enough to install it to a <em>virtualenv</em>
+
+:codeblock
+  :::sh
+    virtualenv-2.7 ~/local/saltenv
+    . ~/local/saltenv/bin/activate
+
+    cd ~/git/salt
+    pip install -r requirements/dev_python27.txt
+    pip install -r requirements/zeromq.txt
+    ./setup.py install
+
+%p
+  Now test changes by running locally
+
+:codeblock
+  $ salt-call state.highstate --file-root=$PWD --local -l debug
+
+%p
+  <em>salt-call</em> would normally try to connect to a master, but
+  <em>--local</em> instructs it to use to read configuration locally.
+
+%h2 Example Configuration: WordPress
+
+%p
+  The following is a completely automated install of WordPress on OpenBSD.
+  <a href="http://docs.ansible.com/ansible/playbooks_best_practices.html">Unlike
+  Ansible</a>, Salt allows you to factor out components as you go. In this case
+  I created a single file called <em>vm/wordpress.sls</em> that I included at
+  the end of <em>vm/init.sls</em>
+
+:codeblock
+  :::yaml
+  include:
+    - vm.wordpress
+
+%p
+  First we install the prerequisites for WordPress itself, including PHP and the
+  libraries for accessing MySQL
+
+:codeblock
+  :::yaml
+  wordpress-packages:
+    pkg.installed:
+      - pkgs:
+        - mariadb-server
+        - mariadb-client
+        - py-mysql
+        - py-pip
+        - php-mysqli
+      - skip_suggestions: true
+      - fromrepo: pillar['openbsd_pkg_mirror']
+
+%p
+  OpenBSD supports multiple versions of PHP, none of which are configured by
+  default. Symlink the default configurations like so
+
+:codeblock
+  :::yaml
+  /etc/php-5.6/mysqli.ini:
+    file.symlink:
+      - target: /etc/php-5.6.sample/mysqli.ini
+
+  /etc/php-5.6/opcache.ini:
+    file.symlink:
+      - target: /etc/php-5.6.sample/opcache.ini
+
+  /etc/php-5.6.ini:
+    file.symlink:
+      - target: /usr/local/share/examples/php-5.6/php.ini-development
+
+%p
+  Next initialize and start up a MariaDB server
+
+:codeblock
+  :::yaml
+  /usr/local/bin/mysql_install_db:
+    cmd.run:
+      - creates: /var/mysql
+  mysqld:
+    service.running
+
+%p
+  Now that we have a MariaDB server we will create a mysql user and database for
+  WordPress to use. In order to manage the new database Salt needs a MySQL
+  library for Python. Salt can install packages via PIP itself as long as we
+  symlink the <em>pip</em> to the version of Python we're using
+
+:codeblock
+  :::yaml
+  /usr/local/bin/pip:
+    file.symlink:
+      - target: /usr/local/bin/pip2.7
+
+  wordpress_db:
+    pip.installed:
+      - name: mysql
+    mysql_database.present:
+      - name: wordpress
+    mysql_user.present:
+      - name: wordpress
+      - password: XYZ987
+    mysql_grants.present:
+      - database: wordpress.*
+      - grant: ALL PRIVILEGES
+      - user: wordpress
+      - host: 'localhost'
+
+%p
+  Now we can fetch and install WordPress itself. By specifying a path that
+  should exist using <em>creates</em> we allow this to run only once. If we wish
+  to wipe and reinstall we would simply rename the <em>wordpress</em> directory.
+
+:codeblock
+  :::yaml
+  /var/www/wordpress:
+    file.directory:
+      - owner: www
+      - group: www
+
+  get_wordpress:
+    cmd.run:
+      - name: 'wget http://wordpress.org/latest.tar.gz && tar xvzf latest.tar.gz'
+      - cwd: /var/www
+      - creates: /var/www/wordpress/index.php
+      - runas: www
+
+%p
+  WordPress needs to know the database connection parameters, which is set in
+  <em>wp-config.php</em>
+
+:codeblock
+  :::yaml
+  /var/www/wordpress/wp-config.php:
+    file.managed:
+      - source: salt://vm/wp-config.php
+      - owner: www
+      - group: www
+
+%p
+  To establish FCGI communication to the service running PHP we can use
+  <em>file.replace</em> to change only one line in the <em>php-fpm</em>
+  configuration. This is a very nice option when you do not want to keep the
+  entire file in sync
+
+:codeblock
+  :::yaml
+  /etc/php-fpm.conf:
+    file.replace:
+      - pattern: "listen = /var/www/run/php-fpm.sock"
+      - repl: "listen = 127.0.0.1:9000"
+      - append_if_not_found: True
+
+%p
+  Finally we'll install the Nginx configuration and set the service to reload
+  whenever <em>nginx.conf</em> changes
+
+:codeblock
+  :::yaml
+  /etc/nginx/nginx.conf:
+    file.managed:
+      - source: salt://vm/nginx.conf
+      - user: root
+      - group: wheel
+      - mode: 644
+
+  nginx:
+    service.running:
+      - watch:
+        - file: /etc/nginx/nginx.conf
+
+%p
+  The section from <em>nginx.conf</em> that points to our new WordPress
+  installation
+
+:codeblock
+  :::nginx
+    server {
+        listen 162.213.37.87:80;
+        server_name pineconeperfections.com www.pineconeperfections.com;
+        root /var/www/wordpress;
+        index index.php;
+
+        location ~ \.php$ {
+            try_files $uri $uri/ =404;
+            include fastcgi_params;
+            fastcgi_index index.php;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_intercept_errors on;
+            fastcgi_param SCRIPT_FILENAME wordpress$fastcgi_script_name;
+        }
+
+        access_log   /var/www/logs/pineconeperfections.log main;
+    }
+
+%p
+  After putting all of these steps in order it makes it possible to see how the
+  service operates and how the components relate.

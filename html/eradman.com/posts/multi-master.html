@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Introducing Multi-Master
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Introducing Multi-Master</h1>
+      <h2>UDR and BDR</h2>
+      <p>
+        Thanks to work excellent work of 2ndQuadrant, the components needed to
+        support unidirectional and bidirectional replication are [mostly] integrated
+        into PostgreSQL. Logical replication allows a range of options including the
+        replication of part of a cluster and multi-master configurations.
+      </p>
+      <h2>Build/Install</h2>
+      <h3>on Linux</h3>
+      <p>
+        At the time of this writing (PG 9.5) still does not bundle everything required
+        to run logical replication out of the box, so fetch the latest tarballs from
+        <a href="http://packages.2ndquadrant.com/postgresql-bdr94-2ndquadrant/tarballs/">packages.2ndquadrant.com</a>
+        and build them
+      </p>
+      <pre>&#x000A;cd postgres-bdr&#x000A;./configure --prefix=/usr/pgsql-9.4-bdr --enable-debug&#x000A;make&#x000A;sudo make install&#x000A;cd contrib&#x000A;make&#x000A;sudo make install&#x000A;&#x000A;cd bdr-plugin&#x000A;PATH=/usr/pgsql-9.4-bdr/bin:$PATH ./configure --prefix=/usr/pgsql-9.4-bdr --enable-bdr&#x000A;make&#x000A;sudo make install&#x000A;</pre>
+      <h3>on BSD</h3>
+      <p>
+        Installation on the BSDs is similar
+      </p>
+      <pre>&#x000A;FLEX=/usr/local/bin/gflex ./configure&#x000A;gmake -j2&#x000A;doas gmake install&#x000A;cd contrib&#x000A;doas gmake install&#x000A;&#x000A;PATH=/usr/local/pgsql/bin:$PATH ./configure&#x000A;gmake -j2&#x000A;doas gmake install&#x000A;</pre>
+      <h2>Starting up the Cluster</h2>
+      <p>
+        On each node initialize the databases
+      </p>
+      <!-- sudo chown postgres:postgres /pg_data -->
+      <pre>&#x000A;su -l postgres&#x000A;/usr/pgsql-9.4/bin/initdb -D /pg_data/9.4-bdr -A trust&#x000A;</pre>
+      <p>
+        Enable BDR in <em>postgresql.conf</em> thusly:
+      </p>
+      <pre>&#x000A;listen_addresses <span class="Statement">=</span> <span class="Constant">'*'</span>&#x000A;&#x000A;shared_preload_libraries <span class="Statement">=</span> <span class="Constant">'bdr'</span>&#x000A;wal_level <span class="Statement">=</span> <span class="Constant">'logical'</span>&#x000A;track_commit_timestamp <span class="Statement">=</span> on&#x000A;max_connections <span class="Statement">=</span> <span class="Constant">100</span>&#x000A;max_wal_senders <span class="Statement">=</span> <span class="Constant">10</span>&#x000A;max_replication_slots <span class="Statement">=</span> <span class="Constant">10</span>&#x000A;max_worker_processes <span class="Statement">=</span> <span class="Constant">10</span>&#x000A;</pre>
+      <p>
+        And then set up the appropriate permissions in <em>pg_hba.conf</em>
+      </p>
+      <pre>&#x000A;local   replication     postgres                                trust&#x000A;host    replication     postgres        <span class="Constant">127.0</span>.<span class="Constant">0.1</span>/<span class="Constant">32</span>            trust&#x000A;host    replication     postgres        ::<span class="Constant">1</span>/<span class="Constant">128</span>                 trust&#x000A;&#x000A;host all all <span class="Constant">10.0</span>.<span class="Constant">0.0</span>/<span class="Constant">8</span>  password&#x000A;&#x000A;host replication postgres <span class="Constant">10.232</span>.<span class="Constant">24.48</span>/<span class="Constant">32</span> trust&#x000A;host replication postgres <span class="Constant">10.232</span>.<span class="Constant">25.92</span>/<span class="Constant">32</span> trust&#x000A;&#x000A;host replication bdrsync <span class="Constant">10.232</span>.<span class="Constant">24.48</span>/<span class="Constant">32</span> password&#x000A;host replication bdrsync <span class="Constant">10.232</span>.<span class="Constant">25.92</span>/<span class="Constant">32</span> password&#x000A;</pre>
+      <p>
+        Next fire up the servers (as the user <em>postgres</em>) and create a user to
+        be used for BDR
+      </p>
+      <pre>&#x000A;/usr/pgsql-9.4/bin/pg_ctl -D /pg_data/9.4-bdr start&#x000A;psql -c &quot;CREATE USER bdrsync superuser;&quot;&#x000A;psql -c &quot;ALTER USER bdrsync WITH PASSWORD '12345#';&quot;&#x000A;</pre>
+      <p>
+        For each host we will create an unprivileged user and a blank database
+      </p>
+      <pre>&#x000A;/usr/pgsql-9.4/bin/createuser amsv2&#x000A;/usr/pgsql-9.4/bin/createdb -O amsv2 amstest&#x000A;psql amstest -c 'CREATE EXTENSION btree_gist;'&#x000A;psql amstest -c 'CREATE EXTENSION bdr;'&#x000A;</pre>
+      <p>
+        Finally it is time to join the nodes together in a bdr group:
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> bdr.bdr_group_create(&#x000A;    local_node_name := <span class="Constant">'node1'</span>,&#x000A;    node_external_dsn := <span class="Constant">'host=10.232.24.48 user=bdrsync dbname=amstest password=12345#'</span>&#x000A;);&#x000A;&#x000A;<span class="Statement">SELECT</span> bdr.bdr_group_join(&#x000A;    local_node_name := <span class="Constant">'node2'</span>,&#x000A;    node_external_dsn := <span class="Constant">'host=10.232.25.92 user=bdrsync dbname=amstest password=12345#'</span>,&#x000A;    join_using_dsn := <span class="Constant">'host=10.232.24.48 user=bdrsync dbname=amstest password=12345#'</span>&#x000A;);&#x000A;</pre>
+      <!--
+        SELECT bdr.bdr_group_join(
+        local_node_name := 'node3',
+        node_external_dsn := 'host=10.232.24.49 user=bdrsync dbname=amstest password=12345#',
+        join_using_dsn := 'host=10.232.24.48 user=bdrsync dbname=amstest password=12345#'
+        );
+      -->
+      <h3>Verifying Associations</h3>
+      <p>
+        Each peer uses a replication slot to identify other nodes that changes
+        propagate to
+      </p>
+      <pre>&#x000A;amstest=# select * from bdr.bdr_node_slots;&#x000A;node_name |                slot_name&#x000A;-----------+-----------------------------------------&#x000A;node1     | bdr_17168_6231255027739465518_1_17948&#x000A;node3     | bdr_17168_6231542136481997963_1_17162&#x000A;(2 rows)&#x000A;</pre>
+      <p>
+        Also see the documentation on <a
+        href="http://bdr-project.org/docs/0.9.0/catalog-bdr-nodes.html">BDR-related
+        system catalogs</a>.
+      </p>
+      <p>
+        In production a lot of useful summary data can be seen in the
+        <em>bdr.pg_stat_bdr</em> table.
+      </p>
+      <h2>Caveats of BDR</h2>
+      <h3>DDL Aquires Global Locks</h3>
+      <p>
+        All data manipulation of any sort is blocked on other masters if a table is
+        altered:
+      </p>
+      <pre>&#x000A;amstest=# insert into t2 values (70);&#x000A;ERROR:  database is locked against ddl by another node&#x000A;HINT:  Node (6226337458219448371,1,16385) in the cluster is already performing DDL&#x000A;</pre>
+      <h3>Properties of Roles</h3>
+      <ol>
+        <li>
+          Roles are not part of a database and are therefore not replicated
+        </li>
+        <li>
+          Other masters will repeatedly try to change ownership
+        </li>
+        <li>
+          All ownership changes must be applied. Setting the owner of a table to
+          <em>A</em> must succeed before setting the owner to <em>B</em>.
+        </li>
+      </ol>
+      <p>
+        Since clients receive errors DDL needs to be planned carefully
+      </p>
+      <h2>Global IDs</h2>
+      <p>
+        With logical replication sequences are local to the database. This is a
+        challenge because for each database a scheme for avoiding ID conflicts.
+        postgres-bdr includes a special sequence that will host an election between
+        nodes and will negotiate ID blocks
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> SEQUENCE global_job_id <span class="Special">USING</span> bdr;&#x000A;<span class="Statement">ALTER</span> <span class="Special">TABLE</span> job <span class="Statement">ALTER</span> <span class="Special">COLUMN</span> id <span class="Statement">SET</span> <span class="Special">DEFAULT</span> nextval(<span class="Constant">'global_job_id'</span>);&#x000A;</pre>
+      <p>
+        If we do not have enough nodes to establish a quorum then each node will
+        eventually use up it's pre-allocated block of IDs. This does not block; it
+        raises an error
+      </p>
+      <pre>&#x000A;ERROR:  could not find free sequence value for global sequence public.global_job_id&#x000A;</pre>
+      <p>
+        While the initial ID of a sequence can be set when importing data; there is no
+        direct way to increment the ID of an existing counter. We can force it this
+        way:
+      </p>
+      <pre>&#x000A;<span class="Statement">ALTER</span> SEQUENCE global_job_id RESTART <span class="Special">WITH</span> <span class="Constant">1000000</span>;&#x000A;<span class="Comment">--ERROR:  ALTER SEQUENCE ... restart is not supported for bdr sequences</span>&#x000A;</pre>
+      <p>
+        Perhaps the best we can do is increment the counter manually
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> <span class="Identifier">max</span>(nextval(<span class="Constant">'global_job_id'</span>)) <span class="Special">FROM</span> generate_series(<span class="Constant">1</span>,<span class="Constant">1000</span>);&#x000A;</pre>
+      <!-- http://bdr-project.org/docs/0.9.0/catalog-bdr-nodes.html -->
+      <h2>Dump/Restore</h2>
+      <h3>Import Existing Data</h3>
+      <p>
+        Before importing the data itself it is important to ensure that the schema
+        itself works
+      </p>
+      <pre>&#x000A;pg_restore -c -U amstest -d amstest -O -Fc -x -s /archive/ams.dump&#x000A;</pre>
+      <p>
+        Before trying to make a logical dump, remove BDR-related bookkeeping
+      </p>
+      <pre>&#x000A;psql amstest -c 'truncate bdr.bdr_queued_commands;'&#x000A;psql amstest -c 'truncate bdr.bdr_queued_drops;'&#x000A;pg_dump amstest &gt; /tmp/amsv2.dump&#x000A;</pre>
+      <p>
+        To convert all sequences to global add a directive to the top of the dump file
+      </p>
+      <pre>&#x000A;<span class="Statement">SET</span> LOCAL default_sequenceam = <span class="Constant">'bdr'</span>;&#x000A;</pre>
+      This requires a restore using the single-transaction flag
+      <pre>&#x000A;psql amstest -1 &lt; /tmp/amsv2.dump&#x000A;</pre>
+      <h3>Recreating a Database</h3>
+      <p>
+        To remove the replication slots and demote a remote node run the following on
+        each instance
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> bdr.bdr_part_by_node_names(ARRAY[<span class="Constant">'node2'</span>]);&#x000A;<span class="Statement">DELETE</span> <span class="Special">FROM</span> bdr.bdr_nodes <span class="Special">WHERE</span> node_name=<span class="Constant">'node2'</span>;&#x000A;<span class="Statement">SELECT</span> pg_terminate_backend(pid) <span class="Special">FROM</span> pg_stat_activity <span class="Special">WHERE</span> client_port <span class="Special">is</span> <span class="Special">null</span>;&#x000A;</pre>
+      <p>
+        To destroy a database locally you first need to ensure that all clients have
+        disconnected. Force this using
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> pg_drop_replication_slot(slot_name)&#x000A;<span class="Special">FROM</span> pg_replication_slots&#x000A;<span class="Special">WHERE</span> database=<span class="Constant">'amstest'</span>;&#x000A;</pre>
+      <pre>&#x000A;dropdb amstest&#x000A;&#x000A;There is no simple way to convert a node to a sremove an orphaned disconnected node from a&#x000A;group. This is the &lt;a&#x000A;href=&quot;<a href="https://github.com/2ndQuadrant/bdr/issues/127">https://github.com/2ndQuadrant/bdr/issues/127</a>&quot;&gt;current workaround&lt;/a&gt;&#x000A;</pre>
+      <pre>&#x000A;<span class="Special">BEGIN</span>;&#x000A;<span class="Statement">SET</span> LOCAL bdr.skip_ddl_locking = <span class="Special">on</span>;&#x000A;<span class="Statement">SET</span> LOCAL bdr.permit_unsafe_ddl_commands = <span class="Special">on</span>;&#x000A;<span class="Statement">SET</span> LOCAL bdr.skip_ddl_replication = <span class="Special">on</span>;&#x000A;SECURITY LABEL <span class="Special">FOR</span> bdr <span class="Special">ON</span> DATABASE amstest <span class="Special">IS</span> <span class="Special">NULL</span>;&#x000A;<span class="Statement">DELETE</span> <span class="Special">FROM</span> bdr.bdr_connections;&#x000A;<span class="Statement">DELETE</span> <span class="Special">FROM</span> bdr.bdr_nodes;&#x000A;<span class="Statement">SELECT</span> bdr.bdr_connections_changed();&#x000A;<span class="Statement">COMMIT</span>;</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

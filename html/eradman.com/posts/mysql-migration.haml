@@ -1,0 +1,204 @@
+%h1 Migrating from MySQL
+
+%p
+  I like to say that all database problems are application problems because
+  building a responsive application requires cooperation with the facilities
+  that the database provides. The implicit terms of the contract become most
+  obvious when you try to swap out the backend.
+%p
+  The matter of first importance is to keep a copy of the database running that
+  will allow a progressive testing and migration of services
+
+%h2 Creating a Replica
+
+%p
+  If you need a live stream of updates between a MySQL database and Postgres,
+  look no further than
+  %a{:href=>"http://pythonhosted.org/pg_chameleon/"} pg_chameleon.
+  To my surprise, it works. This project is possible because MySQL databases
+  are normally used in a very simplistic way. (PostgreSQL provides a powerful
+  programming environment which easily makes replication the other way a strange
+  scenario.)
+%p
+  Another method is simply to create and restore a periodic dump.
+  %code mysqldump
+  provides most of what you need to get off the ground
+
+:codeblock
+  :::sh
+  #!/bin/sh
+  tables="
+    locations
+    subnets
+    aliases
+  "
+  for t in $tables
+  do
+    mysqldump -h db1 \
+        -u readonly \
+        --password="xyz" \
+        --skip-lock-tables \
+        --skip-add-locks \
+        --compatible=postgresql \
+        --complete-insert \
+        --no-create-info \
+        --skip-extended-insert mydb $t > $t.dump
+  done
+
+%p
+  This will create separate dumps for each table. There are some other
+  features:
+
+%ul
+  %li
+    %code --skip-lock-tables
+    allows backups from on a read-only connection
+  %li
+    %code --complete-insert
+    specifies column names so that we are not relying on the order they happen to be defined in
+  %li
+    %code --skip-extended-insert
+    generates one line per record. This is very verbose but allows for
+    easy navigation of the resulting file with
+    %code grep
+    or your favorite editor
+
+%h2 Stream Editor Tasks
+
+%p
+  MySQL column names and table names are not case sensitive, so solving
+  these discrepancies is inevitable
+
+:codeblock
+  :::sh
+  sed -i 's/"Id"/"ID"/g' locations.dump
+
+%p
+  PostgreSQL is much stricter about type and referential integrity, so
+  %code sed
+  can be used to fix up data that would fail otherwise. In this example we fix
+  up bogus dates
+
+:codeblock
+  :::sh
+  sed -i -e "s/'0000-00-00 00:00:00'/NULL/g" -e "s/,'/,E'/g" aliases.dump
+
+%h2 Restoring Data
+
+%p
+  Imperative for any database is a means of reproducing the schema. For
+  SQLAlchemy this is accomplished using
+  %em create_all
+
+:codeblock
+  :::python
+  from sqlalchemy import Column, types
+  from sqlalchemy import create_engine
+  from sqlalchemy.ext.declarative import declarative_base
+
+  Base = declarative_base()
+
+  class Subnets(Base):
+      __tablename__ = "subnets"
+      subnet_id = Column(types.Integer, primary_key=True)
+      name = Column(types.Unicode(20), unique=True)
+
+  uri = "postgresql://postgres@localhost/test"
+  engine = create_engine(uri)
+  Base.metadata.create_all(bind=engine)
+
+%p
+  Laying the schema creation out in a single text file is also a great tactic.
+
+%p
+  MySQL does not quote strings in a SQL-standard complaint way. PostgreSQL can
+  read MySQL strings by prepending the
+  %a{:href=>"https://www.postgresql.org/docs/current/static/runtime-config-compatible.html#GUC-BACKSLASH-QUOTE"}
+    backslash_quote
+  option to each dump
+
+:codeblock
+  :::sql
+  SET standard_conforming_strings = 'off';
+  SET backslash_quote = 'on';
+
+%p
+  By default,
+  %code psql(1)
+  prints warnings and errors to
+  %STDERR
+  but  does not exit non-zero if n SQL statement fails. This may be
+  fine, but for some operations you can fail the entire script by adding an
+  %code ERR
+  trap and setting
+  %code psql
+  to return an error code
+
+:codeblock
+  :::sh
+  #!/bin/sh
+  trap 'printf "$0: exit code $? on line $LINENO\n" >&2; exit 1' ERR
+
+  psql $url -v ON_ERROR_STOP=1 -f my.dump
+
+%h2 Resetting Sequences
+
+%p
+  Once the data is restored we need to reset sequences so that subsequent
+  inserts to our database do not cause a collision
+
+:codeblock
+  :::sh
+  for t in $tables
+  do
+    max_id=$(psql -Atq $db <<SQL
+    SELECT MAX("ID") FROM "$t";
+  SQL
+  )
+    psql -q $db cluster <<SQL
+    ALTER SEQUENCE "${t}_ID_seq" RESTART WITH $(($max_id+1));
+  SQL
+  done
+<span />
+%p
+  Again, much of this kind of work can be automatically translated by
+  pg_chameleon. One advantage to scripting these steps one by one is that
+  each error can be addressed individually without holding up the entire
+  mechanism.
+
+%h2 Adjusting Column Default Values
+
+%p
+  Some differences in the way application handle the data from a database can be
+  handled by adjusting column defaults. The PostgreSQL
+  %code timestamptz
+  for example report milliseconds, whereas MySQL's
+  %code date
+  type only reports seconds. We can mimic this behavior when recording the
+  current type using a column default like this:
+
+:codeblock
+  :::sql
+  DEFAULT date_trunc('second', now())
+
+%p
+  What if we're using an ORM? If all else fails apply a schema adjustment as a
+  separate operation after
+  %code create_all()
+  \.  SQLAlchemy allows you to chain these functions these functions an them
+  apply them by setting
+  %code server_default
+  \.
+
+:codeblock
+  :::python
+  from sqlalchemy import literal_column, func
+
+  literal_second = literal_column("'second'")
+  db_now = func.date_trunc(literal_second, func.now())
+
+  class Ticket(Base):
+      __tablename__ = 'ticket'
+      id = Column(Integer(), primary_key=True)
+      added = Column(DateTime(), server_default=db_now)
+

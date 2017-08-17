@@ -1,0 +1,99 @@
+%h1 Portable C Compiler Benchmarks
+
+%h2 Quotes
+%blockquote
+  %p
+    "Compilation inefficiency directly harms programmer efficiency and the quality
+    and volume of code the programmer produces. These are surely the most important
+    things by which a toolchain's usefulness should be judged."
+    = succeed "&mdash;" do
+      %br/
+    %a{:href => "http://lkml.indiana.edu/hypermail/linux/kernel/0306.2/1632.html"}
+      Andrew Morton, Jun 2003
+%blockquote
+  %p
+    "I understand that there is a goal to make gcc produce better output
+    code. But we are programmers.  We spend our lives compiling code.  When can we
+    get a compiler that is tuned for us?"
+    = succeed "&mdash;" do
+      %br/
+    %a{:href => "http://gcc.gnu.org/ml/gcc/2004-03/msg00011.html"}
+      Theo de Raadt, Feb
+      2004
+%h2 PCC vs. GCC
+%table{:style => "width: 90%;"}
+  %colgroup{:span => "5"}
+  %colgroup{:style => "font-weight: bold;"}
+  %thead{:style => "background-color: #f3f3f3;"}
+    %tr
+      %td OS
+      %td Platform
+      %td Options
+      %td GCC 4.2.1
+      %td PCC 1.0.0
+      %td Speedup
+  %tbody
+    %tr
+      %td OpenBSD 5.0
+      %td i386
+      %td -O3
+      %td 1m32s
+      %td 10s
+      %td
+        9.80
+    %tr
+      %td OpenBSD 5.0
+      %td i386
+      %td -O1
+      %td 1m4s
+      %td 10s
+      %td
+        6.40
+    %tr
+      %td OpenBSD 5.0
+      %td amd64
+      %td -O3
+      %td 30s
+      %td 8s
+      %td
+        3.37
+    %tr
+      %td OpenBSD 5.0
+      %td amd64
+      %td -O1
+      %td 19s
+      %td 7s
+      %td
+        2.71
+%p
+  Tests performed compiling
+  = succeed "." do
+    %a{:href => "http://sourceforge.net/apps/mediawiki/lout/index.php?title=Main_Page"}
+      Lout
+      3.39
+%h2 C vs. C++ Benchmarks
+%table{:style => "width: 90%;"}
+  %thead{:style => "background-color: #f3f3f3;"}
+    %tr
+      %td OS
+      %td Platform
+      %td pcc 1.0, gcc 4.2.1
+      %td g++ 4.2.1
+      %td Speedup
+  %tbody
+    %tr
+      %td OpenBSD 5.0
+      %td i386
+      %td
+        \.27s, .54s (
+        %a{:href => "http://sourceforge.net/projects/cjson/files/"}> cjson
+        )
+      %td
+        22.4s (
+        %a{:href => "http://sourceforge.net/projects/libjson/"}> libjson
+        )
+      %td
+        83.0, 41.5
+%h2 References
+%p
+  %a{:href => "http://pcc.ludd.ltu.se/"} Portable C Compiler home page

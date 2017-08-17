@@ -1,0 +1,85 @@
+%h1 OpenSMTPD Mail Filtering
+
+%p
+  The title of this post should be "Spam Filtering on OpenSMTPD", but I didn't
+  want to use the word "spam" on my home page. Running an e-mail server is a
+  challanging and low-reward task, so we need to keep this as simple as we
+  possibly can.  These days is I classify mail using <a
+  href="https://spamassassin.apache.org">SpamAssasin</a>, which will retuire
+  three packages
+
+:codeblock
+  p5-Mail-SpamAssassin
+  spampd
+  procmail
+
+%p
+  <em>SpamAssassin</em> is the classification engine, <em>SpamPD</em> connects
+  to the SpamAssassin daemon and forwards the mail to an MTA, and
+  <em>Procmail</em> writes the messages in the <em>mbox</em> format.
+
+%h2 SpamAssassin &amp; SpamPD
+
+%p
+  Filtering mail with OpenSMTPd is most easily accomplished by running a
+  SpamAssassin proxy that we can forward mail to. The SpamPD relay will
+  add <em>X-Spam-</em> headers to each message and forwarded them back to
+  localhost on the port that we specify
+
+:codeblock
+  :::sh
+  # rc.conf.local
+  pkg_scripts="spamassassin spampd"
+  spampd_flags="--port=10025 --relayhost=127.0.0.1:10026 --tagall --log-rules-hit --maxsize=2048"
+
+%p
+  These <a
+  href="http://www.worlddesign.com/Content/rd/mta/spampd/spampd.html">SpamPD
+  options</a> only need to match the MTA configuration. Setting
+  <em>--maxsize</em> allows messages with largish attachments to be
+  processed. <em>--tagall</em> and <em>--log-rules-hit</em> are not
+  required, but useful for diagnostics.
+
+%h2 Procmail
+
+%p
+  Procmail can be configured per user with <em>$HOME/.procmailrc</em> or per
+  site with <em>/etc/procmailrc</em>.  The following rules will cause suspect
+  mail to be delivered to an mbox named "spam".
+
+:codeblock
+  :::procmail
+  :0:
+  * ^X-Spam-Flag: YES
+  $HOME/mail/spam
+
+%h2 OpenSMTPD Routing
+
+%p
+  Extending the ideas presented in <a
+  href="run-your-own-server.html">Run Your Own Server</a>, this adds routing
+  rules that forward incoming mail to the mail proxy for evaluation
+
+:codeblock
+  :::pf
+  # smtpd.conf
+  listen on localhost port 25
+  listen on egress port 25
+  listen on localhost port 10028 tag DKIM
+  listen on localhost port 10026 tag SPAMD
+
+  table aliases db:/etc/mail/aliases.db
+
+  accept tagged SPAMD from any for domain "eradman.com" deliver to mda "procmail -f -"
+  accept from any for domain "eradman.com" relay via smtp://127.0.0.1:10025
+  accept for local alias <aliases> deliver to mbox
+
+  accept tagged DKIM for any relay
+  accept from local for any relay via smtp://127.0.0.1:10027
+
+%p
+  Incoming mail on port <em>25</em> is not tagged, which matches the rule
+  <em>relay via smtp://127.0.0.1:10025</em>. After SpamAssassin grades the mail,
+  SpamPD relays it back to OpenSMTPD on port <em>10026</em> where it matches the
+  tag <em>SPAMD</em> and is handed over to <em>procmail</em> for delivery.
+

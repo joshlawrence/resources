@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Synchronizing PostgreSQL Databases
+    </title>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Synchronizing PostgreSQL Databases</h1>
+      <h2>Option 1: Triggers</h2>
+      <p>
+        At first triggers seem like the logical way to go, but it's not as easy as
+        one might hope because the text for the SQL updates to a slave database have to
+        be reconstructed for every event. There's no such idea as a "calling query", or
+        <em>$@</em> in the shell world, that can simply be run against a remote
+        database connection.
+      </p>
+      <h2>Option 2: Logging</h2>
+      <p>
+        In terms of simplicity this is definitely the way to go: make Postgres log
+        all <em>UPDATE</em>, <em>INSERT</em>, and <em>DELETE</em> statements and replay
+        them on backup databases. Several modifications need to be made to
+        <em>postgresql.conf</em>:
+      </p>
+      <pre>&#x000A;redirect_stderr = on&#x000A;log_directory = 'pg_log'&#x000A;log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log&#x000A;log_rotation_age = 15&#x000A;log_line_prefix = ':%u:%d:'&#x000A;log_statement = 'mod'&#x000A;&#x000A;</pre>
+      <p>
+        All of these figures are important. <em>redirect_stderr</em>,
+        <em>log_filename</em>, and <em>log_directory</em> start logging to the directory
+        <em>~/data/pg_log</em> with log names that are timestamped. The
+        <em>log_rotation_age</em> essentially determines how often (in minutes) updates
+        can be sent out because we only want to scan and remove log files that are not
+        being written to by <em>postmaser</em>.
+      </p>
+      <p>
+        The string <em>':%u:%d:'</em> in <em>log_line_prefix</em> sets up a format
+        that a script can use to (a) identify the user that made the query, (b) the
+        database it was called on, and (c) identify log entries that are notifications,
+        and not queries at all; resulting in lines beginning with <em>:::</em>.
+      </p>
+      <p>
+        Finally, <em>log_statement = 'mod'</em> enables logging for record changes
+        only.
+      </p>
+      <h2>The Log Parser</h2>
+      <pre>&#x000A;<span class="PreProc">#!/usr/pkg/bin/ruby</span>&#x000A;<span class="Comment">#</span>&#x000A;<span class="Comment"># logparser.rb by Eric Radman</span>&#x000A;<span class="Comment"># Modified 2007-01-04</span>&#x000A;&#x000A;<span class="Type">PG_LOGS</span> = <span class="Special">&quot;</span><span class="Constant">/var/pgsql/data/pg_log</span><span class="Special">&quot;</span>&#x000A;<span class="Type">PG_SYNC</span> = <span class="Special">&quot;</span><span class="Constant">/home/system</span><span class="Special">&quot;</span>&#x000A;&#x000A;<span class="rubyDefine">def</span> <span class="Identifier">parselog</span>(logfile)&#x000A;    puts <span class="Special">&quot;</span><span class="Constant">Processing '</span><span class="Special">#{</span>logfile<span class="Special">}</span><span class="Constant">'</span><span class="Special">&quot;</span>&#x000A;    lf = <span class="Type">File</span>.new(logfile)&#x000A;    sql = db = <span class="Special">&quot;&quot;</span>&#x000A;    lf.each_line {|<span class="Identifier">ln</span>|&#x000A;        <span class="Statement">if</span> ln.slice(<span class="Constant">0</span>,<span class="Constant">2</span>) === <span class="Special">&quot;</span><span class="Constant">::</span><span class="Special">&quot;</span>       <span class="Comment"># Not a query, skip</span>&#x000A;            print <span class="Special">'</span><span class="Constant">.</span><span class="Special">'</span>                   <span class="Comment"># - skip -</span>&#x000A;        <span class="Statement">elsif</span> ln.slice(<span class="Constant">0</span>,<span class="Constant">1</span>) === <span class="Special">&quot;</span><span class="Constant">:</span><span class="Special">&quot;</span>     <span class="Comment"># New statement</span>&#x000A;            flush_query db, sql         <span class="Comment"># Write query before next statement</span>&#x000A;            print <span class="Special">'</span><span class="Constant">!</span><span class="Special">'</span>                   <span class="Comment"># - new statement -</span>&#x000A;            sql = ln.split(<span class="Special">/</span><span class="Constant">statement:</span><span class="Special">/</span>)[<span class="Constant">1</span>]&#x000A;            db = ln.split(<span class="Special">'</span><span class="Constant">:</span><span class="Special">'</span>)[<span class="Constant">2</span>]&#x000A;        <span class="Statement">else</span>                            <span class="Comment"># Everything else is statement body</span>&#x000A;            print <span class="Special">'</span><span class="Constant">-</span><span class="Special">'</span>                   <span class="Comment"># - statement continued -</span>&#x000A;            sql.concat(ln)&#x000A;        <span class="Statement">end</span>&#x000A;    }&#x000A;    flush_query db, sql                 <span class="Comment"># Write whatever was collected 'till EOF</span>&#x000A;    puts&#x000A;    <span class="Type">File</span>.delete(logfile)&#x000A;    puts <span class="Special">&quot;</span><span class="Constant">done</span><span class="Special">&quot;</span>&#x000A;<span class="rubyDefine">end</span>&#x000A;&#x000A;<span class="rubyDefine">def</span> <span class="Identifier">flush_query</span>(db, sql)&#x000A;    <span class="Statement">if</span> sql.strip.length &gt; <span class="Constant">0</span> <span class="Statement">and</span> db != <span class="Special">&quot;&quot;</span> <span class="Statement">then</span>&#x000A;        sql.strip!.concat(<span class="Special">&quot;</span><span class="Constant">;</span><span class="Special">\n</span><span class="Special">&quot;</span>)&#x000A;        <span class="Statement">begin</span>&#x000A;            file = open(<span class="Special">&quot;</span><span class="Special">#{</span><span class="Type">PG_SYNC</span><span class="Special">}</span><span class="Constant">/db_</span><span class="Special">#{</span>db<span class="Special">}</span><span class="Constant">_updates.sql</span><span class="Special">&quot;</span>, <span class="Special">&quot;</span><span class="Constant">a</span><span class="Special">&quot;</span>)&#x000A;            file.syswrite(sql)&#x000A;        <span class="Statement">end</span>&#x000A;    <span class="Statement">end</span>&#x000A;<span class="rubyDefine">end</span>&#x000A;&#x000A;<span class="Statement">if</span> <span class="Identifier">$0</span> == <span class="Constant">__FILE__</span>&#x000A;    lst = <span class="Type">Dir</span>.entries(<span class="Type">PG_LOGS</span>).delete_if {|<span class="Identifier">i</span>| i[<span class="Constant">0</span>,<span class="Constant">11</span>] != <span class="Special">'</span><span class="Constant">postgresql-</span><span class="Special">'</span>}.sort&#x000A;    <span class="Statement">if</span> lst.length &gt; <span class="Constant">1</span>&#x000A;        parselog <span class="Special">&quot;</span><span class="Special">#{</span><span class="Type">PG_LOGS</span><span class="Special">}</span><span class="Constant">/</span><span class="Special">#{</span>lst[<span class="Constant">0</span>]<span class="Special">}</span><span class="Special">&quot;</span>&#x000A;    <span class="Statement">end</span>&#x000A;<span class="Statement">end</span>&#x000A;&#x000A;</pre>
+      <p>
+        The <em>if $0 == __FILE__</em> statement test to see if there's more than
+        one log file in the folder specified by <em>PG_LOGS</em> and if there is, it's
+        parsed and separate log files for each database are written to the folder
+        <em>PG_SYNC</em>.
+      </p>
+      <p>
+        In my case the destination is not writable by the user <em>pgsql</em>
+        running <em>sqllogparser.rb</em> so I created files with write access in the
+        <em>/home/system</em>.
+      </p>
+      <h2>Scheduling Updates</h2>
+      <p>
+        Now set up the <em>pgsql</em> crontab:
+      </p>
+      <pre>&#x000A;*/6    *       *       *       *      /var/pgsql/data/pg_log/parselog.rb&#x000A;</pre>
+      <p>
+        and watch for mail to be generated with the result of the operation:
+      </p>
+      <pre>&#x000A;$ mail&#x000A;Mail version 8.1 6/6/93.  Type ? for help.&#x000A;&quot;/var/mail/pgsql&quot;: 1 message 1 new&#x000A;Message 1:&#x000A;From root@teisprint.net Thu Jan 04 14:36:00 2007&#x000A;Envelope-to: pgsql@localhost&#x000A;Delivery-date: Thu, 04 Jan 2007 14:36:00 -0500&#x000A;From: root@teisprint.net (Cron Daemon)&#x000A;To: pgsql@localhost.teisprint.net&#x000A;Subject: Cron &lt;pgsql@am2800--nb0&gt; /var/pgsql/data/pg_log/parselog.rb&#x000A;...&#x000A;Date: Thu, 04 Jan 2007 14:36:00 -0500&#x000A;&#x000A;Processing '/var/pgsql/data/pg_log/postgresql-2007-01-04_141500.log'&#x000A;!--------------------!--!------------!----!--------------------!-----------------&#x000A;--------!------------!----!-------------------------!--!------------!----!-------&#x000A;-------------------!----------------------!------------!----!--------------------&#x000A;--!------------!----!---------------------!------------!----!--------------------&#x000A;!------------!----!------------------------!------------!----!-------------------&#x000A;----!------------------------!-------------------------&#x000A;done&#x000A;</pre>
+      <p>
+        Assuming that the slave database server has the update files (pushed over
+        NFS, SSH, etc.), a crontab can be set up to apply the updates:
+      </p>
+      <pre>&#x000A;*/20    *       *       *       *      /home/system/bin/sync-db.sh&#x000A;</pre>
+      <p>
+        The results to apply:
+      </p>
+      <pre>&#x000A;-rw-r--r--   1 pgsql   wheel      0 Jan  3 16:19 db_pgsql_updates.sql&#x000A;-rw-rw----   1 pgsql   wheel   2016 Jan  4 14:48 db_roundcube_updates.sql&#x000A;-rw-rw----   1 pgsql   wheel   6128 Jan  4 14:48 db_system_updates.sql&#x000A;-rw-r--r--   1 pgsql   wheel      0 Jan  3 16:19 db_tei_updates.sql&#x000A;</pre>
+      <p>
+        My update script:
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;psql <span class="Special">-U</span> system system <span class="Statement">&lt;</span> ~/db_system_updates.sql&#x000A;cat /dev/null <span class="Statement">&gt;</span> ~/db_system_updates.sql&#x000A;</pre>
+      <p>
+        PostgreSQL doesn't allow the database password to be passed in the command
+        line; the passwords are stored in <em>~/.pgpass</em>.
+      </p>
+      <h2>
+        Not Done Yet
+      </h2>
+      <p>
+        Okay, it couldn't be that easy, could it? It's not. The  problem is that this
+        scheme assumes that an <em>INSERT</em> statement run against a database running
+        on two different servers will have the same result.  One case where this is not
+        true is if an auto-index is used on a column. To deal with the your application
+        to must be coded to set indexes explicitly:
+      </p>
+      <pre>&#x000A;conn = dbh.prepare(<span class="Constant">&quot;SELECT nextval('customers_id_seq')&quot;</span>)&#x000A;conn.execute()&#x000A;</pre>
+      <p>
+        Then pass the result of <em>conn.fetch[0]</em> to the function that adds the
+        records instead of relying on <em>nextval()</em> to be executed by the column's
+      </p>
+      <em>
+        DEFAULT</em> parameter.
+      </em>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 27, 2015
+    </p>
+  </body>
+</html>

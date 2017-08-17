@@ -1,0 +1,77 @@
+%h1 Auditing Updates in PostgreSQL
+
+%p
+  A database is a system that provides leverage for dealing with persistant
+  data, and part of this functionality is the ability to INSERT/UPDATE/DELETE to
+  trigger other actions. These actions may be consistency checks or automatic
+  normalization or de-normalization of data. Triggers can also be used to
+  provide a record of updates so that the reason for the modification of data
+  itself can be obtained.
+
+%h2 Tracking Changes
+
+%p
+  Suppose we have a table that tracks open tickets
+
+:codeblock
+  :::sql
+  CREATE TABLE tickets (
+    id SERIAL PRIMARY KEY,
+    description text,
+    asignee varchar(32),
+    status varchar(12) -- 'open' or 'closed'
+  );
+
+%p
+  If the state changes in the table in an unexpected way, then naturally the
+  code that updated the table should be reviwed. But what do we do if you are
+  not able to discern the source of a change? We can log particular state
+  changes using a trigger.
+
+%h2 Installing the Trigger
+
+%p
+  First create a table that has contains field for the data we're interested in.
+  Capturing the
+  %em application_name
+  is always a good idea, but critical if you're suing a proxy such as PgBouncer
+  which will obscure the source IP address.
+
+:codeblock
+  :::sql
+  CREATE TABLE ticket_updates (
+    time timestamp with time zone NOT NULl,
+    application_name varchar(255) NOT NULL,
+    remote_addr inet,
+    query text NOT NULL
+  );
+
+%p
+  The trigger could record every updated, but in this case we only want to
+  record the context for the case where the ticket was not closed, and after an
+  update it is set to closed
+
+:codeblock
+  :::sql
+  CREATE FUNCTION log_ticket_update()
+    RETURNS trigger AS
+  $$
+  BEGIN
+    IF OLD.state_id != 'closed' AND NEW.state_id = 'closed' THEN
+      INSERT
+        INTO ticket_updates VALUES(
+          now(),
+          current_setting('application_name'),
+          inet_client_addr(),
+          current_query()
+        );
+    END IF;
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER ticket_update_trigger
+    AFTER UPDATE ON tickets
+    FOR EACH ROW
+    EXECUTE PROCEDURE log_ticket_update();
+

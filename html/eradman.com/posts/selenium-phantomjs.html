@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Integration Testing with Selenium and PhantomJS
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Integration Testing with Selenium and PhantomJS</h1>
+      <p>
+        Writing integration tests for a web app is not very difficult to set up
+        thanks to <a href="https://github.com/detro/ghostdriver">ghostdriver</a>, which
+        is built into <a href="http://phantomjs.org/">phantomjs</a>.
+      </p>
+      <h2>
+        Prerequisites
+      </h2>
+      <p>
+        On OpenBSD add the following packages
+      </p>
+      <pre>&#x000A;doas pkg_add jre phantomjs python-3.4.1p1 py3-pip&#x000A;</pre>
+      <p>
+        Then fetch Selenium and install the Python module:
+      </p>
+      <pre>&#x000A;doas pip3.4 install selenium&#x000A;ftp $url&#x000A;</pre>
+      <h2>Runtime</h2>
+      <p>
+        The selenium server (port <em>4444</em>) and an instance of phantomjs (port
+      </p>
+      <em>
+        8080</em>) must be running first
+      </em>
+      <pre>&#x000A;java <span class="Special">-jar</span> selenium-server-standalone-2.<span class="Constant">42</span>.<span class="Constant">2</span>.jar &amp;&#x000A;phantomjs <span class="Special">--webdriver=8080</span> <span class="Special">--webdriver-selenium-grid-hub=<a href="http://127.0.0.1:4444">http://127.0.0.1:4444</a></span> &amp;&#x000A;</pre>
+      <h2>Your First Test</h2>
+      <pre>&#x000A;<span class="Comment">#!/usr/local/bin/python3.3</span>&#x000A;&#x000A;<span class="PreProc">from</span> selenium <span class="PreProc">import</span> webdriver&#x000A;&#x000A;browser = webdriver.PhantomJS(executable_path=<span class="Constant">&quot;</span><span class="Constant">/usr/local/bin/phantomjs</span><span class="Constant">&quot;</span>)&#x000A;browser.get(<span class="Constant">&quot;</span><span class="Constant"><a href="http://openbsd.org/">http://openbsd.org/</a></span><span class="Constant">&quot;</span>)&#x000A;&#x000A;<span class="Statement">assert</span> <span class="Constant">&quot;</span><span class="Constant">OpenBSD</span><span class="Constant">&quot;</span> <span class="Statement">in</span> browser.title&#x000A;<span class="Identifier">print</span>(<span class="Constant">&quot;</span><span class="Constant">DONE</span><span class="Constant">&quot;</span>)&#x000A;</pre>
+      <p>
+        For further reading see the <a
+        href="http://selenium.googlecode.com/git/docs/api/py/api.html">Selenium
+        Documentation</a>.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

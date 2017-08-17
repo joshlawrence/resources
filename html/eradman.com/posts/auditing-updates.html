@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Auditing Updates in PostgreSQL
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Auditing Updates in PostgreSQL</h1>
+      <p>
+        A database is a system that provides leverage for dealing with persistant
+        data, and part of this functionality is the ability to INSERT/UPDATE/DELETE to
+        trigger other actions. These actions may be consistency checks or automatic
+        normalization or de-normalization of data. Triggers can also be used to
+        provide a record of updates so that the reason for the modification of data
+        itself can be obtained.
+      </p>
+      <h2>Tracking Changes</h2>
+      <p>
+        Suppose we have a table that tracks open tickets
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">TABLE</span> tickets (&#x000A;  id SERIAL PRIMARY KEY,&#x000A;  description text,&#x000A;  asignee <span class="Type">varchar</span>(<span class="Constant">32</span>),&#x000A;  status <span class="Type">varchar</span>(<span class="Constant">12</span>) <span class="Comment">-- 'open' or 'closed'</span>&#x000A;);&#x000A;</pre>
+      <p>
+        If the state changes in the table in an unexpected way, then naturally the
+        code that updated the table should be reviwed. But what do we do if you are
+        not able to discern the source of a change? We can log particular state
+        changes using a trigger.
+      </p>
+      <h2>Installing the Trigger</h2>
+      <p>
+        First create a table that has contains field for the data we're interested in.
+        Capturing the
+        <em>application_name</em>
+        is always a good idea, but critical if you're suing a proxy such as PgBouncer
+        which will obscure the source IP address.
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">TABLE</span> ticket_updates (&#x000A;  time timestamp <span class="Special">with</span> time zone <span class="Statement">NOT</span> <span class="Special">NULl</span>,&#x000A;  application_name <span class="Type">varchar</span>(<span class="Constant">255</span>) <span class="Statement">NOT</span> <span class="Special">NULL</span>,&#x000A;  remote_addr inet,&#x000A;  query text <span class="Statement">NOT</span> <span class="Special">NULL</span>&#x000A;);&#x000A;</pre>
+      <p>
+        The trigger could record every updated, but in this case we only want to
+        record the context for the case where the ticket was not closed, and after an
+        update it is set to closed
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">FUNCTION</span> log_ticket_update()&#x000A;  RETURNS <span class="Special">trigger</span> <span class="Special">AS</span>&#x000A;$$&#x000A;<span class="Special">BEGIN</span>&#x000A;  <span class="Special">IF</span> OLD.state_id != <span class="Constant">'closed'</span> <span class="Statement">AND</span> NEW.state_id = <span class="Constant">'closed'</span> <span class="Special">THEN</span>&#x000A;    <span class="Statement">INSERT</span>&#x000A;      <span class="Special">INTO</span> ticket_updates <span class="Special">VALUES</span>(&#x000A;        now(),&#x000A;        current_setting(<span class="Constant">'application_name'</span>),&#x000A;        inet_client_addr(),&#x000A;        current_query()&#x000A;      );&#x000A;  <span class="Special">END</span> <span class="Special">IF</span>;&#x000A;  <span class="Special">RETURN</span> NEW;&#x000A;<span class="Special">END</span>;&#x000A;$$ LANGUAGE plpgsql;&#x000A;&#x000A;<span class="Statement">CREATE</span> <span class="Special">TRIGGER</span> ticket_update_trigger&#x000A;  AFTER <span class="Statement">UPDATE</span> <span class="Special">ON</span> tickets&#x000A;  <span class="Special">FOR</span> EACH <span class="Special">ROW</span>&#x000A;  <span class="Statement">EXECUTE</span> <span class="Special">PROCEDURE</span> log_ticket_update();</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

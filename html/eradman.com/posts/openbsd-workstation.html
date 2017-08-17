@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      An OpenBSD Workstation
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>An OpenBSD Workstation</h1>
+      <h2>Terminal Fonts</h2>
+      <p>
+        The most important feature of any workstation is getting a terminal that is
+        pleasant to use. By default most terminals render text with a heavier weight
+        than I would like. To solve this select a font with a <em>light</em> or
+        <em>book</em> variation. Here is my invocation for the
+        <a href='http://st.suckless.org/'>
+          simple terminal
+        </a>
+      </p>
+      <pre>&#x000A;st -f 'Hermit:light:pixelsize=14:antialias=true:autohint=true'&#x000A;</pre>
+      <p>
+        My
+        <a href='https://github.com/eradman/openbsd-ports/tree/master/x11/st'>
+          st port
+        </a>
+        includes
+      </p>
+      <ul>
+        <li>
+          The
+          <a href='http://st.suckless.org/patches/solarized'>
+            solarized
+          </a>
+          color scheme
+        </li>
+        <li>
+          A modification to render <em>bold</em> fonts with the weight <em>normal</em>
+        </li>
+      </ul>
+      <p>
+        The really compelling feature of <em>st</em> is that it automatically
+        substitutes glyphs from the default font if the one you've selected does not
+        contain them. This enables me to use the really excellent
+        <a href='https://pcaro.es/p/hermit/'>
+          Hermit font
+        </a>
+        while retaining the extended character set of DejaVu Sans.
+      </p>
+      <p>
+        <img alt='utf-8 and colors' src='../library/st-1.png'>
+      </p>
+      <p>
+        To ensure you get full Unicode support from applications such as <em>mutt</em>
+        or </em>tmux</em> set your language type using
+      </p>
+      <pre>&#x000A;<span class="Identifier">LC_CTYPE</span>=en_US.UTF-8&#x000A;<span class="Statement">export</span><span class="Identifier"> LC_CTYPE</span>&#x000A;&#x000A;</pre>
+      <h2>Suspend &amp; Resume</h2>
+      <p>
+        OpenBSD has very good ACPI support, see
+        <a href='http://www.openbsd.org/cgi-bin/man.cgi?query=apmd&amp;amp;apropos=0&amp;amp;sektion=0&amp;amp;manpath=OpenBSD+Current&amp;amp'>
+          apmd(8).
+        </a>
+        <em>zzz</em> and <em>ZZZ</em> are shortcuts for suspend and hibernate if
+        <em>apmd</em> is run at startup.
+      </p>
+      <pre>&#x000A;<span class="Identifier">apmd_flags</span>=<span class="Statement">&quot;</span><span class="Constant">-A</span><span class="Statement">&quot;</span>&#x000A;</pre>
+      <p>
+        <em>-A</em> will automatically scale the CPU frequency to save power.
+      </p>
+      <h2>X Configuration: .xinitrc</h2>
+      <pre>&#x000A;<span class="Comment"># .xinitrc</span>&#x000A;xset <span class="Special">-b</span>&#x000A;&#x000A;<span class="Statement">while </span><span class="Statement">true</span><span class="Statement">;</span><span class="Statement"> </span><span class="Statement">do</span>&#x000A;    <span class="Identifier">batt</span>=<span class="Statement">&quot;</span><span class="Error">$(</span><span class="Special">sysctl </span><span class="Special">-n</span><span class="Special"> hw.sensors.acpibat0.watthour3 </span><span class="Statement">|</span><span class="Special"> cut </span><span class="Special">-f</span><span class="Special">1,</span><span class="Constant">2</span><span class="Special"> </span><span class="Special">-d</span><span class="Statement">&quot;</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Error">)</span><span class="Statement">&quot;</span>&#x000A;    xsetroot <span class="Special">-name</span> <span class="Statement">&quot;</span><span class="PreProc">$batt</span><span class="Statement">&quot;</span>&#x000A;    sleep <span class="Constant">60</span>&#x000A;<span class="Statement">done</span> &amp;&#x000A;xsetroot <span class="Special">-solid</span> gray40&#x000A;<span class="Statement">exec</span> dwm&#x000A;</pre>
+      <p>
+        <em>xset -b</em> disables the annoying beep that terminals sometimes make.
+      </p>
+      <p>
+        I run a loop in the background that read the available battery life (Wh) and
+        updates the window manager's display area. Any sensor data can be included in
+        such output.
+      </p>
+      <p>
+        Finally set the background color and start your favorite window manager.
+      </p>
+      <h2>
+        Switch to an External Monitor
+      </h2>
+      <p>
+        Hopefully your desktop monitor is larger than your laptop display.
+        I use a little docking script to switch to the external display that detects
+        which connection is used and switches the others off
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;<span class="Identifier">dp() {</span>&#x000A;    xrandr <span class="Special">--output</span> LVDS1 <span class="Special">--off</span>&#x000A;    xrandr <span class="Special">--output</span> VGA1 <span class="Special">--off</span>&#x000A;    xrandr <span class="Special">--output</span> DP1 <span class="Special">--auto</span>&#x000A;    xrandr <span class="Special">--output</span> HDMI1 <span class="Special">--off</span>&#x000A;<span class="Identifier">}</span>&#x000A;&#x000A;<span class="Identifier">hdmi() {</span>&#x000A;    xrandr <span class="Special">--output</span> LVDS1 <span class="Special">--off</span>&#x000A;    xrandr <span class="Special">--output</span> VGA1 <span class="Special">--off</span>&#x000A;    xrandr <span class="Special">--output</span> DP1 <span class="Special">--off</span>&#x000A;    xrandr <span class="Special">--output</span> HDMI1 <span class="Special">--auto</span>&#x000A;<span class="Identifier">}</span>&#x000A;&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-x</span>&#x000A;xrandr <span class="Special">--query</span> | grep <span class="Statement">&quot;</span><span class="Constant">DP1 connected</span><span class="Statement">&quot;</span> &amp;&amp; dp&#x000A;xrandr <span class="Special">--query</span> | grep <span class="Statement">&quot;</span><span class="Constant">VGA1 connected</span><span class="Statement">&quot;</span> &amp;&amp; hdmi&#x000A;xrandr <span class="Special">--query</span> | grep <span class="Statement">&quot;</span><span class="Constant">HDMI1 connected</span><span class="Statement">&quot;</span> &amp;&amp; hdmi&#x000A;&#x000A;&#x000A;</pre>
+      <p>
+        In my experience X11 will sometimes hide the cursor if resumed while using an
+        external monitor. To solve this I use the <em>unclutter</em> utility to enable
+        the cursor again after a short period of activity.
+      </p>
+      <pre>&#x000A;pkill unclutter&#x000A;unclutter <span class="Special">-idle</span> <span class="Constant">1</span> <span class="Special">-root</span> <span class="Special">-grab</span> <span class="Special">-visible</span> &amp;&#x000A;</pre>
+      <h2>
+        Connecting to a Projector
+      </h2>
+      <p>
+        If you started X with the VGA connected, it may pick a resolution common to
+        both your screen and the external display. On my T60 it can be reset like so
+      </p>
+      <pre>&#x000A;xrandr --output LVDS --mode 1400x900&#x000A;</pre>
+      <p>
+        Use <em>--query</em> to find out what modes each display supports.
+      </p>
+      <p>
+        If the external display supports a lower resolution you can set up a viewport
+        that pans with the mouse pointer
+      </p>
+      <pre>&#x000A;xrandr --output VGA-0 --mode 1280x720 --panning 1400x900&#x000A;</pre>
+      <p>
+        Or force both screens to use the same resolution
+      </p>
+      <pre>&#x000A;xrandr --output VGA-0 --mode 1280x720 --output LVDS --mode 1280x720&#x000A;</pre>
+      <p>
+        I also add some additional logic in my <em>.xinitrc</em> to switch to the
+        external display automatically if X is started while connected to an external
+        monitor:
+      </p>
+      <pre>&#x000A;xrandr --query | grep &quot;DVI-0 connected&quot; &amp;&amp; ~/bin/docked-dvi&#x000A;xrandr --query | grep &quot;VGA-0 connected&quot; &amp;&amp; ~/bin/docked-vga&#x000A;</pre>
+      <h2>tmux</h2>
+      <p>
+        There's only a few tweaks I make to my terminal multiplexor's
+        configuration. I frequently run <a href="http://entrproject.org">entr</a> in a
+        smaller pane on the bottom
+      </p>
+      <pre>&#x000A;bind-key C-t split-window <span class="Special">-p</span> <span class="Constant">25</span>&#x000A;</pre>
+      <p>
+        I don't know of a terminal color picker, but they can be printed with a shell
+        loop.
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/ksh</span>&#x000A;&#x000A;<span class="Statement">for</span> i <span class="Statement">in</span> <span class="Special">`jot </span><span class="Constant">255</span><span class="Special">`</span>; <span class="Statement">do</span>&#x000A;  <span class="Statement">printf</span> <span class="Statement">&quot;</span><span class="Special">\033</span><span class="Constant">[38;5;</span><span class="PreProc">${</span><span class="PreProc">i</span><span class="PreProc">}</span><span class="Constant">mcolour</span><span class="PreProc">${</span><span class="PreProc">i</span><span class="PreProc">}</span><span class="Special">\n</span><span class="Statement">&quot;</span>&#x000A;<span class="Statement">done</span>&#x000A;</pre>
+      <p>
+        Then I set status background and active border to bright green
+      </p>
+      <pre>&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-g</span><span class="Identifier"> status-bg colour118</span>&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-g</span><span class="Identifier"> pane-active-border-fg colour118</span>&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-g</span><span class="Identifier"> pane-border-fg colour30</span>&#x000A;</pre>
+      <p>
+        Most importantly, clean up the status bar so that only the window names are
+        displayed:
+      </p>
+      <pre>&#x000A;<span class="Comment"># remove status debris</span>&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-g</span><span class="Identifier"> status-left </span><span class="Statement">''</span>&#x000A;<span class="Statement">set</span><span class="Identifier"> </span><span class="Special">-g</span><span class="Identifier"> status-right </span><span class="Statement">''</span>&#x000A;</pre>
+      <h2>Using Disk Encryption</h2>
+      <p>
+        OpenBSD provides software RAID by way of a virtual host bus adapter called
+        <em>softraid0</em>. This HBA is also used for setting up disk encryption. To
+        set use a disklabel (in my case for <em>sd0g /home</em> set the partition type
+        to <em>RAID</em>
+      </p>
+      <pre>&#x000A;$ doas disklabel -E /dev/sd0c&#x000A;Label editor (enter '?' for help at any prompt)&#x000A;  g:         55641600        100653824    RAID&#x000A;&gt; m g&#x000A;offset: [100653824]&#x000A;size: [55641600]&#x000A;FS type: [4.2BSD] RAID&#x000A;</pre>
+      <p>
+        Now configure it for crypto using <em>-c C</em>
+      </p>
+      <pre>&#x000A;# bioctl -c C -l /dev/sd0g softraid0&#x000A;New passphrase: My Crypto Pass Phrase&#x000A;Re-type passphrase: My Crypto Pass Phrase&#x000A;softraid0: CRYPTO volume attached as sd1&#x000A;</pre>
+      <p>
+        Mount it using the same command. The kernel log will show a new virtual
+        device appear
+      </p>
+      <pre>&#x000A;sd1 at scsibus2 targ 1 lun 0: &lt;OPENBSD, SR CRYPTO, 005&gt; SCSI2 0/direct fixed&#x000A;sd1: 27168MB, 512 bytes/sector, 55641072 sectors&#x000A;</pre>
+      <p>
+        Now add a disklabel and format the encrypted volume
+      </p>
+      <pre>&#x000A;$ doas disklabel -E /dev/wd0c&#x000A;$ doas newfs /dev/rwd0a&#x000A;</pre>
+      <p>
+        Devices in OpenBSD may be mounted by device name or by disklabel UID which is
+        a random id generated when the label is created.
+      </p>
+      <pre>&#x000A;$ disklabel /dev/sd1c | grep uid&#x000A;duid: 779d87bac3905122&#x000A;</pre>
+      <p>
+        It's this ID that we'll to mount the volume, in this way plugging in other
+        drives won't confuse <em>mount</em> after we prompt the user for a password on
+        boot. Adding the following to <em>rc.local</em> will ask for a password four
+        times before giving up
+      </p>
+      <pre>&#x000A;<span class="Comment">#/etc/rc.local</span>&#x000A;<span class="Statement">for</span> attept <span class="Statement">in</span> <span class="Constant">1</span> <span class="Constant">2</span> <span class="Constant">3</span> <span class="Constant">4</span>; <span class="Statement">do</span>&#x000A;  bioctl <span class="Statement">-c</span> C <span class="Statement">-l</span> f878bdbe8655a6eb.k softraid0 <span class="Statement">&amp;&amp;</span> <span class="Statement">break</span>&#x000A;  sleep <span class="Constant">1</span>&#x000A;<span class="Statement">done</span>&#x000A;fsck <span class="Special">-y</span> 0728fd2c8e49bc73.a&#x000A;mount <span class="Special">-o</span> nodev,nosuid,softdep,wxallowed f12a2aa015f390df.a /home&#x000A;</pre>
+      <p>
+        That last mount parameter <em>wxallowed</em> is important because it will
+        allow you to run certain interpreters such as Python from a <em>virtualenv</em>
+        in your home directory.
+      </p>
+      <p>
+        If you would like to enable crypto on the entire boot volume see <a
+        href="http://www.tedunangst.com/flak/post/OpenBSD-softraid-crypto-boot">this
+        post</a> by Ted Unangst.
+      </p>
+      <h2>Reducing Password Fatique with YubiKey</h2>
+      <p>
+        <a href="https://www.yubico.com/">Yubico</a> makes a nice little hardware
+        key that, among other things, can be used to generate one time passwords for
+        user authentication. The <em>yubikey-personalization-gui</em> is a Qt-based
+        program that can be used to write private keys to one of two "slots". Copy the
+        6-byte private identity and the 16-byte secret key without spaces to like so
+      </p>
+      <pre>&#x000A;echo &quot;5c e1 e0 3e 63 a4&quot; \&#x000A;        | tr -d ' ' &gt; /var/db/yubikey/$USER.id&#x000A;echo &quot;57 e3 af 3e 9b 51 2b 10 58 7d 33 fb d9 08 ef 7b&quot; \&#x000A;        | tr -d ' ' &gt; /var/db/yubikey/$USER.key&#x000A;chmod 600 /var/db/yubikey/$USER.*&#x000A;</pre>
+      <p>
+        Now set YubiKey as the authentication method for the group <em>staff</em> by
+        editing <em>/etc/login.conf</em>
+      </p>
+      <pre>&#x000A;<span class="Special">- :tc=auth-defaults:</span>&#x000A;<span class="Identifier">+ :auth=yubikey</span>&#x000A;</pre>
+      <p>
+        If you're a long-time BSD user you might be tempted to run <em>cap_mkdb</em>
+        to rebuild the login DB. You don't need to do this; in fact the new <em>.db</em>
+        file will override local changes to <em>/etc/login.conf</em>
+      </p>
+      <p>
+        To reduce typing I use the second slot on the Yubikey as a relatively secure
+        method of enabling <a
+        href="http://www.openbsd.org/cgi-bin/man.cgi?query=ssh-agent&amp;format=html">ssh-agent</a>
+        in order to connect to remote systems where my public key(s) are installed. To
+        start use the <em>yubikey-personalization-gui</em> to generate a random key,
+        then set slot 2 to challange-response mode with this key
+      </p>
+      <pre>&#x000A;hexkey=$(echo &quot;dd b6 68 81 c9 73 f9 64 84 21 7e f0 69 e8 2c 28 1b 6c ad e2&quot; | tr -d ' ')&#x000A;ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64 -a $hexkey&#x000A;</pre>
+      <p>
+        Next I create new ssh keys (<em>ssh-keygen</em>) using part of the reply
+        from <em>ykchalresp</em>. I installed script as <em>bin/ykauth</em>
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;ykchalresp <span class="Constant">-2</span> <span class="Statement">&quot;</span><span class="Constant">mysecret</span><span class="Statement">&quot;</span> | cut <span class="Special">-c</span> 1-15&#x000A;</pre>
+      <p>
+        Finally add this bit of logic to <em>.profile</em> to automatically activate
+        these keys when I log in
+      </p>
+      <pre>&#x000A;ssh-add <span class="Special">-l</span> <span class="Statement">&gt;</span> /dev/null <span class="Constant">2</span><span class="Statement">&gt;&amp;1</span> || <span class="Special">{</span>&#x000A;    <span class="Statement">eval</span> <span class="Special">`ssh-agent`</span>&#x000A;    <span class="Constant">0</span><span class="Statement">&lt;&amp;-</span> <span class="Identifier">SSH_ASKPASS</span>=<span class="Statement">'</span><span class="Constant">/home/eradman/bin/ykauth</span><span class="Statement">'</span> ssh-add&#x000A;    <span class="Statement">exec</span> xinit&#x000A;<span class="Special">}</span>&#x000A;</pre>
+      <p>
+        Closing STDIN provokes <em>ssh-add</em> to use the program specified in by
+        <em>SSH_ASKPASS</em>
+      </p>
+      <h2>
+        Performance Tuning
+      </h2>
+      <p>
+        There is no documentation on improving the responsiveness of an OpenBSD
+        desktop. These are the tweaks I make. First I allow applications to consume
+        more RAM
+      </p>
+      <pre>&#x000A;<span class="Comment"># /etc/login.conf</span>&#x000A;<span class="Statement">staff</span><span class="Special">:</span><span class="Special">\</span>&#x000A;        <span class="Special">:</span><span class="Type">datasize-cur</span><span class="Statement">=</span>2048M<span class="Special">:</span><span class="Special">\</span>&#x000A;        <span class="Special">:</span><span class="Type">datasize-max</span><span class="Statement">=</span>2048M<span class="Special">:</span><span class="Special">\</span>&#x000A;        <span class="Special">:</span><span class="Type">datasize</span><span class="Statement">=</span>2048M<span class="Special">:</span><span class="Special">\</span>&#x000A;        <span class="Special">:</span><span class="Type">openfiles-cur</span><span class="Statement">=</span>1024<span class="Special">:</span><span class="Special">\</span>&#x000A;        <span class="Special">:</span><span class="Type">stacksize-cur</span><span class="Statement">=</span>16M<span class="Special">:</span><span class="Special">\</span>&#x000A;</pre>
+      <p>
+        If you know of other strategies for tuning desktop performance, please <a
+        href="mailto:ericshane@eradman.com">send me what you know</a>.
+      </p>
+      <h2>Screen Lock</h2>
+      <p>
+        Add the following to your <em>.xinitrc</em> to automatically lock the screen
+        after 5 minutes of activity
+      </p>
+      <pre>&#x000A;xidle <span class="Special">-timeout</span> <span class="Constant">300</span> <span class="Special">-program</span> <span class="Statement">&quot;</span><span class="Constant">/usr/local/bin/slock</span><span class="Statement">&quot;</span> &amp;&#x000A;</pre>
+      <p>
+        To trigger this action when the system is suspended, create
+        <em>/etc/apm/suspend</em> with an instruction to signal <em>xidle</em> to run
+        the lock program
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;pkill <span class="Special">-USR</span>1 xidle&#x000A;</pre>
+      <p>
+        Using a
+        <a href='https://github.com/eradman/openbsd-ports/tree/master/x11/slock'>
+          custom version of slock
+        </a>
+        it is possible to display a custom image. I like to construct a grayscale and
+        slightly blured image based on what's on the screen when slock was called
+      </p>
+      <pre>&#x000A;gm import <span class="Special">-screen</span> :<span class="Constant">0</span> <span class="Special">-window</span> root /tmp/import.png&#x000A;gm convert <span class="Special">-colorspace</span> Gray <span class="Special">-motion-blur</span> 0x4+<span class="Constant">180</span> /tmp/import<span class="Special">{</span>,<span class="Constant">2</span><span class="Special">}</span>.png&#x000A;<span class="Statement">exec</span> /usr/local/bin/slock <span class="Special">-i</span> /tmp/import2.png&#x000A;</pre>
+      <p>
+        <img alt='unlocked screen' src='../library/import.png'>
+      </p>
+      <p>
+        <img alt='locked screen' src='../library/import2.png'>
+      </p>
+      <h2>Switching Networks</h2>
+      <p>
+        One thing that might not be obvious on BSD is how to switch from one network
+        to another. When switching from wireless to wired for example. First, remove
+        any IP addresses and set the interface down.
+      </p>
+      <pre>&#x000A;ifconfig wpi0 -inet down&#x000A;</pre>
+      <p>
+        Removing the IP address from an interface also drops any link-local or
+        so-called "connected" routes. It may be helpful to nuke all routes.
+      </p>
+      <pre>&#x000A;route -n flush&#x000A;</pre>
+      <p>
+        <em>-n</em> prevents <em>route</em> from trying to resolve hostnames.
+      </p>
+      <p>
+        If you have set up WPA on your wireless card you can likewise remove the
+        network parameters to obtain a broadcast SSID
+      </p>
+      <pre>&#x000A; ifconfig wpi0 nwid <span class="Statement">&quot;</span><span class="Constant">Mobile Hotspot</span><span class="Statement">&quot;</span> wpa wpakey <span class="Constant">09123456789</span>&#x000A; ifconfig wpi0 <span class="Special">-nwid</span> <span class="Special">-wpa</span> <span class="Special">-wpakey</span> <span class="Comment"># use broadcast id</span>&#x000A;&#x000A;</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 28, 2017
+    </p>
+  </body>
+</html>

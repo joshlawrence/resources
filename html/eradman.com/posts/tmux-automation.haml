@@ -1,0 +1,43 @@
+%h1 TMUX Automation
+
+%p
+  The first brilliant design feature of <a
+  href="http://tmux.sourceforge.net">tmux</a> is that all of the commands
+  available using <em>C-b :</em> are also available from the command line.
+  The second great design feature is that all of these same commands can be
+  run against a session that is not even connected. The following starts a new
+  session called "harvest" (disconnected) and renames the initial window to
+  "editor":
+
+:codeblock
+  :::sh
+  tmux new-session -s harvest -d
+  tmux rename-window -t harvest "editor"
+
+%p
+  With only knowledge of a few tmux commands it is not possible to script a
+  development environment. Here we'll create a new window and start an
+  application that will automatically be reloaded if files change:
+
+:codeblock
+  :::sh
+  tmux new-window -t harvest:1 -n "server"
+  tmux send-keys -t harvest:1 "ls *.rb | entr -r ruby main.rb" C-m
+
+%p
+  Other useful operations include <em>split-window</em> and
+  <em>select-pane</em>.  After setting all of the workspaces you can
+  switch to first window and attach to session.
+
+:codeblock
+  :::sh
+  tmux select-window -t harvest:0
+  tmux -2 attach-session -t harvest
+
+%p
+  To get rid of the entire session use
+
+:codeblock
+  :::sh
+  tmux kill-session -t harvest
+

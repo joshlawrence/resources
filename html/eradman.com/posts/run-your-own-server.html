@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Run Your Own Server
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Run Your Own Server</h1>
+      <p>
+        Configuring your own box on the Internet is a lot of fun, and provides an
+        opportunity to experiment with Internet services in general.
+      </p>
+      <table>
+        <thead style='background-color: #f3f3f3;'>
+          <tr>
+            <td>Service</td>
+            <td>Cost</td>
+            <td>Provider</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Domain registration</td>
+            <td>$11/yr.</td>
+            <td><a href="http://name.com/">name.com</a></td>
+          </tr>
+          <tr>
+            <td>OpenBSD VPS hosting</td>
+            <td>$10/mo. (based on resources used)</td>
+            <td><a href="http://cloudsigma.com/">cloudsigma.com</a></td>
+          </tr>
+          <tr>
+            <td>Secondary DNS</td>
+            <td>$10/yr. (donation)</td>
+            <td><a href="http://buddyns.com/">buddyns.com</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>VPS Hosting</h2>
+      <h3>Initial Setup</h3>
+      <p>
+        Getting started with a service like <a href="http://cloudsigma.com/">cloudsigma.com</a>
+        is easy, after you select a plan and enter your data an e-mail will be sent with
+        your initial login information. First login and change your login
+        credentials.
+      </p>
+      <pre>&#x000A;ssh sshadmin@65.49.80.28&#x000A;useradd -m eradman&#x000A;vi /etc/group&#x000A;userdel sshadmin&#x000A;rm -rf /home/sshadmin&#x000A;</pre>
+      <p>
+        Out of the gate you may also want to prevent password authentication for
+        anyone not in the weel group.
+      </p>
+      <pre>&#x000A;<span class="Comment"># Require keys for regular users</span>&#x000A;<span class="Statement">Match</span> <span class="Type">Group</span> !wheel&#x000A;    <span class="Statement">PasswordAuthentication</span> <span class="Identifier">no</span>&#x000A;</pre>
+      <p>
+        Then set the hostname and timezone
+      </p>
+      <pre>&#x000A;echo &quot;vm.eradman.com&quot; &gt; /etc/myname&#x000A;ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime&#x000A;</pre>
+      <p>
+        If you ever need to repair your install your hosting provider should be able
+        to give you access via VNC. To increase your odds of recovering the system
+        enable keyboard reset in case you can't log on and need to single user mode:
+      </p>
+      <pre>&#x000A;<span class="Identifier">machdep.kbdreset</span><span class="Statement">=</span><span class="Constant">1 # permit console CTRL-ALT-DEL to do a nice halt</span>&#x000A;</pre>
+      <p>
+        If you botch an upgrade booting off of the install boot image
+        (<em>bsd.rd</em>) will also give you a fully functional environment to make
+        repairs from.
+      </p>
+      <p>
+        Now is also a good time to disable root logins
+      </p>
+      <pre>&#x000A;<span class="Comment">#/etc/sshd/sshd_config</span>&#x000A;<span class="Statement">PermitRootLogin</span> <span class="Identifier">no</span>&#x000A;</pre>
+      <h2>Services - HTTP</h2>
+      <pre>&#x000A;chown eradman:users /var/www/htdocs&#x000A;rm /var/www/htdocs/*&#x000A;</pre>
+      <h3>Nginx</h3>
+      <p>
+        If you like Nginx that's easy as well
+      </p>
+      <pre>&#x000A;http {&#x000A;    access_log   /var/www/logs/access.log main;&#x000A;    sendfileon;&#x000A;    gzip  on;&#x000A;    index index.html;&#x000A;&#x000A;    server {&#x000A;        server_name  eradman.com www.eradman.com;&#x000A;        root/var/www/htdocs/eradman.com;&#x000A;        location /posts {&#x000A;            autoindex on;&#x000A;        }&#x000A;    }&#x000A;}&#x000A;</pre>
+      <p>
+        Nginx provides an easy way to exclude some content from it's web logs which
+        saves on a lot of space an noise.
+      </p>
+      <pre>&#x000A;    server {&#x000A;        ...&#x000A;        location ~* \.(css|png|js|ico)$ {&#x000A;            access_log off;&#x000A;            expires max;&#x000A;        }&#x000A;    }&#x000A;</pre>
+      <h2>Services - DNS</h2>
+      <p>
+        Since 5.4 OpenBSD ships with NSD by default. If you were using BIND the zone
+        format is idential, you only need to enable it and add the list of zones to
+        <em>nsd.conf</em>.
+      </p>
+      <pre>&#x000A;echo 'nsd_flags=&quot;&quot;' &gt;&gt; /etc/rc.conf.local&#x000A;</pre>
+      <h3>Primary Nameserver</h3>
+      <pre>&#x000A;#/var/nsd/etc/nsd.conf&#x000A;zone:&#x000A;        name: &quot;eradman.com&quot;&#x000A;        zonefile: &quot;eradman.com&quot;&#x000A;</pre>
+      <pre>&#x000A;<span class="Comment">;/var/nsd/zones/eradman.com</span>&#x000A;<span class="PreProc">$ORIGIN </span><span class="Statement">eradman.com.</span>&#x000A;<span class="PreProc">$TTL </span><span class="Constant">6h</span>&#x000A;&#x000A;<span class="Error">@IN</span> <span class="Type">SOA</span> <span class="Identifier">vm.eradman.com.</span> <span class="Identifier">hostmaster.eradman.com.</span> (&#x000A;    <span class="Constant">2</span>     <span class="Comment">; serial</span>&#x000A;    <span class="Constant">1h</span>    <span class="Comment">; refresh</span>&#x000A;    <span class="Constant">30m</span>   <span class="Comment">; retry</span>&#x000A;    <span class="Constant">7d</span>    <span class="Comment">; expiration</span>&#x000A;    <span class="Constant">1h</span> )  <span class="Comment">; minimum</span>&#x000A;&#x000A;    <span class="Type">NS</span>      <span class="Identifier">vm.eradman.com.</span>&#x000A;    <span class="Type">A</span>       <span class="Constant">65.49.80.28</span>&#x000A;<span class="Statement">www</span>     <span class="PreProc">IN</span>  <span class="Type">CNAME</span> <span class="Identifier">eradman.com.</span>&#x000A;<span class="Statement">vm</span>      <span class="PreProc">IN</span>  <span class="Type">CNAME</span> <span class="Identifier">eradman.com.</span>&#x000A;</pre>
+      <p>
+        After restarting <em>nsd</em> verify like so
+      </p>
+      <pre>&#x000A;$ host eradman.com&#x000A;eradman.com has address 65.49.80.28&#x000A;eradman.com mail is handled by 50 mail.freeshell.org.&#x000A;</pre>
+      <h3>Secondary Nameservers</h3>
+      <p>
+        There are two rules to running your own nameserver
+      </p>
+      <ol>
+        <li>There must be at least two</li>
+        <li>They must not have the same IP address</li>
+      </ol>
+      <p>
+        This is why a secondary nameservice is required, and <a
+        href="http://buddyns.com/">buddyns.com</a> provides an excellent solution. Once
+        you create an account, update your nameserver config to <a
+        href="https://www.buddyns.com/support/setup/zone-transfer/">enable AXFR
+        transfer</a> so that they can keep the nameservers in sync.
+      </p>
+      <pre>&#x000A;#/var/nsd/etc/nsd.conf&#x000A;zone&#x000A;    # ...&#x000A;    provide-xfr: 173.244.206.26 NOKEY&#x000A;    provide-xfr: 88.198.106.11 NOKEY&#x000A;    provide-xfr: 2607:f0d0:1005:72::100 NOKEY&#x000A;    provide-xfr: 2a01:4f8:d12:d01::10:100 NOKEY&#x000A;</pre>
+      <p>
+        Next add them as secondary authority for each zone file.
+      </p>
+      <pre>&#x000A;<span class="Comment">;/var/nsd/zones/eradman.com</span>&#x000A;&#x000A;        <span class="Type">NS</span>      <span class="Identifier">b.ns.buddyns.com.</span>&#x000A;        <span class="Type">NS</span>      <span class="Identifier">d.ns.buddyns.com.</span>&#x000A;</pre>
+      <p>
+        Once this works locally, use a DNS health check such as <a
+        href="http://intodns.com/">intodns.com</a> to verify that your configuration is
+        correct.
+      </p>
+      <h2>E-mail</h2>
+      <p>
+        First write your hosting provider and ask them to add a PTR record for your
+        IP address, then add an MX record for your domain
+      </p>
+      <pre>&#x000A;<span class="PreProc">$ORIGIN </span><span class="Statement">eradman.com.</span>&#x000A;&#x000A;                <span class="Type">MX</span>      <span class="Constant">50</span> <span class="Identifier">vm.eradman.com.</span>&#x000A;<span class="Statement">selector1._domainkey</span> <span class="PreProc">IN</span> <span class="Type">TXT</span> <span class="Error">&quot;k=rsa;</span> <span class="Error">t=s;</span> <span class="Error">p=MIGf...o8P2</span>&#x000A;</pre>
+      <p>
+        Then stop sendmail and enable smtpd by following the instructions in the <a
+        href="http://man.openbsd.org/smtpd">smtpd(8)</a> man page.
+      </p>
+      <p>
+        Confirm that local relays are working by tailing <em>/var/log/maillog</em> or
+        by running smtpd in the foreground with <em>-dv</em>
+      </p>
+      <p>
+        Now proceed to create rules in <em>/etc/mail/smtpd.conf</em> for virtual
+        domains and SMTP relay
+      </p>
+      <pre>&#x000A;pki vm.eradman.com certificate &quot;/etc/ssl/vm.eradman.com.crt&quot;&#x000A;pki vm.eradman.com key &quot;/etc/ssl/private/vm.eradman.com.key&quot;&#x000A;&#x000A;listen on lo0 port <span class="Constant">25</span>&#x000A;listen on egress port <span class="Constant">25</span>&#x000A;listen on egress port <span class="Constant">465</span> smtps pki vm.eradman.com <span class="Constant">auth</span>&#x000A;&#x000A;<span class="Statement">table</span> aliases db:/etc/<span class="Constant">mail</span>/aliases.db&#x000A;accept from <span class="Type">any</span> for <span class="Constant">domain</span> &quot;eradman.com&quot; deliver to mbox&#x000A;accept for local alias <span class="Identifier">&lt;aliases&gt;</span> deliver to mbox&#x000A;</pre>
+      <p>
+        OpenSMTPD supports <a
+        href="https://www.fastmail.fm/help/technology_ssl_vs_tls_starttls.html">SSL/TLS
+        and STARTTLS</a> modes using the keyword <em>https</em> (normally port
+      </p>
+      <em>
+        465</em>), and <em>tls</em> (normally port <em>587</em>). Both of these
+        protocols are SSL connections, but the latter switches to secure mode after
+        connecting. If the client sends a username and password the connection is
+        considered <em>local</em> and passes the last rule, allowing relay. The <a
+        href="http://man.openbsd.org/smtpd.conf.5#EXAMPLES">smtpd.conf(5)</a> man page
+        suggests a means of generating your own certificate.
+      </em>
+      <p>
+        Gmail specifically demands that messages be signed with a public key that
+        matches the <em>_domainkey</em> <em>TXT</em> record for the domain. OpenSMTPD
+        allows you to route messages through <a
+        href="http://dkimproxy.sourceforge.net/">DKIMproxy</a> in order to sign each
+        e-mail:
+      </p>
+      <pre>&#x000A;listen on lo0 port <span class="Constant">10028</span> tag DKIM&#x000A;accept tagged DKIM for <span class="Type">any</span> relay&#x000A;accept from local for <span class="Type">any</span> relay via <span class="Constant">smtp</span>:/<span class="Constant">/127</span>.0.0.1:10027&#x000A;</pre>
+      <p>
+        A competing or complementary technology for validating sender identity is
+        SPF. This is much easer to configure it's simply a record that is used to
+        specify which hosts are permitted to relay mail for a given domain. <a
+        href="http://spfwizard.com/">easySPF</a> is one of several handy tools for
+        generating these records. The final nameserver entries for DKIM and SPF have
+        this form
+      </p>
+      <pre>&#x000A;<span class="Statement">selector1._domainkey</span> <span class="PreProc">IN</span> <span class="Type">TXT</span> <span class="Error">&quot;k=rsa;</span> <span class="Error">t=s;</span> <span class="Error">p=MIGf...o8P2</span>&#x000A;                     <span class="PreProc">IN</span> <span class="Type">TXT</span> <span class="Constant">&quot;v=spf1 mx a ptr ip4:65.49.80.28 ~all&quot;</span>&#x000A;</pre>
+      <p>
+        I also recommend fighting off spam by following the instructions at <a
+        href="http://bgp-spamd.net/">bgp-spamd.net</a> to set up greylisting using BGP
+        to distribute OpenBSD spamd lists.
+      </p>
+      <p>
+        There are two services that were brought to my attention that can verify the
+        SPF and DKIM signatures of a mail server. Simply send a message to <a
+        href="mailto:check-auth@verifier.port25.com">check-auth@verifier.port25.com</a>
+        and a report will be mailed back.
+        <a href="http://mxtoolbox.com/diagnostic.aspx">mxtoolbox</a> also provides a
+        web-based diagnostic tool.
+      </p>
+      <p>
+        Other systems that are permitted to relay mail can simply add a <em>relay
+        via</em> rule to their smtpd configuration
+      </p>
+      <pre>&#x000A;accept for <span class="Type">any</span> relay via &quot;<span class="Constant">smtp</span>://vm.eradman.com&quot;&#x000A;</pre>
+      <h2>Mail Retrieval over SSL</h2>
+      <p>
+        By far the easiest way to configure pop3 access is using <a
+        href="https://github.com/snimmagadda/pop3d">pop3d</a>, soon to be available from
+        ports under <em>mail/pop3d</em>. It's a zero-configuration daemon, I only block
+        the plain text port:
+      </p>
+      <pre>&#x000A;<span class="Statement">block </span>in on ! lo0 proto tcp to port <span class="Constant">pop3</span>&#x000A;</pre>
+      <h2>Backups</h2>
+      <p>
+        Now that everything is in working order set up a small script to make a copy
+        of each file system.
+      </p>
+      <pre>&#x000A;<span class="Comment">#/bin/sh</span>&#x000A;&#x000A;<span class="Identifier">host</span>=eradman@backups.eradman.com&#x000A;df <span class="Special">-h</span>&#x000A;/sbin/dump <span class="Special">-0af</span> - /home | ssh <span class="PreProc">$host</span> <span class="Statement">&quot;</span><span class="Constant">cat &gt; /vm/eradman.com/home.dump</span><span class="Statement">&quot;</span>&#x000A;/sbin/dump <span class="Special">-0af</span> - /var  | ssh <span class="PreProc">$host</span> <span class="Statement">&quot;</span><span class="Constant">cat &gt; /vm/eradman.com/var.dump</span><span class="Statement">&quot;</span>&#x000A;/sbin/dump <span class="Special">-0af</span> - /     | ssh <span class="PreProc">$host</span> <span class="Statement">&quot;</span><span class="Constant">cat &gt; /vm/eradman.com/root.dump</span><span class="Statement">&quot;</span>&#x000A;</pre>
+      <p>
+        See also <a href="http://www.faqs.org/docs/securing/back-dump.html">Why's and
+        When's of Backup and Restore</a> by Gerhard Mourani for more information about
+        backup levels and rotation.
+      </p>
+      <h2>Preventing an Attack</h2>
+      <p>
+        If you allow Windows clients to authenticate against your server then it is
+        also prudent to block activity that indicates that the PC has been hijacked. The
+        following will add a client to a blacklist if there are more than 2 concurrent
+        connections to port 465, or there are more than 8 connections made over a
+        30-second window:
+      </p>
+      <pre>&#x000A;<span class="Statement">table</span> <span class="Identifier">&lt;attacker&gt;</span> persist&#x000A;<span class="Statement">block </span>quick from <span class="Identifier">&lt;attacker&gt;</span>&#x000A;<span class="Statement">pass</span> inet proto tcp to egress:network port smtps keep state <span class="Statement">\</span>&#x000A;      (max-src-conn <span class="Constant">2</span>, max-src-conn-rate <span class="Constant">8</span><span class="Constant">/30</span>, overload <span class="Identifier">&lt;attacker&gt;</span>)&#x000A;</pre>
+      <p>
+        A daily cron job to list such connections is as easy as
+      </p>
+      <pre>&#x000A;00      1       *       *       *       /sbin/pfctl -t attacker -T show&#x000A;</pre>
+      <p>
+        Or a PF table can be given an expiration date for it's entries. Here we block
+        all such hosts for 3 days:
+      </p>
+      <pre>&#x000A;/sbin/pfctl -t attacker -T expire 259200&#x000A;</pre>
+      <p>
+        See Peter Hansteen's <a
+        href="http://home.nuug.no/~peter/pf/en/bruteforce.html">PF tutorial</a> provides
+        for a more complete  explanation of these tactics.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

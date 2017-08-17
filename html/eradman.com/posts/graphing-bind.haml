@@ -1,0 +1,161 @@
+%h1 Graphing Nameserver Statistics
+
+%p
+  Sometimes trends are more informative than snapshots. BIND can append
+  statistics to <em>/var/named/named.stats</em>, for example:
+
+:codeblock
+  +++ Statistics Dump +++ (1232034903)
+  success 510007943
+  referral 9162844
+  nxrrset 57241342
+  nxdomain 272525211
+  recursion 348209144
+  failure 58016681
+  /--- Statistics Dump --- (1232034903)
+
+%p
+  The number in parentheses is a timespamp, and can be translated by using
+  <em>date(1)</em>:
+
+:codeblock
+  $ date -r 1232034903
+  Thu Jan 15 10:55:03 EST 2009
+
+%p
+  By storing the results of these statistics in a round-robin database a graph
+  can be created to help identify transitory conditions or trends.
+
+%p.center
+  <img src="../library/graphing-bind/dns-day.png" width="579" height="419" alt="BIND statistics for the past 24 hours" />
+
+%h2
+  Step 1: Create an RRD file (<em>create_rrd.sh</em>)
+
+:codeblock
+  :::sh
+  #!/bin/sh
+
+  /usr/local/bin/rrdtool create ~/templates/dns.rrd \
+      --step 300 \
+      DS:success:COUNTER:600:0:1000000 \
+      DS:referral:COUNTER:600:0:1000000 \
+      DS:nxrrset:COUNTER:600:0:100000 \
+      DS:nxdomain:COUNTER:600:0:100000 \
+      DS:recursion:COUNTER:600:0:1000000 \
+      DS:failure:COUNTER:600:0:10000 \
+      RRA:AVERAGE:0.5:1:800 \
+      RRA:AVERAGE:0.5:6:800 \
+      RRA:AVERAGE:0.5:24:800 \
+      RRA:AVERAGE:0.5:288:800 \
+      RRA:MAX:0.5:1:800 \
+      RRA:MAX:0.5:6:800 \
+      RRA:MAX:0.5:24:800 \
+      RRA:MAX:0.5:288:800
+
+%p
+  You can then copy this blank RRD database to the directory where it will be used.
+
+%h2 Step 2: Use a script to gather stats and update the RRD file (<em>dns.sh</em>)
+
+:codeblock
+  :::sh
+  #!/bin/sh
+
+  sudo /bin/cp /dev/null /var/named/named.stats
+  sudo /usr/sbin/rndc stats
+
+  output=`grep -v Statistics /var/named/named.stats | awk '
+          {out=out c $2; c=":"}
+          END {print out}
+          '`
+  /usr/local/bin/rrdtool update \
+      ~/logs/dns.rrd \
+      --template \
+      success:referral:nxrrset:nxdomain:recursion:failure \
+      N:$output
+
+
+%h2
+  Step 3: Edit the <em>sudoers</em> file to allow these updates from this user:
+
+:codeblock
+  :::sudoers
+  Cmnd_Alias STATS = /usr/sbin/rndc stats, \
+                     /bin/cp /dev/null /var/named/named.stats
+  rrd  ALL = NOPASSWD: STATS
+
+%h2
+  Step 4: Create a script to gather all data (<em>poll.sh</em>)
+
+%pre
+
+  <span class="Comment">#!/bin/sh
+
+  scripts/localhost/load_avg.sh
+  scripts/localhost/procs.sh
+  scripts/localhost/dns.sh
+  scripts/localhost/disk.s
+
+%h2
+  Step 5: Schedule updates
+
+:codeblock
+  $ crontab -l
+  #minute hour    mday    month   wday    command
+  */5     *       *       *       *       poll.sh
+
+%h2
+  Step 6: Generate graphs (<a href="http://haroon.sis.utoronto.ca/rrd/scripts/">rrd.cgi</a>)
+
+:codeblock
+  Title[load_avg]: Load Average
+  PageTop[load_avg]: <H1>Load Average</H1>
+  Directory[load_avg]: localhost_stats
+  PercentileValue[load_avg]: 95
+  PercentileSources[load_avg]: 0+1+2
+  Graph[load_avg]:
+      -v &quot;Average Load&quot;
+      --rigid
+      -l 0
+      DEF:a=load_avg.rrd:1min:AVERAGE
+      DEF:b=load_avg.rrd:5min:AVERAGE
+      DEF:c=load_avg.rrd:15min:AVERAGE
+      CDEF:cdefd=a,b,c,+,+
+      CDEF:flag=cdefd,%PERCENTILE0%,GT,1,0,IF
+      CDEF:cdefabelow=1,flag,EQ,0,a,IF
+      CDEF:cdefbbelow=1,flag,EQ,0,b,IF
+      CDEF:cdefcbelow=1,flag,EQ,0,c,IF
+      CDEF:cdefaabove=flag,a,*
+      CDEF:cdefbabove=flag,b,*
+      CDEF:cdefcabove=flag,c,*
+      AREA:cdefcbelow#990000:&quot;15 Minute&quot;
+      GPRINT:c:LAST:&quot;Cur\:%8.2lf %s&quot;
+      GPRINT:c:AVERAGE:&quot;Ave\:%8.2lf %s&quot;
+      GPRINT:c:MAX:&quot;MAX\:%8.2lf %s\n&quot;
+      STACK:cdefbbelow#cc0000:&quot;5 Minute&quot;
+      GPRINT:b:LAST:&quot; Cur\:%8.2lf %s&quot;
+      GPRINT:b:AVERAGE:&quot;Ave\:%8.2lf %s&quot;
+      GPRINT:b:MAX:&quot;MAX\:%8.2lf %s\n&quot;
+      STACK:cdefabelow#ff0000:&quot;1 Minute&quot;
+      GPRINT:a:LAST:&quot; Cur\:%8.2lf %s&quot;
+      GPRINT:a:AVERAGE:&quot;Ave\:%8.2lf %s&quot;
+      GPRINT:a:MAX:&quot;MAX\:%8.2lf %s\n&quot;
+      LINE1:cdefd#000001:Total
+      HRULE:%PERCENTILE0%#7c03f1:&quot;%PERCENTILEVALUE%%ile threshold value %PERCENTILE0%\n&quot;
+      AREA:cdefcabove#000066:&quot;15 Minute (above %PERCENTILEVALUE%%ile)&quot;
+      STACK:cdefbabove#000099:&quot;5 Minute (above %PERCENTILEVALUE%%ile)&quot;
+      STACK:cdefaabove#0000ff:&quot;1 Minute (above %PERCENTILEVALUE%%ile)\n&quot;
+
+%h2 Other Examples
+
+%p
+  Disk Usage
+%p.center
+  <img src="../library/graphing-bind/disk_usage-day.png" width="579" height="201" />
+
+%p
+  Load Average
+%p.center
+  <img src="../library/graphing-bind/load_avg-day.png" width="579" height="210" />
+

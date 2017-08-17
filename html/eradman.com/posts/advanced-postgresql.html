@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Advanced Features in PostgreSQL
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Advanced Features in PostgreSQL</h1>
+      <h2>Establishing Global IDs</h2>
+      <p>
+        Sometimes multiple generations of a particular application warrant separate
+        databases, but there may still be requirement that some counters be site-local,
+        or even global. Sequence counters have a table-like representation, but they're
+        not tables, so creating a remote table using foreign data wrappers won't work.
+        Instead we can establish a mapping to a remote server by enabling
+        <em>dblink</em>
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> EXTENSION dblink;&#x000A;<span class="Statement">CREATE</span> SERVER main_app_server&#x000A;  FOREIGN DATA WRAPPER dblink_fdw&#x000A;  OPTIONS (host <span class="Constant">'db1.domain.com'</span>, dbname <span class="Constant">'app1'</span>);&#x000A;<span class="Statement">CREATE</span> <span class="Identifier">USER</span> MAPPING <span class="Special">FOR</span> user2&#x000A;  SERVER main_app_server&#x000A;  OPTIONS (<span class="Identifier">user</span> <span class="Constant">'user1'</span>, password <span class="Constant">'123456'</span>);&#x000A;</pre>
+      <p>
+        Now grant permission to the user on the second database
+      </p>
+      <pre>&#x000A;<span class="Statement">GRANT</span> USAGE <span class="Special">ON</span> FOREIGN SERVER main_app_server <span class="Special">TO</span> user2;&#x000A;<span class="Statement">GRANT</span> SELECT <span class="Special">ON</span> <span class="Special">TABLE</span> task_id_seq <span class="Special">TO</span> user2;&#x000A;</pre>
+      <p>
+        Now we'll write a function that makes the connection, and returns a
+        result
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Statement">OR</span> <span class="Identifier">REPLACE</span> <span class="Special">FUNCTION</span> next_user1_id(regclass) RETURNS <span class="Type">integer</span>&#x000A;<span class="Special">AS</span> $$&#x000A;DECLARE&#x000A;    new_id <span class="Type">integer</span>;&#x000A;<span class="Special">BEGIN</span>&#x000A;    PERFORM dblink_connect(<span class="Constant">'seq_conn'</span>, <span class="Constant">'main_app_server'</span>);&#x000A;    <span class="Statement">SELECT</span> <span class="Special">INTO</span> new_id&#x000A;        netxtval <span class="Special">FROM</span> dblink(<span class="Constant">'seq_conn'</span>, E<span class="Constant">'select nextval(\''</span> || $<span class="Constant">1</span> || E<span class="Constant">'\')'</span>)&#x000A;            <span class="Special">AS</span> t(netxtval regclass);&#x000A;    PERFORM dblink_disconnect(<span class="Constant">'seq_conn'</span>);&#x000A;    <span class="Special">RETURN</span> new_id;&#x000A;<span class="Special">END</span>;&#x000A;$$ LANGUAGE plpgsql;&#x000A;</pre>
+      <p>
+        Finally switch to new sequence generator
+      </p>
+      <pre>&#x000A;<span class="Statement">ALTER</span> <span class="Special">TABLE</span> task <span class="Statement">ALTER</span> <span class="Special">COLUMN</span> id <span class="Statement">SET</span> <span class="Special">DEFAULT</span> next_user1_id(<span class="Constant">'task_id_seq'</span>);&#x000A;</pre>
+      <p>
+        Only a superuser can use dblink with <em>trust</em> authentication, so change
+        TCP connections to <em>password</em> for <em>localhost</em> in
+        <em>pg_hba.conf</em>
+      </p>
+      <pre>&#x000A;local   all             all                                     trust&#x000A;host    all             all             127.0.0.1/32            password&#x000A;host    all             all             ::1/128                 password&#x000A;</pre>
+      <h2>
+        Using PL/Python to Build Custom Selectors
+      </h2>
+      <p>
+        A number of presentations have pointed out the exciting possiblities of using
+        V8
+        to parse text stored as JSON in PostgreSQL, but it's worth noting that the other
+        supported languages can do this just as easily, including <a
+        href="http://www.postgresql.org/docs/current/static/plpython.html">PL/Python</a>.
+      </p>
+      <p>
+        First create the language extension, and enable access to it
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> EXTENSION plpythonu;&#x000A;<span class="Statement">UPDATE</span> pg_language <span class="Statement">SET</span> lanpltrusted = <span class="Special">true</span> <span class="Special">WHERE</span> lanname = <span class="Constant">'plpythonu'</span>;&#x000A;<span class="Statement">GRANT</span> USAGE <span class="Special">ON</span> LANGUAGE plpython2u <span class="Special">TO</span> <span class="Identifier">user</span>;&#x000A;</pre>
+      <p>
+        Next define a function that takes a field and returns a string representation
+        of that member.
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Statement">OR</span> <span class="Identifier">REPLACE</span> <span class="Special">FUNCTION</span> jsel(json_text json, key text)&#x000A;  RETURNS json&#x000A;  LANGUAGE plpythonu&#x000A;  IMMUTABLE&#x000A;<span class="Special">AS</span> $$&#x000A;<span class="Special">if</span> json_text == None <span class="Statement">or</span> key == None:&#x000A;    <span class="Special">return</span>&#x000A;import json&#x000A;j = json.loads(json_text)&#x000A;tup = key.split(<span class="Constant">&quot;.&quot;</span>)&#x000A;<span class="Special">for</span> k <span class="Statement">in</span> tup:&#x000A;    <span class="Special">if</span> <span class="Statement">not</span> j.has_key(k):&#x000A;        <span class="Special">return</span> None&#x000A;    j = j[k]&#x000A;<span class="Special">return</span> j&#x000A;$$;&#x000A;</pre>
+      <p>
+        This function assumes that the data sorted is either null or a hash. In
+        Postgres the <em>json</em> type is just text with validation to ensure that it's
+        JSON. The same is true for the <em>xml</em> type. This selector function may be
+        as simple or as versatile as you'd like. Use it thusly
+      </p>
+      <pre>&#x000A;<span class="Comment">-- '{&quot;qos&quot;: &quot;high&quot;, ...}</span>&#x000A;<span class="Statement">SELECT</span> jsel(options, <span class="Constant">'qos'</span>) <span class="Special">AS</span> qos <span class="Special">FROM</span> job;&#x000A;</pre>
+      <pre>&#x000A;<span class="Comment">-- '{&quot;address&quot;: {&quot;link&quot;: {&quot;href&quot;: &quot;&quot;, ...} ...}, ...}'</span>&#x000A;<span class="Statement">SELECT</span> jsel(contact, <span class="Constant">'address.link.href'</span>) <span class="Special">AS</span> contact_hef <span class="Special">FROM</span> job;&#x000A;</pre>
+      <p>
+        Since Postgres can create indexes using user defined functions it is also
+        capable of fast indexing of custom data types that it has no inherent knowledge
+        of!
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">INDEX</span> qos_in_json <span class="Special">ON</span> job (jsel(options, <span class="Constant">'qos'</span>));&#x000A;</pre>
+      <p>
+        Starting with 9.3, Postgres includes a number of functions and operators
+        specifically for handling JSON fields
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> contact-&gt;<span class="Constant">'address'</span>-&gt;<span class="Constant">'link'</span>-&gt;&gt;<span class="Constant">'href'</span> <span class="Special">FROM</span> job;&#x000A;</pre>
+      <p>
+        or
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> contact#&gt;&gt;<span class="Constant">'{address,link,href}'</span> <span class="Special">FROM</span> job;&#x000A;</pre>
+      <h2>Interpolation</h2>
+      <p>
+        <a
+        href="https://www.postgresql.org/docs/9.6/static/app-psql.html#APP-PSQL-INTERPOLATION">Variable
+        interpolation</a> is a feature of the `psql` client, and can be used to define
+        aliases for a command to be run or for arbitrary values.  One common use is to
+        update a column with a chunk of data
+      </p>
+      <pre>&#x000A;\<span class="Statement">set</span> content `cat /tmp/1k.json.new`&#x000A;<span class="Statement">UPDATE</span> anton_wiringplan <span class="Statement">SET</span> wiring_plan=:<span class="Constant">'content'</span>&#x000A;<span class="Special">WHERE</span> size_x=<span class="Constant">8</span> <span class="Statement">and</span> size_y=<span class="Constant">8</span> <span class="Statement">and</span> size_z=<span class="Constant">16</span>;&#x000A;</pre>
+      <p>
+        The command is executed on the client where local files and utilities are
+        available.
+      </p>
+      <h2>Simple Triggers</h2>
+      <p>
+        I put the word "advanced" in the title of this page, but a simple use of
+        triggers can add information that enables applications to work together. This
+        trigger keeps a column updated with a timestamp (PG keeps everything in UTC)
+        any time a record is changed.
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Statement">OR</span> <span class="Identifier">REPLACE</span> <span class="Special">FUNCTION</span> update_mtime_column()&#x000A;RETURNS <span class="Special">TRIGGER</span> <span class="Special">AS</span> $$&#x000A;<span class="Special">BEGIN</span>&#x000A;   NEW.mtime = now();&#x000A;   <span class="Special">RETURN</span> NEW;&#x000A;<span class="Special">END</span>;&#x000A;$$ language <span class="Constant">'plpgsql'</span>;&#x000A;&#x000A;<span class="Statement">CREATE</span> <span class="Special">TRIGGER</span> update_mtime_column BEFORE <span class="Statement">UPDATE</span>&#x000A;<span class="Special">ON</span> pending_tasks&#x000A;<span class="Special">FOR</span> EACH <span class="Special">ROW</span> <span class="Statement">EXECUTE</span> <span class="Special">PROCEDURE</span> update_mtime_column();&#x000A;</pre>
+      <p>
+        Triggers are also an excellent way to maintain a series of records that
+        maintain a duration.
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Statement">OR</span> <span class="Identifier">REPLACE</span> <span class="Special">FUNCTION</span> update_prev_task_history()&#x000A;RETURNS <span class="Special">TRIGGER</span> <span class="Special">AS</span> $$&#x000A;<span class="Special">BEGIN</span>&#x000A;   <span class="Statement">UPDATE</span> anton_task_history <span class="Statement">SET</span> etime = NEW.ctime&#x000A;   <span class="Special">WHERE</span> etime <span class="Special">IS</span> <span class="Special">NULL</span> <span class="Statement">AND</span> category_id=NEW.category_id;&#x000A;   <span class="Special">RETURN</span> NEW;&#x000A;<span class="Special">END</span>;&#x000A;$$ language <span class="Constant">'plpgsql'</span>;&#x000A;&#x000A;<span class="Statement">CREATE</span> <span class="Special">TRIGGER</span> update_prev_task_history BEFORE <span class="Statement">INSERT</span>&#x000A;<span class="Special">ON</span> task_history&#x000A;<span class="Special">FOR</span> EACH <span class="Special">ROW</span> <span class="Statement">EXECUTE</span> <span class="Special">PROCEDURE</span> update_prev_task_history();&#x000A;</pre>
+      <p>
+        Without such automated maintenance queries become difficult (join on self and
+        compare id or timestamps with <em>&lt;</em> or <em>&gt</em>).
+      </p>
+      <!-- -- To use the built-in contrib version of hstore -->
+      <!-- SELECT hstore('')::json; -->
+      <!-- CREATE EXTENSION hstore SCHEMA public FROM unpackaged; -->
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

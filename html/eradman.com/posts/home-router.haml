@@ -1,0 +1,300 @@
+%h1 A Home Router with UPnP and Authpf
+
+%p
+  Never has the quality of tools for building Internet infrastructure been
+  richer, and yet it is exceedingly rare to configure your own home network.
+  Even if you maintain a business networking there is always something new to
+  learn when managing Internet access from home.
+
+%h2 Initial Router Configuration
+
+%p
+  Your service provider most likely uses DHCP to hand out addresses. If you have
+  used another router you can keep the same IP by setting <em>lladdr</em>
+
+:codeblock
+  # /etc/hostname.em0
+  dhcp NONE NONE NONE lladdr 4C:E6:76:AB:E8:26
+
+%p
+  For the inside address I use a virtual interface so that I can use a bridge to
+  connect several interfaces together on the same subnet
+
+:codeblock
+  # /etc/hostname.vether0
+  inet 192.168.0.4/24
+  inet6 2001:470:a020::1/48
+
+%p
+  Creating a bridge that includes this interface is as easy as adding the
+  participating interfaces
+
+:codeblock
+   #/etc/hostname.bridge0
+   up
+   add vether0
+   add axe0
+
+%p
+  Now enable routing
+
+:codeblock
+  :::sysctl
+  net.inet.ip.forwarding=1
+  net.inet6.ip6.forwarding=1
+
+%p
+  All of these changes can be applied simply by running <a
+  href="http://man.openbsd.org/rc">rc(8)</a>
+
+:codeblock
+  $ doas sh /etc/rc
+
+%h2 Firewall Config
+
+%p
+  Start out with a basic PF config that enables port-address translation
+
+:codeblock
+  :::pf
+  # macros
+
+  # tables
+
+  # options
+  set skip on lo
+  set block-policy return
+
+  # nat
+  match out on egress from 192.168.0.0/24 nat-to (egress)
+  pass
+
+%h2 Tuning
+
+%p
+  There is only one tuning parameter I change is to increase the IP buffer size
+  from 300 to 4000. This smooths out high packet-count traffic such a video call
+  from impairing other services.
+
+:codeblock
+  :::sysctl
+  net.inet.ip.maxqueue=4000
+
+
+%h2 UPnP Functionality
+
+%p
+  Video calls (such as Facetime) that use a peer-to-peer media channel require
+  some method of permitting inbound forwarding on arbitrary ports. To accomplish
+  this we need a daemon such as <a
+  href="http://miniupnp.tuxfamily.org/">MiniUPnP</a>. Devices will request
+  open ports using <a
+  href="https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol">SSDP</a>.
+
+%p
+  The basic config is as follows:
+
+:codeblock
+  # /etc/miniupnpd.conf
+  allow 1024-65535 192.168.0.0/24 1024-65535
+  deny 0-65535 0.0.0.0/0 0-65535
+
+%p
+  Activate changes to PF by adding a pointer to the rules
+
+:codeblock
+  :::pf
+  anchor "miniupnpd"
+
+%p
+  Now when a video call is place we should be able to see the new dynamic rules
+
+:codeblock
+  # pfctl -a 'miniupnpd/*' -s rules
+  pass in log quick on em0 inet proto udp from any to any port = 29999 \
+        label "NAT-PMP 29999 udp" rdr-to 192.168.0.88 port 29999
+  pass in log quick on em0 inet proto tcp from any to any port = 29999 \
+        flags any label "NAT-PMP 29999 tcp" rdr-to 192.168.0.88 port 29999
+
+%h2 Authpf
+
+%p
+  <a href="http://www.openbsd.org/faq/pf/authpf.html">Authpf</a> is a method of
+  activating a set of rules based on who has successfully authenticated via SSH.
+  It is activated by setting a user's shell to <em>/usr/sbin/authpf</em>. Any
+  number of users may have their own configurations. The basic configuration
+  files for a user named <em>www-access</em> are:
+
+:codeblock
+  /etc/authpf/authpf.conf
+  /etc/authpf/authpf/users/www-access/authpf.message
+  /etc/authpf/authpf/users/www-access/authpf.rules
+
+%p
+  For per-user configuration, <em>authpf.conf</em> may be empty, but must be
+  present. The other two simply contain a signin message
+
+:codeblock
+  Access enabled for all blocked devices
+
+%p
+  and the PF rules to apply
+
+:codeblock
+  :::pf
+  pass in quick on !lo inet proto tcp from any to any port 80
+  pass in quick on !lo inet proto tcp from any to any port 443
+
+%p
+  After connecting via SSH the new rules will be attached
+
+:codeblock
+  # pfctl -a 'authpf/*' -s rules
+  anchor "www-proxy(25253)" all {
+    pass in quick on ! lo inet proto tcp from any to any port = 80 flags S/SA
+    pass in quick on ! lo inet proto tcp from any to any port = 443 flags S/SA
+  }
+
+
+%h2 Content Filtering
+
+%p
+  I want my children and anyone else using guest Wifi at my home to have access
+  to the Internet from their mobile devices, but not necessarily everything on
+  the web. Blocking ports 80 and 443 is too broad since many applications speak
+  over those ports.  OpenBSD's <em>relayd</em> provides an excellent mechanism
+  for implementing transparent HTTP filtering.
+
+%p
+  It is easy enough to filter by URL, but this is never what I want--I am
+  interested in particular content. Here are the HTTP headers for the video
+  player for PBS KIDS:
+
+:codeblock
+  $ curl  -s -D - http://www-tc.pbskids.org/pbsk/video/lib/assets/swf/video-js.swf
+  Content-Type: application/x-shockwave-flash
+  Content-Length: 16743
+  Connection: keep-alive
+  Date: Wed, 30 Dec 2015 13:38:06 GMT
+  Server: Apache
+  Last-Modified: Wed, 09 Dec 2015 23:07:30 GMT
+  Accept-Ranges: bytes
+  Access-Control-Allow-Origin: *
+  Cache-Control: max-age=3600
+  Expires: Wed, 30 Dec 2015 14:38:06 GMT
+  X-PBS-appsvrname: kids-fwcacheproxy10
+  X-PBS-appsvrip: 10.100.10.21
+  Via: www-cache.pbskids.org (t=1451482686108763), 1.1 0a9f4502819b08c3a7919c963887be2b.cloudfront.net (CloudFront)
+  Cache-Control: s-maxage=3600
+  Age: 40974
+  X-Cache: Hit from cloudfront
+  X-Amz-Cf-Id: 2gi8kI02gYSn-AW4a1tyiAj2LWD8geZb5yC9rfFZfDeV4tbGKoFXpQ==
+
+%p
+  For most web browsers blocking anything with a <em>Content-Type</em> of
+  <em>application/x-shockwave-flash</em> will suffice, but the iPad app doesn't
+  use Flash. Instead I added a rule to match anything with a header named
+  <em>X-PBS-appsvrname</em>. Here are the basic rules
+
+
+:codeblock
+  :::pf
+  # /etc/relayd.conf
+  http protocol httpfilter {
+    return error style 'body { background: #f3f3f3; color: #606060; }'
+    pass
+
+    match label "Content blocked"
+    block response quick header "Content-Type" value "application/x-shockwave-flash"
+    block response quick header "Content-Type" value "video/x-flv"
+    block response quick header "X-PBS-appsvrname" value "*"
+  }
+
+  relay plaininspect {
+        listen on 127.0.0.1 port 8080
+        protocol httpfilter
+        forward to destination
+  }
+
+%p
+  If we are willing to put up with certificate warnings on the clients we can
+  also filter TLS (<em>https://</em>). The rules are almost identical to the
+  filter for <em>http://</em>
+
+:codeblock
+  :::pf
+  http protocol httpsfilter {
+    return error style 'body { background: #f3f3f3; color: #606060; }'
+    pass
+
+    match label "Content blocked"
+    block response quick header "Content-Type" value "video/quicktime"
+
+    # Configuration directives for SSL/TLS Interception
+    tls ca key "/etc/ssl/private/ca.key" password "secret"
+    tls ca cert "/etc/ssl/ca.crt"
+    tls { sslv3, tlsv1 }
+  }
+
+  relay tlsinspect {
+    listen on 127.0.0.1 port 8443 tls
+    protocol httpsfilter
+    forward with tls to destination
+  }
+
+/https://github.com/reyk/relayd/blob/master/etc/relayd.conf
+
+%p
+  <em>relayd</em> needs two certificates: one to be used as a fake client
+  (enter the passphrase "secret), and the other without a password for the
+  server side
+
+:codeblock
+  # openssl req -x509 -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/relayd/ca.key -out /etc/ssl/relayd/ca.crt
+
+  # openssl req -nodes -x509 -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/private/127.0.0.1.key -out /etc/ssl/127.0.0.1.crt
+
+%p
+  Finally we redirect hosts not on a given whitelist using PF
+
+:codeblock
+  :::pf
+  table <permitted> { 192.168.0.2, 192.168.0.4 }
+  pass in on !egress inet proto tcp from any to port 443 divert-to localhost port 8443
+  pass in on !egress inet proto tcp from any to port 80 divert-to localhost port 8080
+  pass in on !lo inet proto tcp from <permitted> to any port {80, 443}
+
+%p
+  Now rather than being subjected to the Internet as if we it were cable TV, we
+  tell the Internet what it can do for us.
+
+%h3 Exemptions
+%p
+  The difficult part to this arragement is that many applications on mobile
+  devices communicate over the standard port for <em>https</em>. Selectively
+  allowing services to run will often require a support ticket to find out
+  exactally what kind of rule to add
+
+:codeblock
+  :::pf
+  # Zello uses 443 and 28225
+  pass in on !lo inet proto tcp from any to karabas.loudtalks.com port 443
+
+%p
+  Another approach is to allow certain services (such as automatic updates) to
+  run during a window of time. Here is a crontab that allows all web traffic
+  from 4:00 to 8:00 in the morning
+
+:codeblock
+  :::crontab
+  00      4       *       *       *       pfctl -a http -f /etc/anchor.http_allow
+  00      8       *       *       *       pfctl -a http -F rules
+
+:codeblock
+  :::pf
+  #/etc/anchor.http_allow
+  pass in proto tcp from 192.168.0.0/24 to any port { 80 443 }
+
+

@@ -1,0 +1,492 @@
+%h1 BSD: Networking Included
+
+%p
+  These are some every-day techniques that I use to get stuff done.
+
+%h2 XTerm is Useful
+
+%p
+  My first recommendation is to use a fast terminal with a bitmap font. The
+  reason I say bitmap is because it will keep up with the display of a live
+  capture.
+
+  <p class="center"><img src="../library/networking-included/xterm.png" width="509"
+  height="326" alt="XTerm screen shot" />
+
+%h2
+  BSD Kernels track Duplicate IPs
+
+%p
+  The BSD kernels keep track of MAC-IP resolutions, and will log any changes.
+  It's a good habit to check this after plugging your own laptop into a network.
+  More than once I have plugged my Thinkpad into a network and broken some
+  service because their DHCP server gave me an address that was already used.
+
+:codeblock
+  $ dmesg
+  ...
+  duplicate IP address 31.6.2.3 sent from ethernet address 00:13:72:a7:ff:14
+  duplicate IP address 31.6.2.3 sent from ethernet address 00:13:72:a7:ff:14
+  duplicate IP address 31.6.2.11 sent from ethernet address 00:13:72:a7:f9:04
+  duplicate IP address 31.6.2.11 sent from ethernet address 00:13:72:a7:f9:04
+
+%ul
+  %li Always check after guessing at an IP
+  %li Always check this after an IT guy has assigned you one
+  %li Don't trust DHCP assignments
+  %li IPv6 should not suffer from duplicates often, but IT people will make it happen
+
+%h2 Run Daemons as Foreground Processes
+
+%p
+  Most BSD network daemon can be run in the foreground, which not only gives
+  you the ability to easily test a service again, but you may notice oddities
+  immediately. Below is an example of a site that was configured with two
+  competing DHCP servers.
+
+:codeblock
+  $ sudo dhclient -d fxp0
+  DHCPREQUEST on fxp0 to 255.255.255.255 port 67
+  DHCPNAK from 31.6.1.4
+  DHCPDISCOVER on fxp0 to 255.255.255.255 port 67 interval 7
+  DHCPOFFER from 31.6.1.4
+  DHCPOFFER from 31.6.1.3
+  DHCPREQUEST on fxp0 to 255.255.255.255 port 67
+  DHCPACK from 31.6.1.4
+  bound to 31.6.2.11 -- renewal in 345600 seconds.
+
+%h2 Resolve Common Ports
+
+%p
+  <em>services</em> is a handy reference for common protocols.
+
+:codeblock
+  $ grep 138 /etc/services
+  netbios-dgm     138/tcp                         # NETBIOS Datagram Service
+  netbios-dgm     138/udp
+
+%p
+  I also sometimes document an assignment by defining in
+%em
+  /etc/services</em>, so that I know what port is used, especially on
+  proprietary systems.
+
+:codeblock
+  coral     11001/tcp  # Coral PBX management with CUGW
+
+%h2 Quickly Find Proxy-Arp
+
+%p
+  This is insane; sometimes home-office routers are installed that have
+  proxy-ARP enabled by default!(Linksys VPN routers come to mind.) A quick look
+  at the ARP table will show this.
+
+:codeblock
+  $ arp -a
+  ? (192.168.1.36) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.1.43) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.1.46) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.1.49) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.1.51) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.1.56) at 00:0c:6e:41:e1:56 on xl2
+  ? (192.168.6.38) at 00:50:ba:58:9e:64 on xl1
+  ? (192.168.6.13) at 00:11:09:c5:cb:8b on xl1
+  ? (192.168.6.17) at 00:13:72:d3:da:94 on xl1
+  ? (192.168.6.18) at 00:0a:6b:00:a5:8b on xl1
+
+%h2 Is Someone Else using an IP?
+
+%p
+  Again, never trust IP assignments, and if I need to assign an IP it's wise
+  to make sure no network card is responding to it.
+
+:codeblock
+  $ ping -c 1 -n 72.20.216.78
+  PING 72.20.216.78 (72.20.216.78): 56 data bytes
+
+  /--- 72.20.216.78 ping statistics ---
+  1 packets transmitted, 0 packets received, 100.0% packet loss
+
+  $ arp -an | grep 72.20.216.78
+  ? (72.20.216.78) at 00:09:6b:42:1a:9e on xl1
+  ? (72.20.216.62) at (incomplete) on fxp0
+
+%h2 Find that Pesky Gateway
+
+%p
+  Most ARP requests will come from the gateway on a given subnet. The volume
+  of requests make it easy to find the gateway.
+
+:codeblock
+  $ sudo tcpdump -n arp
+  tcpdump: listening on rl0, link-type EN10MB
+  20:20:13.080158 arp who-has 192.168.168.199 tell 192.168.168.36
+  20:20:18.584708 arp who-has 192.168.168.191 tell 192.168.168.36
+  20:20:24.931355 arp who-has 72.20.216.61 tell 72.20.216.57
+  20:20:25.955077 arp who-has 192.168.168.199 tell 192.168.168.36
+  20:20:31.955179 arp who-has 192.168.168.199 tell 192.168.168.36
+
+%h2 Log Traffic Between two Devices
+
+%p
+  If you can't get a hub in-between two points or a switch that support port
+  mirroring a second NIC in a laptop can be set up as a bridge between two points
+  so that full network trace can be captured. In my T30 <em>fxp0</em> is a
+  built-in network card, and <em>dc0</em> is a Xircom combo in my PCCard
+  slot.
+
+:codeblock
+  ifconfig fxp0 up
+  ifconfig dc0 up
+  ifconfig bridge0 up
+  brconfig bridge0 add fxp0
+  brconfig bridge0 add dc0
+
+:codeblock
+  $ sudo brconfig
+  bridge0: flags=41<UP,RUNNING>
+          priority 32768 hellotime 2 fwddelay 15 maxage 20 holdcnt 6 proto rstp
+          dc0 flags=3<LEARNING,DISCOVER>
+                  port 5 ifpriority 0 ifcost 0
+          fxp0 flags=3<LEARNING,DISCOVER>
+                  port 2 ifpriority 0 ifcost 0
+          Addresses (max cache: 100, timeout: 240):
+
+%p
+  Now I can log everything with <em>snort</em>
+
+:codeblock
+  $ sudo snort -l ./
+
+%p
+  or <em>tcpdump</em>:
+
+:codeblock
+  $ sudo tcpdump -w file -i ath0
+  tcpdump: listening on ath0, link-type EN10MB
+  ^C
+  1557 packets received by filter
+  0 packets dropped by kernel
+
+  $ sudo tcpdump -r file icmp
+  ...
+
+%p
+  With a capture on file comparisons are possible between different samples in
+  time and maybe even match up a flow with a specific event that you learn of
+  from others there.
+
+%h2 Double-Check Subnet Masks
+
+%p
+  Even after setting up networks for a while it's not hard to make a mistake
+  in calculating subnets, so an IP calculator is a handy way to check yourself.
+  It can be installed from ports under <em>net/ipcalc</em>
+
+:codeblock
+  $ ipcalc 72.20.214.14/28
+  address   : 72.20.214.14
+  netmask   : 255.255.255.240 (0xfffffff0)
+  network   : 72.20.214.0     /28
+  broadcast : 72.20.214.15
+  host min  : 72.20.214.1
+  host max  : 72.20.214.14
+  hosts/net : 14
+
+%h2
+  Check File Integrity
+
+%p
+  A router can corrupt a data stream. This is rare, but when transferring
+  files I've demonstrated that a Cisco 3640 can corrupt the payload of TCP
+  packets. Armed with <em>md5</em> you may catch some tricky glitches in hardware
+  or software.
+
+:codeblock
+  $ md5 test.zip
+  MD5 (test.zip) = 0f155c2bd57bbba564c899da50504ce5
+
+:codeblock
+  $ ftp http://teisprint.net/test.zip
+  Trying 72.28.48.198...
+  Requesting http://teisprint.net/test.zip (via http://proxy.eradman.com:8123/)
+  100% |**************************************************|  3090 KB    00:20
+  Successfully retrieved file.
+
+  $ md5 test.zip
+  MD5 (test.zip) = 0f155c2bd57bbba564c899da50504ce5
+
+%p
+  Simply comparing file sizes is not a good method of testing the validity of
+  a trasmission.
+
+%h2 Routing Loops
+
+%p
+  Finding routing loops is not an advanced topic and does not require a
+  specialized set of tools. Thanks to <em>tcpdump</em> you can check for this
+  anywhere by watching the <em>ttl</em> values. Here we have a switching loop
+  (duplicate packets) and a routing loop (TTL moving to 0) on the same LAN.
+
+:codeblock
+  $ sudo tcpdump -i fxp0 port 445
+  14:02:25.944847 IP (tos 0x0, ttl   8, id 15937, offset 0, flags [DF], =
+  proto: TCP (6), length: 79) 31.6.2.20.2688 > 31.6.1.2.microsoft-ds: P, =
+  cksum 0xd6dd (correct), 0:39(39) ack 1 win 16529
+  14:02:25.944861 IP (tos 0x0, ttl   7, id 15937, offset 0, flags [DF], =
+  proto: TCP (6), length: 79) 31.6.2.20.2688 > 31.6.1.2.microsoft-ds: P, =
+  cksum 0xd6dd (correct), 0:39(39) ack 1 win 16529
+  14:02:25.944985 IP (tos 0x0, ttl   8, id 15937, offset 0, flags [DF], =
+  proto: TCP (6), length: 79) 31.6.2.20.2688 > 31.6.1.2.microsoft-ds: P, =
+  cksum 0xd6dd (correct), 0:39(39) ack 1 win 16529
+
+%p
+  Many times this can be caused by servers with IP forwarding enabled. Test
+  a suspect by trying to route packets through the suspect.
+
+:codeblock
+  $ sudo route delete default
+  $ sudo route add default 31.6.1.2
+  $ ping eradman.com
+  ...
+
+%h2 TFTP is Standard
+
+%p
+  It's good to be in the habit of copying off configuration of rotuers and
+  switches before you modify them, and so that you have a backup.
+
+:codeblock
+  # /etc/inetd.conf
+  tftp dgram udp  wait root /usr/libexec/tftpd  tftpd -s /tftpboot
+  tftp dgram udp6 wait root /usr/libexec/tftpd  tftpd -s /tftpboot
+
+%p
+  I link the TFTP folder <em>/tftpboot</em> to my home directory. The
+  important thing is that <em>inetd</em> have write permission to the file you
+  want to copy to.
+
+:codeblock
+  $ ls -l /tftpboot
+  lrwxr-xr-x  1 root  wheel  18 Dec 14 03:19 /tftpboot -> /home/eradman/tftp
+  $ touch ~/tftp/PIX515-GATEWAY
+  $ chmod 666 ~/tftp/PIX515-GATEWAY
+
+%h2 Log Everything in tmux(1)
+
+%p
+  <em>tmux</em> doesn't provide a built-in shortcut for logging the output
+  of a session, but it can be easily toggled by adding shortcuts to
+  <em>.tmux.conf</em>
+
+:codeblock
+  bind-key H pipe-pane &quot;exec cat >>$HOME/'#W-tmux.log'&quot; \;
+      display-message 'Started logging to $HOME/#W-tmux.log'
+  bind-key h pipe-pane \;
+      display-message 'Ended logging to $HOME/#W-tmux.log'
+
+%h2 Domain Internet Groper
+
+%p
+  <em>nslookup</em> is a pain. <em>host</em> gives you what you want to know
+  now.
+
+:codeblock
+  $ host eradman.com
+  eradman.com has address 72.20.216.13
+  eradman.com has IPv6 address 2001:470:1f00:297:a00:20ff:fe9e:b3e1
+  eradman.com mail is handled by 10 us270-ob0.eradman.com.
+
+%p
+  The all-time greatest name award goes to <em>dig</em>, and it also shows you exactally what you want to see:
+
+:codeblock
+  $ dig @72.20.216.8 nycbug.org ns +short
+  auth20.ns.nyi.net.
+  auth21.ns.nyi.net.
+
+%p
+  In addition to <em>ns</em> (name server) there's also <em>mx</em> (mail
+  exchange), <em>aaaa</em> (IPv6 A record), and <em>txt</em> (SPF records).
+
+%p
+  Use <em>-x</em> to look up reverse lookups.
+
+%h2 Wireshark
+
+%p
+  It does compile on OpenBSD, and doesn't have to be run as root to read files.
+
+%h2 Find Manufacturer of Device
+
+%p
+  First get <a href="http://standards-oui.ieee.org/oui/oui.txt">the IEEE
+  MAC assignment list</a>. The first six octets are the manufacturer of a
+  particular NIC, so if you know the address of the offending device you may be
+  able to tell what kind of device it's in.
+
+:codeblock
+  $ arp -an | sed 's/:/-/g'
+  ? (192.168.1.1) at 00-01-03-e9-c2-b2 on xl2 static
+
+  $ grep -i 00-01-03 ~/documents/oui.txt
+  00-01-03   (hex)                3COM CORPORATION
+
+%p
+  <em>nmap</em> does this automatically.
+
+%h2
+  Searching for Wireless Networks
+
+%p
+  OpenBSD's <em>ifconfig(8)</em> completely unifies configuration of various
+  network cards, including wireless adaptors. To scan the SSIDs visible to your
+  laptop use the <em>scan</em> parameter
+
+:codeblock
+  $ sudo ifconfig wpi0 scan
+  wpi0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+          lladdr 00:1b:77:11:10:c5
+          priority: 4
+          groups: wlan egress
+          media: IEEE802.11 autoselect (OFDM54 mode 11g)
+          status: active
+          ieee80211: nwid 0024A5B3D55F chan 1 bssid 00:24:a5:b3:d5:5f 63dB ...
+                  nwid 0x00 chan 11 bssid 00:1d:a2:84:cd:30 62dB 54M ...
+                  nwid guest chan 11 bssid 00:1d:a2:84:cd:31 50dB 54M ...
+                  nwid avctrl chan 11 bssid 00:1d:a2:84:cd:32 53dB 54M ...
+          inet 149.77.212.173 netmask 0xfffffff0 broadcast 149.77.212.175
+
+%h2 Link Stability
+
+%p
+  Using a network monitor to graph a flood ping can tell  you a lot about link
+  stability.
+
+:codeblock
+  $ sudo  ping -s 2048 -f 192.168.0.1
+  PING 192.168.0.1 (192.168.0.1): 2048 data bytes
+  /--- 192.168.0.1 ping statistics ---
+  1570 packets transmitted, 1569 packets received, 0.1% packet loss
+  round-trip min/avg/max/std-dev = 6.053/6.850/23.333/0.647 ms
+
+%p
+  This graph is from <a href="http://www.gkrellm.net/">gkrellm</a>, and it's
+  very useful.
+%p.center
+  <img src="../library/networking-included/flood-ping.png" alt="gkrellm graph" />
+
+%h2 RS-232 aka Serial Devices
+
+%p
+  Serial access is also built-in:
+
+:codeblock
+  $ cu -speed 19200 tty00
+
+%p
+  <em>BREAK</em> is <em>~#</em> or <em>^A F</em> in <em>minicom</em>. If you
+  have USB-to-serial converter you can access it like so
+
+:codeblock
+  $ dmesg
+  ...
+  ugen1 at uhub6 port 3 configuration 1 &quot;Research In Motion RIM Composite Device&quot; rev 2.00/2.32 addr 8
+  uplcom0 at uhub3 port 1 &quot;Prolific Technology Inc. USB-Serial Controller D&quot; rev 1.10/4.00 addr 2
+  ucom0 at uplcom0
+
+:codeblock
+  $ sudo cu -l ttyU0
+
+
+%h2 Print Configuration
+
+%p
+  12-point courier wastes a lot of paper. Install <em>a2ps</em> from ports and
+  use half as much.
+
+:codeblock
+  $ a2ps -2 ap.conf -M A5 -o ap.conf.ps
+
+%p.center
+  <img src="../library/networking-included/ap.conf.png" width="738" height="515" alt="Sample page with two columns" />
+
+%h2 BSD Telnet Works
+
+%p
+  It may be a well-kept secret that the BSD telnet can do send one character
+  at a time, which is sometimes required to simulate a serial link on some
+  terminals need for password prompts, etc.
+
+:codeblock
+  $ telnet 22.50.52.90 10001
+  Trying 12.50.52.92...
+  Connected to 12.50.52.92.
+  Escape character is '^]'.
+
+  ENTER PASSWORD  ^]
+  telnet>; mode character
+
+%p
+  Better yet, add common connection parameters to <em>.telnetrc</em>.
+
+:codeblock
+  192.168.168.2 # The Simplicity VM
+    mode character
+    # do-nothing to make the above line work:
+    set crmod off
+
+%h2
+  XTerm as an ANSI Terminal with VGA Fonts
+
+:codeblock
+  $ cd /usr/X11R6/lib/X11/fonts/misc
+  $ sudo ftp http://scie.nti.st/dist/sabvga.pcf
+  $ sudo ftp http://scie.nti.st/dist/vga.pcf
+  $ sudo ftp http://scie.nti.st/dist/vga11x19.pcf
+  $ sudo mkfontdir
+
+%p
+  (Thanks to <a
+  href="http://scie.nti.st/2007/8/14/dos-ansi-fonts-in-xterm">Garry Dolley</a>
+  for posting these fonts and for showing how to do this on OS X as well)
+
+:codeblock
+  xterm +sb -fn vga -bg darkblue -fg white
+
+%p
+  This is a view to the text console of an HP iLO:
+
+%p.center
+  <img src="../library/networking-included/dl360_textcons.png" width="644" height="388" alt="HP iLO using VGA fonts" />
+
+%h2 Custom Key-Mappings
+
+%p
+  Proprietary applications often expect goofy character combinations for
+  normal use. The key translations in XTerm are very flexible because you can map
+  a key pair to any string of characters. I used VIM to figure out key by moving
+  the cursor to a character or code (like <em>^M</em>) and typing <em>ga</em> to
+  show the hex code in the status line. This is part of my <em>.Xdefaults</em>:
+
+:codeblock
+  :::xdefaults
+  XTerm*VT100.translations: #override \n \
+   ~Shift <Key>F1:        string(0x1) string(0x40) string(0xd) \n\
+   ~Shift <Key>F2:        string(0x1) string(0x41) string(0xd) \n\
+   ~Shift <Key>F3:        string(0x1) string(0x42) string(0xd) \n\
+   ~Shift <Key>F4:        string(0x1) string(0x43) string(0xd) \n\
+   ~Shift <Key>F5:        string(0x1) string(0x44) string(0xd) \n\
+   ~Shift <Key>F6:        string(0x1) string(0x45) string(0xd) \n\
+   ~Shift <Key>F7:        string(0x1) string(0x46) string(0xd) \n\
+   ~Shift <Key>F8:        string(0x1) string(0x47) string(0xd) \n\
+   ~Shift <Key>F9:        string(0x1) string(0x48) string(0xd) \n\
+   ~Shift <Key>F10:       string(0x1) string(0x49) string(0xd) \n\
+
+%p
+  These keys enabled me to manage an old Tadiran voicemail via a network serial
+  port:
+
+%p.center
+  <img src="../library/networking-included/vgafont.png"
+  width="642" height="387" alt="DOS-based voicemail using VGA fonts" />

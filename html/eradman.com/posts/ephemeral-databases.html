@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Ephemeral Postgres Databases
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Ephemeral Postgres Databases</h1>
+      <p>
+        For some time proponents of unit testing have asserted that unit tests should
+        not touch a real database. The standard practice was to mock these interactions
+        at the level of language-native objects.  Does this rule apply if the database
+        is in memory? Some realized that an in-process engine such as SQLite seemed to
+        solve this problem nicely since the database can be run without touching the
+        file system. This is how running Django tests might look
+      </p>
+      <pre>&#x000A;<span class="Comment"># settings_fast.py</span>&#x000A;<span class="Comment"># run using</span>&#x000A;<span class="Comment">#   python manage.py test --settings=settings_fast</span>&#x000A;&#x000A;<span class="PreProc">from</span> settings <span class="PreProc">import</span> *&#x000A;&#x000A;DATABASES = {&#x000A;   <span class="Constant">'</span><span class="Constant">default</span><span class="Constant">'</span>: {&#x000A;        <span class="Constant">'</span><span class="Constant">ENGINE</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">django.db.backends.sqlite3</span><span class="Constant">'</span>,&#x000A;        <span class="Constant">'</span><span class="Constant">NAME</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">:memory:</span><span class="Constant">'</span>,&#x000A;    }&#x000A;}&#x000A;</pre>
+      <h2>Automatic PG Creation and Teardown</h2>
+      <p>
+        Using an SQLite in-memory database is a very useful technique, but it limits
+        your application to the minimum features are common to both database engines. If
+        you're not using an ORM you can maintain complete test coverage and take
+        advantage of PostgreSQL features by spinning up a temporary database. In Python
+        this can be automated in-process using <a
+        href="https://github.com/tk0miya/testing.postgresql">ltesting.postgresql</a>
+      </p>
+      <pre>&#x000A;<span class="PreProc">import</span> testing.postgresql&#x000A;&#x000A;<span class="Comment"># Temporary Database</span>&#x000A;&#x000A;<span class="Statement">def</span> <span class="Identifier">init_postgres</span>():&#x000A;    postgresql = testing.postgresql.Postgresql()&#x000A;    <span class="Identifier">print</span> <span class="Constant">&quot;</span><span class="Constant">postgresql up and running at %s</span><span class="Constant">&quot;</span> % postgresql.url()&#x000A;    <span class="Statement">return</span> postgresql&#x000A;&#x000A;<span class="Statement">def</span> <span class="Identifier">setup_static_fetch</span>(postgresql):&#x000A;    subprocess.check_output([<span class="Constant">'</span><span class="Constant">psql</span><span class="Constant">'</span>, postgresql.url(), <span class="Constant">'</span><span class="Constant">-q</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">-f</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">schema.sql</span><span class="Constant">'</span>])&#x000A;&#x000A;<span class="Comment"># Initialize App</span>&#x000A;&#x000A;postgresql = init_postgres()&#x000A;setup_static_fetch(postgresql)&#x000A;&#x000A;<span class="PreProc">import</span> app&#x000A;</pre>
+      <p>
+        Now we can start to write unit tests using this new ephemeral database. This
+        is how one might set up a <a href="http://www.tornadoweb.org/">Tornado</a>
+        application
+      </p>
+      <pre>&#x000A;<span class="PreProc">import</span> unittest&#x000A;<span class="PreProc">import</span> psycopg2&#x000A;<span class="PreProc">from</span> tornado.options <span class="PreProc">import</span> options&#x000A;<span class="PreProc">from</span> tornado.testing <span class="PreProc">import</span> AsyncHTTPTestCase, LogTrapTestCase&#x000A;&#x000A;<span class="Statement">class</span> <span class="Identifier">TestUI</span>(AsyncHTTPTestCase, LogTrapTestCase):&#x000A;&#x000A;    <span class="PreProc">@</span><span class="Identifier">classmethod</span>&#x000A;    <span class="Statement">def</span> <span class="Identifier">setUpClass</span>(cls):&#x000A;        app.application.db = psycopg2.connect(options.dsn)&#x000A;        app.application.db.set_isolation_level( <span class="Special">\</span>&#x000A;                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)&#x000A;&#x000A;    <span class="PreProc">@</span><span class="Identifier">classmethod</span>&#x000A;    <span class="Statement">def</span> <span class="Identifier">tearDownClass</span>(cls):&#x000A;        <span class="Statement">if</span> <span class="Statement">not</span> app.application.db.closed:&#x000A;            app.application.db.close()&#x000A;&#x000A;    <span class="Statement">def</span> <span class="Identifier">get_app</span>(self):&#x000A;        <span class="Statement">return</span> app.application&#x000A;&#x000A;    <span class="Statement">def</span> <span class="Identifier">setUp</span>(self):&#x000A;        <span class="Comment"># use db connection from server to make trasactions are effective</span>&#x000A;        self.cur = app.application.db.cursor()&#x000A;        self.cur.execute(<span class="Constant">&quot;</span><span class="Constant">BEGIN;</span><span class="Constant">&quot;</span>)&#x000A;        <span class="Identifier">super</span>(TestUI, self).setUp()&#x000A;&#x000A;    <span class="Statement">def</span> <span class="Identifier">tearDown</span>(self):&#x000A;        self.cur.execute(<span class="Constant">&quot;</span><span class="Constant">ROLLBACK;</span><span class="Constant">&quot;</span>)&#x000A;        self.cur.close()&#x000A;        <span class="Identifier">super</span>(TestUI, self).tearDown()&#x000A;</pre>
+      <p>
+        And our first test
+      </p>
+      <pre>&#x000A;    <span class="Statement">def</span> <span class="Identifier">test_list_urls</span>(self):&#x000A;        self.http_client.fetch(self.get_url(<span class="Constant">&quot;</span><span class="Constant">/</span><span class="Constant">&quot;</span>), self.stop)&#x000A;        response = self.wait()&#x000A;        self.assertEqual(response.code, <span class="Constant">200</span>)&#x000A;&#x000A;<span class="Statement">if</span> __name__ == <span class="Constant">'</span><span class="Constant">__main__</span><span class="Constant">'</span>:&#x000A;    options.dsn = postgresql.url()&#x000A;    unittest.main()&#x000A;</pre>
+      <h2>
+        Time-Limited Database Instances
+      </h2>
+      <p>
+        In Python there are some tricky edge cases that can easily hang the test
+        runner if an uncaught exception occurs while running the unit tests. One
+        solution is to spin up the database in a separate daemon:
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/usr/bin/env python</span>&#x000A;&#x000A;<span class="PreProc">import</span> time&#x000A;<span class="PreProc">import</span> daemon&#x000A;<span class="PreProc">import</span> testing.postgresql&#x000A;&#x000A;<span class="Statement">def</span> <span class="Identifier">wait</span>(seconds=<span class="Constant">60</span>):&#x000A;    time.sleep(seconds)&#x000A;&#x000A;<span class="Statement">if</span> __name__ == <span class="Constant">&quot;</span><span class="Constant">__main__</span><span class="Constant">&quot;</span>:&#x000A;    postgresql = testing.postgresql.Postgresql()&#x000A;    <span class="Identifier">print</span> postgresql.url()&#x000A;    <span class="Statement">with</span> daemon.DaemonContext():&#x000A;        wait()&#x000A;</pre>
+      <p>
+        With the help of a simple script, the <a
+        href="https://metacpan.org/release/TJC/Test-PostgreSQL-0.10">Test::PostgreSQL</a>
+        Perl module can also be used to quickly spin up a database before running
+        tests:
+      </p>
+      <pre>&#x000A;<span class="PreProc">#!/usr/bin/env perl</span>&#x000A;&#x000A;<span class="Statement">use strict</span>;&#x000A;<span class="Statement">use warnings</span>;&#x000A;&#x000A;<span class="Statement">use </span>Test::PostgreSQL;&#x000A;<span class="Statement">use </span>Proc::Daemon;&#x000A;&#x000A;<span class="Statement">my</span> <span class="perlVarPlain">$pgsql</span> = Test::PostgreSQL-&gt;new();&#x000A;<span class="perlStatementFileDesc">print</span> <span class="perlVarPlain">$pgsql</span><span class="Identifier">-&gt;uri</span>, <span class="Constant">&quot;</span><span class="Special">\n</span><span class="Constant">&quot;</span>;&#x000A;&#x000A;Proc::Daemon::Init;&#x000A;<span class="Statement">sleep</span>(<span class="Constant">30</span>);&#x000A;</pre>
+      <p>
+        In both cases the library will automatically stop and remove the temporary
+        database after a period of five minutes. Not only is this technique robust, but
+        it can be used from any language, including a test runner written in shell
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;<span class="Identifier">url</span>=<span class="Error">$(</span><span class="Special">./startpg.py</span><span class="Error">)</span>&#x000A;psql <span class="Special">-f</span> schema.sql <span class="PreProc">$url</span>&#x000A;<span class="Comment"># ...</span>&#x000A;</pre>
+      <h2>
+        Responsive Testing
+      </h2>
+      <p>
+        It takes less then ten seconds to initialize a new database and start
+        Postgres, but it would be huge boot to efficiency if it was available in less
+        then one second.  To accomplish this I published a utility called
+        <em>pg_tmp</em> at <a href="http://ephemeralpg.org">ephemeralpg.org</a>. This
+        example uses ruby:
+      </p>
+      <pre>&#x000A;<span class="PreProc">require</span> <span class="Special">'</span><span class="Constant">pg</span><span class="Special">'</span>&#x000A;<span class="PreProc">require</span> <span class="Special">'</span><span class="Constant">rubypgurl</span><span class="Special">'</span>&#x000A;&#x000A;spec = <span class="Type">RubyPgURL</span>.parse(<span class="Special">`</span><span class="Constant">pg_tmp -t</span><span class="Special">`</span>)&#x000A;puts <span class="Special">&quot;</span><span class="Constant">Using </span><span class="Special">#{</span>spec<span class="Special">}</span><span class="Special">&quot;</span>&#x000A;conn = <span class="Type">PG</span>.connect(spec)&#x000A;result = conn.exec(<span class="Special">&quot;</span><span class="Constant">SELECT 1 AS number</span><span class="Special">&quot;</span>)&#x000A;<span class="Statement">for</span> row <span class="Statement">in</span> result <span class="Statement">do</span>&#x000A;    print row[<span class="Special">'</span><span class="Constant">number</span><span class="Special">'</span>]&#x000A;<span class="Statement">end</span>&#x000A;</pre>
+      <p>
+        <em>pg_tmp</em> uses several tricks to reduce the wait time for a new
+        database to less than a second. The temporary database will be garbage-collected
+        asynchronously. By default <em>pg_tmp</em> returns the path to a Unix socket,
+        but an unused TCP port can be selected instead using the <em>-t</em> option.
+        This is nessesary for <a
+        href="http://stackoverflow.com/questions/13771968/minimal-postgres-instance-for-testing/24619189#24619189">Java</a>
+        since Unix sockets are not supported.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

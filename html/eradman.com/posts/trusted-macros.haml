@@ -1,0 +1,108 @@
+%h1 Trusted Macros in C
+
+%p
+  One of the design goals of <a
+  href="http://expectations.rubyforge.org/">expectations</a>, a unit-test
+  framework for Ruby is to encourage people to <a
+  href="http://xunitpatterns.com/Principles%20of%20Test%20Automation.html#Verify%20One%20Condition%20per%20Test">
+  Verify One Condition per Test</a>. When programming in C I think this
+  principle needs to be called Verify One Function per Test. Macros are a bit
+  different in that they should be generalized bits of code that prove
+  themselves through tests, reasoning, and even discussion about compiler
+  standards.
+
+%p
+  If a macro implements application logic, then it should be formulated as a
+  function and unit-tested. If macros are proven by virtue of their origin or
+  some kind of outside reference then a programmer is free to treat them as
+  if they were language primitives that work even on unknown platforms.</p>
+
+%h2 Example: MEMBER_LENGTH
+
+%p
+  In C it isn't possible to read the size of a struct member without a
+  reference to the struct, so this doesn't work
+
+:codeblock
+  :::c
+  typedef struct {
+      int intArray[2];
+      char charArray[4];
+      double doubleArray[6];
+  } myStruct;
+
+  printf("size of myStruct.intArray is %d\n", sizeof myStruct.intArray);
+  /*
+  member.c: In function `main':
+  member.c:10: error: syntax error before '.' token
+  */
+
+%p
+  <em>myStruct</em> has no spacial charactarisitics until we create an
+  instance. One way to solve this is to make one
+
+:codeblock
+  :::c
+  myStruct myStructInstance;
+  printf("size of myStruct.intArray is %d\n", sizeof myStructInstance.intArray);
+
+:codeblock
+  $ ./a.out
+  size of myStruct.intArray is 8
+
+%p
+  It turns out that this value can be calculated at compile time by casting a
+  null pointer and then using <em>sizeof</em> on one of it's elements
+
+:codeblock
+  :::c
+  printf("size of myStruct.intArray is %d\n", sizeof(((myStruct *)0)->intArray));
+
+%p
+  This is the sort of code that belongs in a macro because it's useful,
+  strange, and valid. It looks strange because it's not legitimate to dereference
+  a null pointer but it's valid because the calculation is done at compile-time
+  without an instantiated pointer!
+
+:codeblock
+  :::c
+  #include <stdio.h>
+
+  #define LENGTH(x) (sizeof x / sizeof x[0])
+  #define MEMBER_SIZE(S, M) sizeof(((S *)0)->M)
+  #define MEMBER_OF(S, M) ((S *)0)->M
+  #define MEMBER_LENGTH(S, M) LENGTH(MEMBER_OF(S, M))
+
+  int main() {
+      typedef struct {
+          int intArray[2];
+          char charArray[4];
+          double doubleArray[6];
+      } myStruct;
+
+      printf("size of myStruct.intArray is %d\n", MEMBER_SIZE(myStruct, intArray));
+      printf("size of myStruct.charArray is %d\n", MEMBER_SIZE(myStruct, charArray));
+      printf("size of myStruct.doubleArray is %d\n", MEMBER_SIZE(myStruct, doubleArray));
+
+      printf("length of myStruct.intArray is %d\n", MEMBER_LENGTH(myStruct, intArray));
+      printf("length of myStruct.charArray is %d\n", MEMBER_LENGTH(myStruct, charArray));
+      printf("length of myStruct.doubleArray is %d\n", MEMBER_LENGTH(myStruct, doubleArray));
+
+      return 0;
+  }
+
+
+:codeblock
+  $ cc struct_len_test.c
+  $ ./a.out
+  size of myStruct.intArray is 8
+  size of myStruct.charArray is 4
+  size of myStruct.doubleArray is 48
+  length of myStruct.intArray is 2
+  length of myStruct.charArray is 4
+  length of myStruct.doubleArray is 6
+
+%p
+  After some experimentation it's clear that macros should be demonstrated,
+  explained, and then used. Use automated tests on functions.
+

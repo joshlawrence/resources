@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+OpenBSD Auto-Install
+
+</title>
+<meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+<link href='../main.css' rel='stylesheet' type='text/css'>
+<link href='../code.css' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<h3 style='margin-left: 5px; margin-top: 20px;'>
+<a href='../index.html' id='myname'>Eric Radman</a>
+<span id='mytitle'>: a Journal</span>
+</h3>
+<div id='article'>
+<h1>OpenBSD Auto-Install</h1>
+<p>
+One of the features that may be underutilized is OpenBSD's uncomplicated
+auto-installer. I do not mean that all of the mechanisms that need to be in
+place for a real-world use case are simple, but the OpenBSD parts are simple.
+</p>
+<h2>TFTP Boot</h2>
+<p>
+The first task of booting via PXE is to hand out an address and name the file
+to fetch over TFTP
+</p>
+<pre>&#x000A;# /etc/dhcpd.conf&#x000A;subnet 192.168.1.0 netmask 255.255.255.0 {&#x000A;    option routers 192.168.1.1;&#x000A;    range 192.168.1.32 192.168.1.127;&#x000A;&#x000A;    # T4300&#x000A;    host pxe-client {&#x000A;            hardware ethernet 00:1e:c9:4c:69:59;&#x000A;            filename &quot;auto_install&quot;&#x000A;            next-server 192.168.1.1;&#x000A;    }&#x000A;}&#x000A;</pre>
+<p>
+The filename <em>auto_install</em> is not arbitrary, this causes the
+<em>install</em> script in <em>bsd.rd</em> to start the automated install by
+pulling configuration over HTTP. The complete layout for <em>/tftpboot</em>
+might look like this:
+</p>
+<pre>&#x000A;drwxr-xr-x   2 root  eradman      512 May 16 15:54 .&#x000A;drwxr-xr-x  16 root  wheel       1024 May 13 01:26 ..&#x000A;lrwxr-xr-x   1 root  eradman       13 May 16 15:52 auto_install -&gt; pxeboot.amd64&#x000A;lrwxr-xr-x   1 root  eradman       12 May 16 15:54 bsd -&gt; bsd.rd.amd64&#x000A;-rw-r--r--   1 root  eradman  7763412 May 13 10:07 bsd.rd.amd64&#x000A;-rw-r--r--   1 root  eradman    82300 May 13 10:07 pxeboot.amd64&#x000A;</pre>
+<h2>Per-Host Install Options</h2>
+<p>
+The <em>next-server</em> entry specified by the DHCP server points to the
+path where answers file can be found:
+</p>
+<pre>&#x000A;default 192.168.1.37 - - [16/May/2016:15:55:54 -0400]&#x000A;  &quot;GET /00:1e:c9:4c:69:59-install.conf?path=5.9/amd64 HTTP/1.0&quot; 200 314&#x000A;</pre>
+<p>
+The answers file contains strings which match the questions from the
+installer
+</p>
+<pre>&#x000A;<span class="Comment"># /var/www/htdocs/00:1e:c9:4c:69:59-install.conf</span>&#x000A;System hostname =<span class="Constant"> t3400</span>&#x000A;Password for root =<span class="Constant"> 123456</span>&#x000A;Network interfaces =<span class="Constant"> bge0</span>&#x000A;IPv4 address for bge0 =<span class="Constant"> dhcp</span>&#x000A;Setup a user =<span class="Constant"> eradman</span>&#x000A;Password for user =<span class="Constant"> 123456</span>&#x000A;Public ssh key for user =<span class="Constant"> ssh-ed25519 XYZ123... eradman@t60.eradman.com</span>&#x000A;What timezone are you in =<span class="Constant"> US/Eastern</span>&#x000A;Location of sets =<span class="Constant"> http</span>&#x000A;Server =<span class="Constant"> 192.168.1.1</span>&#x000A;Server directory =<span class="Constant"> pub/OpenBSD/5.9/amd64</span>&#x000A;</pre>
+<p>
+If you don't specify a line then a default will be used. If more options are
+available you can make further choices:
+</p>
+<pre>&#x000A;Which disk is the root disk =<span class="Constant"> sd1</span>&#x000A;</pre>
+<h2>Hotplug</h2>
+<p>
+To make this mechanism portable I run these services from my laptop. Here is
+how. First I enable the hotplug daemon
+</p>
+<pre>&#x000A;# rcctl enable hotplugd&#x000A;</pre>
+<p>
+Next I create <em>/etc/hotplug/attach</em> to assign an address to my
+USB-to-Ethernet adapter when plugged in
+</p>
+<pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;<span class="Identifier">DEVCLASS</span>=<span class="PreProc">$1</span>&#x000A;<span class="Identifier">DEVNAME</span>=<span class="PreProc">$2</span>&#x000A;&#x000A;<span class="Statement">case</span> <span class="PreProc">$DEVCLASS</span> <span class="Statement">in</span>&#x000A;3<span class="Statement">)</span>&#x000A;    ifconfig axe0 <span class="Constant">192</span>.<span class="Constant">168</span>.<span class="Constant">1</span>.<span class="Constant">1</span>/<span class="Constant">24</span>&#x000A;    <span class="Identifier">daemon_flags</span>=<span class="Statement">&quot;</span><span class="PreProc">$DEVNAME</span><span class="Statement">&quot;</span> /etc/rc.d/dhcpd <span class="Special">-f</span> start&#x000A;    <span class="Identifier">daemon_flags</span>=<span class="Statement">&quot;</span><span class="Constant">/tftp</span><span class="Statement">&quot;</span> /etc/rc.d/tftpd <span class="Special">-f</span> start&#x000A;    <span class="Statement">;;</span>&#x000A;<span class="Statement">esac</span>&#x000A;</pre>
+<p>
+<em>DEVCLASS 3</em> is a network interface. Similarly,
+<em>/etc/hotplug/detach</em> disables these services using the opposite
+actions.
+</p>
+<h2>Custom Sets</h2>
+<p>
+OpenBSD allows for custom software to be installed by adding a <a
+href="http://www.openbsd.org/faq/faq4.html#site">site-specific tgz file</a>.
+If <em>index.txt</em> includs the new file it will appear in the menu; we
+only need to select the new package in <em>*install.conf</em>
+</p>
+<pre>&#x000A;Set name(s) =<span class="Constant"> site59.tgz</span>&#x000A;</pre>
+<p>
+To make this easy I am allowing for this one package to be installed without
+being signed.
+</p>
+<pre>&#x000A;Checksum test for site59.tgz failed. Continue anyway =<span class="Constant"> </span><span class="Statement">yes</span>&#x000A;Unverified sets: site59.tgz. Continue without verification =<span class="Constant"> </span><span class="Statement">yes</span>&#x000A;</pre>
+<h2>rc.firsttime</h2>
+<p>
+One of the most interesting files that can be installed with
+<em>siteNN.tgz</em> is <em>/etc/rc.firsttime</em>. This is executed the first
+time a system boots up in multi-user mode, and is a very convenient way to
+make sure some bits of essential post-install configuration occur. This
+example fetches and installs ports on first boot
+</p>
+<pre>&#x000A;ftp <span class="Special">-o</span> - <a href="http://">http://</a><span class="Constant">192</span>.<span class="Constant">168</span>.<span class="Constant">1</span>.<span class="Constant">1</span>/pub/OpenBSD/<span class="Constant">5</span>.<span class="Constant">9</span>/ports.tar.gz | tar <span class="Special">-zxf</span> - <span class="Special">-C</span> /usr&#x000A;</pre>
+<p>
+Handling the installation of packages could be handled similarly.
+</p>
+
+</div>
+<p class='timestamp'>
+Last updated on June 27, 2017
+</p>
+</body>
+</html>

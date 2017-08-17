@@ -1,0 +1,75 @@
+%h1 Advanced Salt Templates
+
+%h2 Dynamic Rules
+
+%p
+  Any system for configuration management can apply discovered facts to
+  a template in order to generate files, but Salt is perhaps a step ahead in
+  that the every SLS file is itself a template. This means that the rules that
+  describe what files to process can be dynamic.
+
+:codeblock
+  :::yaml
+  {% for host in ['www1', 'www2'] %}
+  /var/www/html/coreos/{{host}}.yml:
+    file.managed:
+      - source: salt://coreos/could-init.yml
+      - template: jinja2
+      - context:
+        hostname: {{host}}
+  {% endfor %}
+
+%h2 Extending Salt
+
+%p
+  Salt will parse python modules found in the <em>_modules</em> directory. this
+  enables us to drive rule creation based on arbitray logic. In this example a
+  we define a function for generating a list of hosts.
+
+:codeblock
+  :::python
+    # util.py
+    import hostlist
+
+    def expand_hostlist(spec):
+        return  hostlist.expand_hostlist(spec)
+
+%p
+  Now in a SLS file or any template we can call this new functionality that was
+  added by Salt.
+
+:codeblock
+  :::yaml
+  {% set hosts = salt['util.expand_hostlist']('www[01-99]') %}
+
+%p
+  For other state information that is available see the
+  <a href="https://docs.saltstack.com/en/latest/ref/states/vars.html">
+  SLS Temmplate Variable Reference</a>. It's worth nothing that the filename of
+  the template being generated is always available as the variable <em>name</em>.
+  Also, in the SLS file we passed in <em>context</em> which contained the short
+  hostname of it is rendering. This is very powerful, and allows us to build
+  very generic templates that rely on information supplied in the loop.
+
+%p
+  We are now very close to a complete system that could be used for bare-metal
+  provisioning. Installing an individual host could be as easy as
+
+:codeblock
+  $ salt "server1" state.sls_id /var/www/html/coreos/www1.yml coreos
+
+%h2 Raw Python
+
+%p
+  There is a lot that can be done with jinja2 templates + custom Salt modules,
+  but Salt also supports processing files by executing Python
+
+:codeblock
+  :::yaml
+  {% for host in ['www1', 'www2'] %}
+  /var/www/html/coreos/{{host}}.yml:
+    file.managed:
+      - source: salt://coreos/could-init.py
+      - template: py
+  {% endfor %}
+

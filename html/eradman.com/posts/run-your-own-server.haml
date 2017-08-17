@@ -1,0 +1,459 @@
+%h1 Run Your Own Server
+
+%p
+  Configuring your own box on the Internet is a lot of fun, and provides an
+  opportunity to experiment with Internet services in general.
+
+%table
+  %thead{:style=>"background-color: #f3f3f3;"}
+    %tr
+      %td Service
+      %td Cost
+      %td Provider
+  %tbody
+    %tr
+      %td Domain registration
+      %td $11/yr.
+      %td <a href="http://name.com/">name.com</a>
+    %tr
+      %td OpenBSD VPS hosting
+      %td $10/mo. (based on resources used)
+      %td <a href="http://cloudsigma.com/">cloudsigma.com</a>
+    %tr
+      %td Secondary DNS
+      %td $10/yr. (donation)
+      %td <a href="http://buddyns.com/">buddyns.com</a>
+
+
+%h2 VPS Hosting
+
+%h3 Initial Setup
+
+%p
+  Getting started with a service like <a href="http://cloudsigma.com/">cloudsigma.com</a>
+  is easy, after you select a plan and enter your data an e-mail will be sent with
+  your initial login information. First login and change your login
+  credentials.
+
+:codeblock
+  ssh sshadmin@65.49.80.28
+  useradd -m eradman
+  vi /etc/group
+  userdel sshadmin
+  rm -rf /home/sshadmin
+
+%p
+  Out of the gate you may also want to prevent password authentication for
+  anyone not in the weel group.
+
+:codeblock
+  :::sshdconfig
+  # Require keys for regular users
+  Match Group !wheel
+      PasswordAuthentication no
+
+%p
+  Then set the hostname and timezone
+
+:codeblock
+  echo "vm.eradman.com" > /etc/myname
+  ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+
+%p
+  If you ever need to repair your install your hosting provider should be able
+  to give you access via VNC. To increase your odds of recovering the system
+  enable keyboard reset in case you can't log on and need to single user mode:
+
+:codeblock
+  :::sysctl
+  machdep.kbdreset=1 # permit console CTRL-ALT-DEL to do a nice halt
+
+%p
+  If you botch an upgrade booting off of the install boot image
+  (<em>bsd.rd</em>) will also give you a fully functional environment to make
+  repairs from.
+
+%p
+  Now is also a good time to disable root logins
+
+:codeblock
+  :::sshdconfig
+  #/etc/sshd/sshd_config
+  PermitRootLogin no
+
+%h2 Services - HTTP
+
+:codeblock
+  chown eradman:users /var/www/htdocs
+  rm /var/www/htdocs/*
+
+%h3 Nginx
+
+%p
+  If you like Nginx that's easy as well
+
+:codeblock
+  :::nginx
+  http {
+      access_log   /var/www/logs/access.log main;
+      sendfileon;
+      gzip  on;
+      index index.html;
+
+      server {
+          server_name  eradman.com www.eradman.com;
+          root/var/www/htdocs/eradman.com;
+          location /posts {
+              autoindex on;
+          }
+      }
+  }
+
+%p
+  Nginx provides an easy way to exclude some content from it's web logs which
+  saves on a lot of space an noise.
+
+:codeblock
+  :::nginx
+      server {
+          ...
+          location ~* \.(css|png|js|ico)$ {
+              access_log off;
+              expires max;
+          }
+      }
+
+%h2 Services - DNS
+
+%p
+  Since 5.4 OpenBSD ships with NSD by default. If you were using BIND the zone
+  format is idential, you only need to enable it and add the list of zones to
+  <em>nsd.conf</em>.
+
+:codeblock
+  echo 'nsd_flags=""' >> /etc/rc.conf.local
+
+%h3 Primary Nameserver
+
+:codeblock
+  #/var/nsd/etc/nsd.conf
+  zone:
+          name: "eradman.com"
+          zonefile: "eradman.com"
+
+:codeblock
+  :::bindzone
+  ;/var/nsd/zones/eradman.com
+  $ORIGIN eradman.com.
+  $TTL 6h
+
+  @IN SOA vm.eradman.com. hostmaster.eradman.com. (
+      2     ; serial
+      1h    ; refresh
+      30m   ; retry
+      7d    ; expiration
+      1h )  ; minimum
+
+      NS      vm.eradman.com.
+      A       65.49.80.28
+  www     IN  CNAME eradman.com.
+  vm      IN  CNAME eradman.com.
+
+%p
+  After restarting <em>nsd</em> verify like so
+
+:codeblock
+  $ host eradman.com
+  eradman.com has address 65.49.80.28
+  eradman.com mail is handled by 50 mail.freeshell.org.
+
+%h3 Secondary Nameservers
+
+%p
+  There are two rules to running your own nameserver
+
+%ol
+  %li There must be at least two
+  %li They must not have the same IP address
+
+%p
+  This is why a secondary nameservice is required, and <a
+  href="http://buddyns.com/">buddyns.com</a> provides an excellent solution. Once
+  you create an account, update your nameserver config to <a
+  href="https://www.buddyns.com/support/setup/zone-transfer/">enable AXFR
+  transfer</a> so that they can keep the nameservers in sync.
+
+:codeblock
+  :::nsd
+  #/var/nsd/etc/nsd.conf
+  zone
+      # ...
+      provide-xfr: 173.244.206.26 NOKEY
+      provide-xfr: 88.198.106.11 NOKEY
+      provide-xfr: 2607:f0d0:1005:72::100 NOKEY
+      provide-xfr: 2a01:4f8:d12:d01::10:100 NOKEY
+
+%p
+  Next add them as secondary authority for each zone file.
+
+:codeblock
+  :::bindzone
+  ;/var/nsd/zones/eradman.com
+
+          NS      b.ns.buddyns.com.
+          NS      d.ns.buddyns.com.
+
+%p
+  Once this works locally, use a DNS health check such as <a
+  href="http://intodns.com/">intodns.com</a> to verify that your configuration is
+  correct.
+
+%h2 E-mail
+
+%p
+  First write your hosting provider and ask them to add a PTR record for your
+  IP address, then add an MX record for your domain
+
+:codeblock
+  :::bindzone
+  $ORIGIN eradman.com.
+
+                  MX      50 vm.eradman.com.
+  selector1._domainkey IN TXT "k=rsa; t=s; p=MIGf...o8P2
+
+%p
+  Then stop sendmail and enable smtpd by following the instructions in the <a
+  href="http://man.openbsd.org/smtpd">smtpd(8)</a> man page.
+
+%p
+  Confirm that local relays are working by tailing <em>/var/log/maillog</em> or
+  by running smtpd in the foreground with <em>-dv</em>
+
+%p
+  Now proceed to create rules in <em>/etc/mail/smtpd.conf</em> for virtual
+  domains and SMTP relay
+
+:codeblock
+  :::pf
+  pki vm.eradman.com certificate "/etc/ssl/vm.eradman.com.crt"
+  pki vm.eradman.com key "/etc/ssl/private/vm.eradman.com.key"
+
+  listen on lo0 port 25
+  listen on egress port 25
+  listen on egress port 465 smtps pki vm.eradman.com auth
+
+  table aliases db:/etc/mail/aliases.db
+  accept from any for domain "eradman.com" deliver to mbox
+  accept for local alias <aliases> deliver to mbox
+
+%p
+  OpenSMTPD supports <a
+  href="https://www.fastmail.fm/help/technology_ssl_vs_tls_starttls.html">SSL/TLS
+  and STARTTLS</a> modes using the keyword <em>https</em> (normally port
+%em
+  465</em>), and <em>tls</em> (normally port <em>587</em>). Both of these
+  protocols are SSL connections, but the latter switches to secure mode after
+  connecting. If the client sends a username and password the connection is
+  considered <em>local</em> and passes the last rule, allowing relay. The <a
+  href="http://man.openbsd.org/smtpd.conf.5#EXAMPLES">smtpd.conf(5)</a> man page
+  suggests a means of generating your own certificate.
+
+%p
+  Gmail specifically demands that messages be signed with a public key that
+  matches the <em>_domainkey</em> <em>TXT</em> record for the domain. OpenSMTPD
+  allows you to route messages through <a
+  href="http://dkimproxy.sourceforge.net/">DKIMproxy</a> in order to sign each
+  e-mail:
+
+:codeblock
+  :::pf
+  listen on lo0 port 10028 tag DKIM
+  accept tagged DKIM for any relay
+  accept from local for any relay via smtp://127.0.0.1:10027
+
+%p
+  A competing or complementary technology for validating sender identity is
+  SPF. This is much easer to configure it's simply a record that is used to
+  specify which hosts are permitted to relay mail for a given domain. <a
+  href="http://spfwizard.com/">easySPF</a> is one of several handy tools for
+  generating these records. The final nameserver entries for DKIM and SPF have
+  this form
+
+:codeblock
+  :::bindzone
+  selector1._domainkey IN TXT "k=rsa; t=s; p=MIGf...o8P2
+                       IN TXT "v=spf1 mx a ptr ip4:65.49.80.28 ~all"
+
+%p
+  I also recommend fighting off spam by following the instructions at <a
+  href="http://bgp-spamd.net/">bgp-spamd.net</a> to set up greylisting using BGP
+  to distribute OpenBSD spamd lists.
+%p
+  There are two services that were brought to my attention that can verify the
+  SPF and DKIM signatures of a mail server. Simply send a message to <a
+  href="mailto:check-auth@verifier.port25.com">check-auth@verifier.port25.com</a>
+  and a report will be mailed back.
+  <a href="http://mxtoolbox.com/diagnostic.aspx">mxtoolbox</a> also provides a
+  web-based diagnostic tool.
+
+%p
+  Other systems that are permitted to relay mail can simply add a <em>relay
+  via</em> rule to their smtpd configuration
+
+:codeblock
+  :::pf
+  accept for any relay via "smtp://vm.eradman.com"
+
+%h2 Mail Retrieval over SSL
+
+%p
+  By far the easiest way to configure pop3 access is using <a
+  href="https://github.com/snimmagadda/pop3d">pop3d</a>, soon to be available from
+  ports under <em>mail/pop3d</em>. It's a zero-configuration daemon, I only block
+  the plain text port:
+
+:codeblock
+  :::pf
+  block in on ! lo0 proto tcp to port pop3
+
+%h2 Backups
+
+%p
+  Now that everything is in working order set up a small script to make a copy
+  of each file system.
+
+:codeblock
+  :::sh
+  #/bin/sh
+
+  host=eradman@backups.eradman.com
+  df -h
+  /sbin/dump -0af - /home | ssh $host "cat > /vm/eradman.com/home.dump"
+  /sbin/dump -0af - /var  | ssh $host "cat > /vm/eradman.com/var.dump"
+  /sbin/dump -0af - /     | ssh $host "cat > /vm/eradman.com/root.dump"
+
+%p
+  See also <a href="http://www.faqs.org/docs/securing/back-dump.html">Why's and
+  When's of Backup and Restore</a> by Gerhard Mourani for more information about
+  backup levels and rotation.
+
+%h2 Preventing an Attack
+
+%p
+  If you allow Windows clients to authenticate against your server then it is
+  also prudent to block activity that indicates that the PC has been hijacked. The
+  following will add a client to a blacklist if there are more than 2 concurrent
+  connections to port 465, or there are more than 8 connections made over a
+  30-second window:
+
+:codeblock
+  :::pf
+  table <attacker> persist
+  block quick from <attacker>
+  pass inet proto tcp to egress:network port smtps keep state \
+        (max-src-conn 2, max-src-conn-rate 8/30, overload <attacker>)
+
+%p
+  A daily cron job to list such connections is as easy as
+
+:codeblock
+  00      1       *       *       *       /sbin/pfctl -t attacker -T show
+
+%p
+  Or a PF table can be given an expiration date for it's entries. Here we block
+  all such hosts for 3 days:
+
+:codeblock
+  /sbin/pfctl -t attacker -T expire 259200
+
+%p
+  See Peter Hansteen's <a
+  href="http://home.nuug.no/~peter/pf/en/bruteforce.html">PF tutorial</a> provides
+  for a more complete  explanation of these tactics.
+
+-# %h3
+-#   Partition Layout
+-#
+-# %p
+-#   Entry-level VPS plans may only have 5GB of disk. Since I'm running a web
+-#   server don't need a lot of space for /usr and /home, so I'll move things about
+-#   so that ample storage for logs and www content. This is the initial layout
+-#
+-# %code
+-#
+-#   Filesystem     Size    Used   Avail Capacity  Mounted on
+-#   /dev/sd0a      938M   46.8M    844M     5%    /
+-#   /dev/sd0e      817M   16.0K    776M     0%    /home
+-#   /dev/sd0d      2.9G    534M    2.3G    19%    /usr
+-#
+-#
+-# %p
+-#   First I'll move everything from /usr to the partition presently used for
+-#   /home
+-#
+-# %code
+-#
+-#   cd /home
+-#   dump 0af - /usr | restore rf -
+-#
+-#
+-# %p
+-#   Then edit /etc/fstab to reflect the new location of /usr
+-#
+-# %code
+-#
+-#   cd /etc/
+-#   sed -e 's:^/dev/wd0e:#/dev/wd0d:' -e 's:^/dev/wd0d:/dev/wd0e:' fstab > fstab.new
+-#   mv fstab.new fstab
+-#   reboot
+-#
+-#
+-# %p
+-#   Now the partition layout should now look like this
+-#
+-# %code
+-#
+-#   Filesystem     Size    Used   Avail Capacity  Mounted on
+-#   /dev/sd0a      938M   46.9M    844M     5%    /
+-#   /dev/sd0e      817M    536M    240M    69%    /usr
+-#
+-#
+-# %p
+-#   Now make the new /var partition, and move /var into it
+-#
+-# %code
+-#
+-#   newfs /dev/rwd0d
+-#   mkdir /mnt/var
+-#   mount /dev/wd0d /mnt/var
+-#   cd /mnt/var
+-#   dump 0af - / | restore rf -
+-#   ls | grep -v var | xargs rm -r
+-#   mv var/* .
+-#   rmdir var
+-#   echo '/dev/wd0d /var ffs rw,nodev,nosuid 1 2' >> /etc/fstab
+-#   rm /var/log/*.gz
+-#   reboot
+-#
+-#
+-# %p
+-#   Optionally, free up some space
+-#
+-# %code
+-#
+-#   rm -r /usr/X11R6
+-#   rm -r /etc/X11
+-#   rm -r /usr/games
+-#
+-#
+-# %p
+-#   The final partition layout now looks something like this; plenty of space for
+-#   log messages and www content.
+-#
+-# %code
+-#
+-#   Filesystem     Size    Used   Avail Capacity  Mounted on
+-#   /dev/sd0a      938M   45.8M    845M     5%    /
+-#   /dev/sd0d      2.9G    7.7M    2.8G     0%    /var
+-#   adev/sd0e      817M    536M    240M    69%    /usr
+

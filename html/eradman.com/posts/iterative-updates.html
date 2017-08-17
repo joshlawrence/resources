@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+Iterative Large Updates
+
+</title>
+<meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+<link href='../main.css' rel='stylesheet' type='text/css'>
+<link href='../code.css' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<h3 style='margin-left: 5px; margin-top: 20px;'>
+<a href='../index.html' id='myname'>Eric Radman</a>
+<span id='mytitle'>: a Journal</span>
+</h3>
+<div id='article'>
+<h1>Iterative Large Updates</h1>
+<p>
+Among the many strong features of a relational database is the capability to
+adjust existing of records
+</p>
+<pre>&#x000A;<span class="Statement">UPDATE</span> employees <span class="Statement">SET</span> hired=<span class="Special">'</span><span class="Constant">2017-07-07</span><span class="Special">'</span> <span class="Special">WHERE</span> name=<span class="Special">'</span><span class="Constant">Kevin</span><span class="Special">'</span>;&#x000A;</pre>
+<p>
+Even at a small scale there are some dangers. The
+<code>WHERE</code>
+clause is
+<a href='https://bitbucket.org/eradman/pg-safeupdate/'>not mandatory</a>
+so it helps to try it in a transaction first. And you can see the results as
+well
+</p>
+<pre>&#x000A;<span class="Special">BEGIN</span>;&#x000A;<span class="Statement">UPDATE</span> employees <span class="Statement">SET</span> hired=<span class="Special">'</span><span class="Constant">2017-07-07</span><span class="Special">'</span> <span class="Special">WHERE</span> name=<span class="Special">'</span><span class="Constant">Kevin</span><span class="Special">'</span>&#x000A;RETURNING employees.*;&#x000A;<span class="Statement">ROLLBACK</span>;&#x000A;</pre>
+<p>
+Once content with the results change the last line to
+<code>COMMIT</code>.
+</p>
+<h2>Suspend Side-Effects</h2>
+<p>
+If you are attempting to modify thousands or millions of rows, update triggers
+need to be accounted for. At the very least these triggers will cause bulk
+updates to run slowly. Fortunately it is possible to disarm these by setting
+</p>
+<pre>&#x000A;<span class="Statement">SET</span> session_replication_role = replica;&#x000A;</pre>
+<p>
+A word of caution: this also disables system triggers such as foreign key
+constraints. You also need to be running as a user that includes the role
+<em>Superuser.</em>
+</p>
+<h2>Make a List</h2>
+<p>
+Freezing a list of records that should be targeted for an update allows you
+to run careful analysis on a group before and after a change is made
+</p>
+<pre>&#x000A;<span class="Statement">CREATE</span> MATERIALIZED <span class="Special">VIEW</span> update_candidates <span class="Special">AS</span> (&#x000A;  <span class="Statement">SELECT</span> id&#x000A;  <span class="Special">FROM</span> employees&#x000A;  <span class="Special">WHERE</span> hired <span class="Special">IS</span> <span class="Special">NULL</span>&#x000A;);&#x000A;</pre>
+<p>
+This allso allows one to run a series of updates without as much worry that
+one update will skew the results of subsequent queries.
+</p>
+<h2>Running Iterations</h2>
+<p>
+Rarely is it a good practive to run an update across five or ten million rows
+in a single transaction. This leaves far too much room for human error. One
+solution to this is to run an update on a small sample of records.
+<a href='https://www.postgresql.org/docs/current/static/app-psql.html'>psql(1)</a>
+Allows you to set variables in an SQL script using
+<code>\set var value</code>
+or on the command line using the
+<code>-v</code>
+flag.
+</p>
+<pre>&#x000A;psql hrdb -v mod_value=1 -f /tmp/update.sql&#x000A;</pre>
+<p>
+With this value in place we can proceed with a trial that bins records into
+aproximately 100 groups
+</p>
+<pre>&#x000A;<span class="Special">BEGIN</span>;&#x000A;<span class="Statement">UPDATE</span> products&#x000A;<span class="Statement">SET</span> in_stock=<span class="Special">'</span><span class="Constant">f</span><span class="Special">'</span>&#x000A;<span class="Special">WHERE</span> id % <span class="Constant">100</span> = :mod_value&#x000A;<span class="Statement">AND</span> in_stock <span class="Special">IS</span> <span class="Special">NULL</span>;&#x000A;<span class="Statement">ROLLBACK</span>;&#x000A;</pre>
+<p>
+Once we're content with this we can run all 100 iterations
+</p>
+<pre>&#x000A;<span class="Statement">for</span> v <span class="Statement">in</span> <span class="Special">{</span><span class="PreProc">0</span>..<span class="Constant">99</span><span class="Special">}</span>&#x000A;<span class="Statement">do</span>&#x000A;  <span class="Statement">echo</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">pass </span><span class="PreProc">$v</span><span class="Constant"> of 99</span><span class="Statement">&quot;</span>&#x000A;  psql hrdb <span class="Statement">-v</span> <span class="Identifier">mod_value</span>=<span class="PreProc">$v</span> <span class="Statement">-f</span> /tmp/update.sql&#x000A;  sleep <span class="Constant">10</span>&#x000A;<span class="Statement">done</span>&#x000A;</pre>
+<p>
+As this runs the administrator has the opportunity to see the new data going
+live progressively! If this change becomes suspect, the current update can be
+canceled with
+<em>Ctrl-C</em>
+and easily resumed by changing the starting number.
+</p>
+
+</div>
+<p class='timestamp'>
+Last updated on July 21, 2017
+</p>
+</body>
+</html>

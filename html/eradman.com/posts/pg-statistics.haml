@@ -1,0 +1,116 @@
+%h1 Generating Statistics with PG
+
+%h2 The Query Preamble
+
+%p
+  Sometimes there are a range of constants or fixed criteria that are plugged
+  into multiple common table expressions or filters. Stating some of the
+  configurable values up front adds a lot to readability
+
+:codeblock
+  :::sql
+  \set start '2015-04-01'
+  \set end '2015-04-08'
+
+%p
+  The quotes are not included as part of the value. To use these dates, quote
+  the variable name
+
+:codeblock
+  :::sql
+  SELECT * FROM mytable
+  WHERE time > :'start' AND time < :'end'
+
+%h2 Running Sum
+
+%p
+  Window functions are super valuable because they allow you to perform ordered
+  calculations on a range of rows
+
+:codeblock
+  :::sql
+  SELECT series,
+    sum(series) OVER (ORDER BY series)
+  FROM generate_series(0, 4) AS series
+  GROUP BY series
+
+%p
+  This results in
+
+:codeblock
+   series | sum
+  --------+-----
+        0 |   0
+        1 |   1
+        2 |   3
+        3 |   6
+        4 |  10
+  (5 rows)
+
+%p
+  If you would like to convert this number to a running total simply leave off
+  any seletion criteria, as in
+
+:codeblock
+  :::sql
+    sum(series) OVER ()
+
+%p
+  Functions such as <em>sum</em> and <em>count</em> can be combined to provide
+  compound summary data. A real-world example might look like this:
+
+:codeblock
+  :::sql
+  WITH wait_times AS (
+    SELECT start_time,
+      date_trunc('minute', (time_end - time_start)) +
+        interval '1 minute' AS alloc_wait
+    FROM tasks
+    WHERE time_end > now() - interval '1 day'
+  )
+  SELECT count(alloc_wait) as "# of tasks",
+    alloc_wait,
+    round(
+      sum(count(alloc_wait)) OVER (ORDER BY alloc_wait)
+    / sum(count(alloc_wait)) OVER () * 100, 2) || ' %' AS total
+  FROM wait_times
+  GROUP BY alloc_wait
+  ORDER BY alloc_wait
+
+:codeblock
+   # of tasks | alloc_wait | total
+  ------------+------------+----------
+          150 | 00:01:00   | 68.81 %
+           46 | 00:02:00   | 89.91 %
+           18 | 00:03:00   | 98.17 %
+            1 | 00:04:00   | 98.62 %
+            1 | 00:28:00   | 99.08 %
+            2 | 00:34:00   | 100.00 %
+  (6 rows)
+
+%h2 Quick Histograms
+
+%p
+  If raw numbers seem hard to digest, simple text representations can also be
+  useful
+
+:codeblock
+  :::sql
+  WITH values AS (
+     SELECT
+       id, (random() * 40)::integer AS level
+     FROM generate_series(100,104) AS id
+  )
+  SELECT id, repeat('*', level) AS level
+  FROM values
+  ORDER BY id;
+
+:codeblock
+   id  |                 level
+  -----+---------------------------------------
+   100 | *************************************
+   101 | *********************************
+   102 | ******
+   103 | *
+   104 | *******************
+  (5 rows)

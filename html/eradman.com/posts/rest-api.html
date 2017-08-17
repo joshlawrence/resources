@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      REST APIs based on PostgreSQL Schemas
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>REST APIs based on PostgreSQL Schemas</h1>
+      <p>
+        A standard REST API for PostgreSQL have been <a
+        href="https://wiki.postgresql.org/wiki/HTTP_API">discussed</a> for some
+        time, and thanks for <a href="http://postgrest.com/">PostgREST</a> there is
+        now an implementation that works very well.
+      </p>
+      <h2>Alternate Strategies</h2>
+      <p>
+        Once upon a time we would spend weeks and months creating elaborate getters
+        and setters that essentially map a URL to a function which would use "model"
+        objects to spawn queries to the database an then return a list of maps.
+      </p>
+      <h2>Building PostgREST</h2>
+      <p>
+        First install the GHC compiler and Cabal packaging system
+      </p>
+      <pre>&#x000A;pkg_add ghc cabal-install git postgresql-server&#x000A;cabal update&#x000A;cabal install -j --disable-documentation stack&#x000A;</pre>
+      <p>
+        Next checkout the latest release branch
+      </p>
+      <pre>&#x000A;git clone <a href="https://github.com/begriffs/postgrest.git">https://github.com/begriffs/postgrest.git</a>&#x000A;cd postgrest&#x000A;~/.cabal/bin/stack setup&#x000A;git checkout v0.3.2.0&#x000A;~/.cabal/bin/stack build&#x000A;~/.cabal/bin/stack test&#x000A;</pre>
+      <h2>Database Schemas</h2>
+      <p>
+        Each instance of PostgREST will explicitly use the schema specified at server
+        startup. List schemas using
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> nspname <span class="Special">FROM</span> pg_catalog.pg_namespace;&#x000A;<span class="Comment">-- or</span>&#x000A;\dn&#x000A;</pre>
+      <p>
+        Creating a mapping from a new schema to the default is <em>public</em>
+        is simple
+      </p>
+      <pre>&#x000A;  <span class="Statement">CREATE</span> SCHEMA api1;&#x000A;  <span class="Statement">CREATE</span> <span class="Special">VIEW</span> api1.machine <span class="Special">AS</span> <span class="Statement">SELECT</span> * <span class="Special">FROM</span> machine;&#x000A;</pre>
+      <p>
+        Schemas and all of their contents can also be erased for easy reconstruction
+      </p>
+      <pre>&#x000A;  <span class="Statement">DROP</span> SCHEMA api1 CASCADE;&#x000A;</pre>
+      <h2>Adding and Updating Records</h2>
+      <p>
+        If you do a lot of interaction with a REST service, especially one that
+        accepts JSON, then you may find that <a
+        href="https://github.com/jkbrzt/httpie">httpie</a> is easier than
+        <a href="https://curl.haxx.se/">curl</a>. The command By default <em>http</em>
+        (what an unfortunate name) lists the reply headers and pretty-prints the
+        payload.
+      </p>
+      <p>
+        Adding a record
+      </p>
+      <pre>&#x000A;$ http POST &quot;$url/farmer&quot; org_name='New Farm' city=Owego state=NY zip=1111</pre>
+      <pre>&#x000A;HTTP/1.1 201 Created&#x000A;Date: Tue, 05 Jul 2016 20:56:30 GMT&#x000A;Location: /farmer?farmer_id=eq.6&#x000A;Server: postgrest/0.3.2.0&#x000A;Transfer-Encoding: chunked&#x000A;</pre>
+      <p>
+        Updating a record
+      </p>
+      <pre>&#x000A;$ http PATCH &quot;$url/farmer?farmer_id=eq.6&quot; zip=13827</pre>
+      <pre>&#x000A;HTTP/1.1 204 No Content&#x000A;Content-Range: 0-0/1&#x000A;Date: Tue, 05 Jul 2016 21:04:13 GMT&#x000A;Server: postgrest/0.3.2.0&#x000A;</pre>
+      <h2>Calling Functions</h2>
+      <p>
+        Any function that is visible in the schema can be called directly:
+      </p>
+      <pre>&#x000A;$ curl -d '' -X POST &quot;$url/rpc/first_friday&quot;</pre>
+      <pre>&#x000A;<span class="Special">[{</span>&quot;<span class="Statement">first_friday</span>&quot;:&quot;<span class="Constant">2016-01-01T00:00:00</span>&quot;<span class="Special">}]</span>&#x000A;</pre>
+      <!--
+        $ http POST "$url/rpc/first_friday" \
+        Content-Type:application/x-www-form-urlencoded
+        HTTP/1.1 200 OK
+        Content-Encoding: gzip
+        Content-Range: 0-0/1
+        Content-Type: application/json; charset=utf-8
+        Date: Thu, 30 Jun 2016 19:02:32 GMT
+        Server: postgrest/0.3.2.0
+        Transfer-Encoding: chunked
+        [{ "first_friday": "2016-01-01T00:00:00" }]
+      -->
+      <h2>Using Python requests</h2>
+      <p>
+        The <a href="https://pypi.python.org/pypi/requests">requests module for
+        Python</a> makes interacting with PostgREST very smooth. All of the common
+        http verbs are supported out of the box. This example uses <em>PATCH</em> to
+        update a record:
+      </p>
+      <pre>&#x000A;<span class="PreProc">import</span> yaml&#x000A;<span class="PreProc">import</span> requests&#x000A;&#x000A;conf = yaml.load(<span class="Identifier">open</span>(<span class="Constant">&quot;</span><span class="Constant">/path/endpoints.yaml</span><span class="Constant">&quot;</span>))&#x000A;url = conf[<span class="Constant">'</span><span class="Constant">rest-writer-url</span><span class="Constant">'</span>]&#x000A;r = requests.patch(url + <span class="Constant">&quot;</span><span class="Constant">/rack</span><span class="Constant">&quot;</span>, params={<span class="Constant">&quot;</span><span class="Constant">id</span><span class="Constant">&quot;</span>: <span class="Constant">&quot;</span><span class="Constant">eq.26</span><span class="Constant">&quot;</span>},&#x000A;  json={<span class="Constant">&quot;</span><span class="Constant">fan_speed</span><span class="Constant">&quot;</span>: <span class="Constant">80</span>})&#x000A;</pre>
+      <p>
+        Similarly, fetching data is as easy as supplying some selection criteria and
+        parsing the reply
+      </p>
+      <pre>&#x000A;&#x000A;r = requests.get(url + <span class="Constant">&quot;</span><span class="Constant">/rack</span><span class="Constant">&quot;</span>, params={<span class="Constant">&quot;</span><span class="Constant">fan_speed</span><span class="Constant">&quot;</span>: <span class="Constant">&quot;</span><span class="Constant">eq.80</span><span class="Constant">&quot;</span>})&#x000A;<span class="Statement">for</span> row <span class="Statement">in</span> r.json():&#x000A;    <span class="Identifier">print</span> row&#x000A;</pre>
+      <h2>Disarming a Trap</h2>
+      <p>
+        The documentation for PostgREST acknowledges that updating or deleting records
+        <a href="https://postgrest.readthedocs.io/en/v0.4/admin.html#block-full-table-operations">
+        is dangerous</a>, but it is only so because postgrest accepts <em>PATCH</em>
+        and <em>DELETE</em> without criteria:
+      </p>
+      <pre>&#x000A;$ curl -s -X PATCH $url/employees \&#x000A;    -H &quot;Content-Type: application/json&quot; -d '{&quot;first_name&quot;: &quot;John&quot;}'&#x000A;</pre>
+      <p>
+        There are a couple workarounds for this. The first is to front HTTP requests
+        using a web server and do assert that a query string was provided
+      </p>
+      <pre>&#x000A;# nginx.conf&#x000A;server {&#x000A;    listen  *:80 default_server;&#x000A;&#x000A;    set $is_bad &quot;&quot;;&#x000A;    if ( $request_method = PATCH ) { set $is_bad &quot;PATCH&quot;; }&#x000A;    if ( $request_method = DELETE ) { set $is_bad &quot;DELETE&quot;; }&#x000A;    if ( $args = &quot;&quot; ) { set $is_bad &quot;${is_bad}:noid&quot;; }&#x000A;    if ( $is_bad = &quot;PATCH:noid&quot; ) {&#x000A;        return 400 '{&quot;details&quot;:&quot;no records specified for PATCH&quot;}';&#x000A;    }&#x000A;    if ( $is_bad = &quot;DELETE:noid&quot; ) {&#x000A;        return 400 '{&quot;details&quot;:&quot;no records specified for DELETE&quot;}';&#x000A;    }&#x000A;&#x000A;    location /api1/ {&#x000A;        proxy_pass <a href="http://localhost:5002/">http://localhost:5002/</a>;&#x000A;    }&#x000A;}&#x000A;</pre>
+      <p>
+        This is provides some safety, but if the url includes any non-filter
+        parameters such as <em>select=field1,field2</em> then this check is
+        effectively disabled.
+      </p>
+      <p>
+        The second solution is to use the Postgres extension <a
+        href="https://bitbucket.org/eradman/pg-safeupdate/">pg-safeupdate</a> to
+        prohibit this behavior on the database server.
+      </p>
+      <pre>&#x000A;<span class="Comment"># postgresql.conf</span>&#x000A;shared_preload_libraries=safeupdate</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

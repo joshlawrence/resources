@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Refactoring Legacy Systems
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Refactoring Legacy Systems</h1>
+      <h2>Write-Ahead Logging</h2>
+      <p>
+        Instead of keeping a recording what did happen, keep a list of improvements
+        that will be made, and them execute them. The obvious benefit is that you and
+        your team can maintain focus. It may be less obvious that the checklist
+        communicates architectural values and thereby limits the type of changes that
+        might be made.
+      </p>
+      <p>
+        If you're fortunate enough to be using <a
+        href="http://mercurial-scm.org">Mercurial</a> or <a
+        href="http://git-scm.org">Git</a> each feature can be easily managed as an
+        atomic unit of work by switching to a new <a
+        href="http://learn.github.com/p/branching.html">branch</a> for each
+        intermediate step.
+      </p>
+      <h2>Write Regression Tests</h2>
+      <p>
+        Retrofitting an existing code base with unit tests is not always feasible,
+        since the practice of unit testing is itself typically the motive for writing
+        code that is more functional in nature. In this case some good functional
+        tests are critical.
+      </p>
+      <pre>&#x000A;tests/recover-checkpoint/01_setup.py&#x000A;tests/recover-checkpoint/02_run.py&#x000A;tests/recover-checkpoint/03_continue.py&#x000A;tests/recover-checkpoint/04_verify.py&#x000A;</pre>
+      <h2>Perform Rolling Upgrades</h2>
+      <p>
+        The goal of a refactoring sprint is to reach a consistent state again as
+        quickly as possible. As soon as a coherent set of changes appears to be
+        stable, initiate a series of upgrades that will incrementally prove the
+        stability of the new code. Partitioning the deployment of configuration or
+        packages also allows a team to make more aggressive changes and to start the
+        next iteration faster.  This scheme also presents an excellent context for
+        implementing run-time health checks.
+      </p>
+      <h2>Fix Easy Tests First</h2>
+      <p>
+        After major surgery it's tempting to try to solve the failures of the most
+        complex tests, but this is a little like trying to chop a large by aiming
+        strait for the center. Instead look for cracks leading around the edge and
+        start to solve the little problems first.
+      </p>
+      <h2>Treat Exceptions as Fatal</h2>
+      <p>
+        The most efficient way to create tangled code is to use exceptions as a
+        general-purpose signaling mechanism.
+      </p>
+      <pre>&#x000A;<span class="Statement">def</span> <span class="Identifier">validate_step</span>():&#x000A;    <span class="Comment"># verify checksums</span>&#x000A;    <span class="Statement">if</span> checkpoint != checkpoint :&#x000A;        <span class="Statement">raise</span> <span class="Type">ValueError</span>(<span class="Constant">&quot;</span><span class="Constant">Checkpoint invalid</span><span class="Constant">&quot;</span>)&#x000A;</pre>
+      <p>
+        Exceptions have type but <a
+        href="http://stackoverflow.com/q/6933228/164254">not identity</a>, so this
+        enables many insidious bugs to hide. We would be wise to remove this construct
+        whenever possible. Sane flow-control can be introduced by structuring code
+        in terms of functions that return values flow control. This is much easer to
+        test and debug.
+      </p>
+      <pre>&#x000A;<span class="Statement">def</span> <span class="Identifier">validate_step</span>():&#x000A;    <span class="Comment"># verify checksums</span>&#x000A;    <span class="Statement">if</span> checkpoint != checkpoint:&#x000A;        <span class="Statement">return</span> (<span class="Identifier">False</span>, <span class="Constant">&quot;</span><span class="Constant">Checkpoint invalid</span><span class="Constant">&quot;</span>)&#x000A;    <span class="Statement">return</span> (<span class="Identifier">True</span>, <span class="Constant">&quot;</span><span class="Constant">Checkpoint OK</span><span class="Constant">&quot;</span>)&#x000A;</pre>
+      <h2>Make Assertions</h2>
+      <p>
+        If values are expected to be in a certain range, use assertions in the code
+        base so that unforeseen conditions at caught early.
+      </p>
+      <pre>&#x000A;<span class="Statement">assert</span> sim_perf != sim_perf, <span class="Constant">&quot;</span><span class="Constant">expect to be a float, but NaN is not valid</span><span class="Constant">&quot;</span>&#x000A;</pre>
+      <h2>
+        Log Function Calls
+      </h2>
+      <p>
+        It is sometimes useful to print some additional detail in log messages, such
+        as the name of the module and the function that invoked a log message.
+      </p>
+      <pre>&#x000A;<span class="PreProc">import</span> sys&#x000A;<span class="Statement">class</span> <span class="Identifier">Log</span>(<span class="Identifier">object</span>):&#x000A;    <span class="Statement">def</span> <span class="Identifier">write</span>(self, msg):&#x000A;        modname = self._modname(sys._getframe(<span class="Constant">2</span>).f_code.co_filename)&#x000A;        frame2 = sys._getframe(<span class="Constant">2</span>).f_code.co_name&#x000A;        <span class="Identifier">print</span>(%s.%s() %s<span class="Constant">&quot;</span><span class="Constant"> % (modname, frame3, msg)</span>&#x000A;</pre>
+      <h2>Acknowledge Architectural Limits</h2>
+      <p>
+        At the core of every project is a paradigm that can never change. With effort
+        a large framework may become more modular, but it will never become a
+        minimalist library.
+      </p>
+      <h2>References</h2>
+      <p>
+        <a href="http://martinfowler.com/bliki/DesignStaminaHypothesis.html">
+        DesignStaminaHypothesis</a> by Martin Fowler
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

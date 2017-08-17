@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Screencasting with OpenBSD
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Screencasting with OpenBSD</h1>
+      <h2>USB Audio</h2>
+      <p>
+        Any USB microphone should appear as a new audio device. Here is the
+        <em>dmesg</em> for my mic by ART:
+      </p>
+      <pre>&#x000A;uaudio0 at uhub0 port 2 configuration 1 interface 0 &quot;M-One USB&quot; rev 1.10/0.01 addr 2&#x000A;uaudio0: audio rev 1.00, 8 mixer controls&#x000A;audio1 at uaudio0&#x000A;</pre>
+      <p>
+        <em>audioctl</em> can read off all of the specific characterisitcs of this
+        device
+      </p>
+      <pre>&#x000A;$ audioctl -f /dev/audio1 | grep record&#x000A;mode=play,record&#x000A;record.rate=48000&#x000A;record.channels=1&#x000A;record.precision=16&#x000A;record.bps=2&#x000A;record.msb=1&#x000A;record.encoding=slinear_le&#x000A;record.pause=0&#x000A;record.active=0&#x000A;record.block_size=1960&#x000A;record.bytes=0&#x000A;record.errors=0&#x000A;</pre>
+      <p>
+        Now test the recording from the second audio device using <a
+        href="http://man.openbsd.org/aucat">aucat(1)</a>
+      </p>
+      <pre>&#x000A;aucat -f rsnd/1 -o file.wav&#x000A;</pre>
+      <p>
+        If the device also has a headset audio can be played through the same
+        device.
+      </p>
+      <pre>&#x000A;aucat -f rsnd/1 -i file.wav&#x000A;</pre>
+      <h2>Screen Capture using Xvfb</h2>
+      <p>
+        The rate at which a framebuffer for your video card is a feature of the
+        hardware and software your using, and it's often very slow. <a
+        href="http://www.karlrunge.com/x11vnc/#limitations">x11vnc</a> will print an
+        estimate of the banwidth for the system your running.
+      </p>
+      <pre>&#x000A;x11vnc&#x000A;...&#x000A;09/05/2012 22:23:45 fb read rate: 7 MB/sec&#x000A;</pre>
+      <p>
+        This is about 4fps. We can do much better by using a virtual framebuffer.
+        Here I'm setting up a new screen, setting the background color, starting <a
+        href="http://man.openbsd.org/cwm">cwm</a> and an instance of xterm
+      </p>
+      <pre>&#x000A;Xvfb :<span class="Constant">1</span> <span class="Special">-screen</span> <span class="Constant">0</span> 720x540x16 &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xsetroot <span class="Special">-solid</span> steelblue &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> cwm &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xterm <span class="Special">+sb</span> <span class="Special">-fa</span> Hermit <span class="Special">-fs</span> <span class="Constant">14</span> &amp;&#x000A;&#x000A;</pre>
+      <p>
+        Much better! Now we're up around 20fps.
+      </p>
+      <pre>&#x000A;x11vnc -display :1  &amp;&#x000A;...&#x000A;11/05/2012 18:04:07 fb read rate: 168 MB/sec&#x000A;</pre>
+      <p>
+        Make a connection to this virtual screen using <em>raw</em> encoding to
+        eliminate time wasted on compression.
+      </p>
+      <pre>&#x000A;vncviewer localhost -encodings raw&#x000A;</pre>
+      <p>
+        A test recording with sound then looks like this
+      </p>
+      <pre>&#x000A;ffmpeg -f sndio -i snd/1 -y -f x11grab -r 12 -s 800x600 -i :1.0 -vcodec ffv1 ~/out.avi&#x000A;</pre>
+      <p>
+        <strong>Note:</strong> always stop the recording and playback using
+        <em>q</em>, not <em>Ctrl-C</em> so that audio inputs are shut down properly.
+      </p>
+      <h2>Screen Capture using Xephyr</h2>
+      <p>
+        <a href="http://awesome.naquadah.org/wiki/Using_Xephyr">Xephyr</a> is
+        perhaps the easiest way to run X with a shadow framebuffer. This solution also
+        avoids reading from the video card's RAM, so it's reasonably fast.
+      </p>
+      <pre>&#x000A;Xephyr <span class="Special">-ac</span> <span class="Special">-br</span> <span class="Special">-noreset</span> <span class="Special">-screen</span> 800x600 :<span class="Constant">1</span> &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xsetroot <span class="Special">-solid</span> steelblue &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> cwm &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xrdb <span class="Special">-load</span> ~/.Xdefaults &amp;&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xterm <span class="Special">+sb</span> <span class="Special">-fa</span> <span class="Statement">&quot;</span><span class="Constant">Hermit</span><span class="Statement">&quot;</span> <span class="Special">-fs</span> <span class="Constant">14</span> &amp;&#x000A;</pre>
+      <p>
+        Capture works in exactally the same way. This command tries to maintain
+        12fps.
+      </p>
+      <pre>&#x000A;ffmpeg -f sndio -i snd/1 -y -f x11grab -r 12 -s 800x600 -i :1.0 -vcodec ffv1 -acodec copy ~/out.avi&#x000A;</pre>
+      <p>
+        To capture keyboard and mouse input press <em>Ctrl</em> then <em>Shift</em>.
+        This is very handy for using navigating a window manager in the nested X
+        session.
+      </p>
+      <h2>Arranging Windows</h2>
+      <p>
+        I have sometimes found it helpful to launch applications and arrange them in
+        a specific way. This will open up a web browser listing the current directory
+        and position windows using <a
+        href="http://www.semicomplete.com/projects/xdotool/">xdotool</a>
+      </p>
+      <pre>&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> midori <span class="Statement">&quot;</span><span class="Constant">file:///</span><span class="Special">`</span><span class="Statement">pwd</span><span class="Special">`</span><span class="Statement">&quot;</span> &amp;&#x000A;sleep <span class="Constant">2</span>&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xdotool search <span class="Special">--name</span> <span class="Statement">&quot;</span><span class="Constant">xterm</span><span class="Statement">&quot;</span> windowmove <span class="Constant">0</span> <span class="Constant">0</span>&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xdotool search <span class="Special">--class</span> <span class="Statement">&quot;</span><span class="Constant">midori</span><span class="Statement">&quot;</span> windowmove <span class="Constant">400</span> <span class="Constant">0</span>&#x000A;<span class="Identifier">DISPLAY</span>=:<span class="Constant">1</span> xdotool search <span class="Special">--class</span> <span class="Statement">&quot;</span><span class="Constant">midori</span><span class="Statement">&quot;</span> windowsize <span class="Constant">400</span> <span class="Constant">576</span>&#x000A;</pre>
+      <p>
+        This will position the window precisely so that it appears to be in a tmux
+        window on the right.
+      </p>
+      <h2>
+        Audio/Video Sync
+      </h2>
+      <p>
+        If you find that the audio is way out of sync with the video, you can ajust
+        the start using the <em>-ss</em> before the audio input to specify the number of
+        seconds to delay. My final recording command line, that delays the audio by 0.5
+        seconds, writing 12fps
+      </p>
+      <pre>&#x000A;ffmpeg -ss 0.5 -f sndio -i snd/1 -y -f x11grab -r 12 -s 800x600 -i :1.0 -vcodec ffv1  -acodec copy ~/out.avi&#x000A;</pre>
+      <h2>Sharring a Terminal with tmux</h2>
+      <p>
+        If you're trying to record a terminal session, <a
+        href="http://www.openbsd.org/cgi-bin/man.cgi?query=aucat&amp;manpath=OpenBSD+Current">
+        tmux</a> is able to share a session. In this way a recording of an X framebuffer
+        can be taken without even using the screen. Start by creating the session.
+      </p>
+      <pre>&#x000A;tmux -2 -S /tmp/tmux0&#x000A;</pre>
+      <p>
+        Then on the remote side connect on the same socket
+      </p>
+      <pre>&#x000A;tmux -2 -S /tmp/tmux0 attach&#x000A;</pre>
+      <h2>Taking Screenshots</h2>
+      <p>
+        Grabbing a screenshots on Xvfb server is easily accomplished with <a
+        href="http://www.imagemagick.org/">ImageMagick's</a> <em>import</em> command
+      </p>
+      <pre>&#x000A;DISPLAY=:1 import -window root screenshot.png&#x000A;</pre>
+      <h2>Audio Processing and Video Transcoding</h2>
+      <p>
+        The first step is to ensure that the clip begins and ends where you'd like it
+        to. The following will make a copy of the recording starting at time
+        <em>00:00</em> and ending at <em>09:45</em>
+      </p>
+      <pre>&#x000A;ffmpeg -i interactive-sql.avi \&#x000A;    -vcodec copy -acodec copy&#x000A;    -ss 00:00:00 -t 00:09:45&#x000A;    interactive-sql-trimmed.avi&#x000A;mv interactive-sql-trimmed.avi interactive-sql.avi&#x000A;</pre>
+      <p>
+        Setting the gain correctly is very important with an analog mixer, but if
+        you're using a USB mic there may not be a gain option; simply record using it's
+        built-in settings and then adjust the levels afterwards using a utility such as
+        <a href="http://normalize.nongnu.org/">normalize</a>.  First extact the audio as
+        a raw PCM file and then run normalize
+      </p>
+      <pre>&#x000A;ffmpeg -i interactive-sql.avi -c:a copy -vn audio.wav&#x000A;normalize audio.wav&#x000A;</pre>
+      <p>
+        Next merge the audio back in again
+      </p>
+      <pre>&#x000A;ffmpeg -i interactive-sql.avi -i audio.wav \&#x000A;    -map 0:0 -map 1:0 -c copy interactive-sql-normalized.avi&#x000A;</pre>
+      <p>
+        The final step is to compress the screencast for distribution. Encoding to
+        VP8/Vorbis is easy:
+      </p>
+      <pre>&#x000A;ffmpeg -i interactive-sql-normalized.avi -c:v libvpx -b:v 1M&#x000A;    -c:a libvorbis -q:a 6 interactive-sql.webm</pre>
+      <p>
+        H.264/AAC is tricky. For most video players the color space needs to be set to
+        <em>yuv420p</em>. The <em>-movflags</em> puts the index data at the beginning
+        of the file to enable streaming/partial content requests over HTTP:
+      </p>
+      <pre>&#x000A;ffmpeg -y -i interactive-sql-normalized.avi -c:v libx264 \&#x000A;    -preset slow -crf 14 -pix_fmt yuv420p -movflags +faststart \&#x000A;    -c:a aac -q:a 6 interactive-sql.mp4&#x000A;&#x000A;</pre>
+      <!-- brew reinstall ffmpeg --with-libvpx --with-libvorbis --with-acc -->
+      <!-- https://developer.mozilla.org/en-US/docs/Web/HTML/Supported_media_formats -->
+      <!-- http://blog.superuser.com/2012/02/24/ffmpeg-the-ultimate-video-and-audio-manipulation-tool/ -->
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

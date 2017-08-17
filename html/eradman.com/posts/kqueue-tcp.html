@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Handling TCP Connections with Kqueue Event Notification
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Handling TCP Connections with Kqueue Event Notification</h1>
+      <!--
+        <blockquote></blockquote>
+        I think that a book on such a topic would probably have to repeat
+        the same thing every second paragraph, throughout the book: Understand the
+        interfaces which you are coding to! Understand the interfaces which you are
+        coding to!  Most of the security (or simply bug) issues we audited out of our
+        source tree are just that. - Theo de Raadt on <a
+        href="http://bsd.slashdot.org/article.pl?sid=00/12/11/1455210">slashdot</a>
+      -->
+      <p>
+        Kqueue is a scalable mechanism for registering and responding to process,
+        signal, timer, and file descriptor events in the kernel. Today it's a native
+        facility on every major BSD distribution, OS/X and iOS. On Linux a user-space
+        implementation is available via <a
+        href="http://sourceforge.net/projects/libkqueue/">libkqueue</a>.
+      </p>
+      <p>
+        The key to using the kqueue API is understand that every event is identified
+        by a user-supplied integer. As Ted Unangst notes in "Experiences with kqueue" <a
+        href="http://www.tedunangst.com/kqueue.pdf">[PDF]</a>, you must make sure you
+        understand what this integer identifies. When implementing a TCP server this
+        integer will be a file descriptor created by <em>socket(2)</em>.
+      </p>
+      <h2>Listening on a Socket</h2>
+      <p>
+        The main event loop will react to events on the listening socket by calling
+      </p>
+      <em>
+        accept(2)</em> or <em>close(2)</em> if the client has disconnected.
+        To get started, we first create a socket, and then bind it to an address
+      </em>
+      <pre>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;sys/socket.h&gt;</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;sys/un.h&gt;</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;netdb.h&gt;</span>&#x000A;&#x000A;<span class="Type">struct</span> addrinfo *addr;&#x000A;<span class="Type">struct</span> addrinfo hints;&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> open a TCP socket </span><span class="Comment">*/</span>&#x000A;memset(&amp;hints, <span class="Constant">0</span>, <span class="Statement">sizeof</span> hints);&#x000A;hints.ai_family = PF_UNSPEC; <span class="Comment">/*</span><span class="Comment"> any supported protocol </span><span class="Comment">*/</span>&#x000A;hints.ai_flags = AI_PASSIVE; <span class="Comment">/*</span><span class="Comment"> result for bind() </span><span class="Comment">*/</span>&#x000A;hints.ai_socktype = SOCK_STREAM; <span class="Comment">/*</span><span class="Comment"> TCP </span><span class="Comment">*/</span>&#x000A;<span class="Type">int</span> error = getaddrinfo (<span class="Constant">&quot;127.0.0.1&quot;</span>, <span class="Constant">&quot;8080&quot;</span>, &amp;hints, &amp;addr);&#x000A;<span class="Statement">if</span> (error)&#x000A;    errx(<span class="Constant">1</span>, <span class="Constant">&quot;getaddrinfo failed: </span><span class="Special">%s</span><span class="Constant">&quot;</span>, gai_strerror(error));&#x000A;</pre>
+      <p>
+        <em>getaddrinfo(3)</em> retured a pointer to an array of addresses that
+        matched the hostname provided, here we'll only use the first match.
+      </p>
+      <pre>&#x000A;local_s = socket(addr-&gt;ai_family, addr-&gt;ai_socktype, addr-&gt;ai_protocol);&#x000A;bind(local_s, addr-&gt;ai_addr, addr-&gt;ai_addrlen);&#x000A;listen(local_s, <span class="Constant">5</span>);&#x000A;</pre>
+      <p>
+        <em>socket</em>, <em>bind</em> and <em>listen</em> all return <em>-1</em> on
+        error. Now that we have a file descriptor to watch, we initialize a queue, then
+        add filters specify the actions to listen for
+      </p>
+      <pre>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;sys/event.h&gt;</span>&#x000A;&#x000A;<span class="Type">int</span> kq;&#x000A;<span class="Type">struct</span> kevent evSet;&#x000A;&#x000A;kq = kqueue();&#x000A;&#x000A;EV_SET(&amp;evSet, local_s, EVFILT_READ, EV_ADD, <span class="Constant">0</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>);&#x000A;<span class="Statement">if</span> (kevent(kq, &amp;evSet, <span class="Constant">1</span>, <span class="Constant">NULL</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>) == -<span class="Constant">1</span>)&#x000A;    err(<span class="Constant">1</span>, <span class="Constant">&quot;kevent&quot;</span>);&#x000A;&#x000A;watch_loop(kq);&#x000A;</pre>
+      <p>
+        <em>EV_SET</em> is a macro that simply fills in the <em>kevent</em>
+        structure. The call to <em>kevent(2)</em> indicates that there is one change to
+      </p>
+      <em>
+        kq</em>: the addition of <em>EVFILT_READ</em>. The following loop waits for
+        events and then uses any combination of meaninful conditions to determine what
+        the event is, and what should be done about it.
+      </em>
+      <pre>&#x000A;<span class="Type">void</span>&#x000A;watch_loop(<span class="Type">int</span> kq) {&#x000A;    <span class="Type">struct</span> kevent evSet;&#x000A;    <span class="Type">struct</span> kevent evList[<span class="Constant">32</span>];&#x000A;    <span class="Type">int</span> nev, i;&#x000A;    <span class="Type">struct</span> sockaddr_storage addr;&#x000A;    socklen_t socklen = <span class="Statement">sizeof</span>(addr);&#x000A;    <span class="Type">int</span> fd;&#x000A;&#x000A;    <span class="Statement">while</span>(<span class="Constant">1</span>) {&#x000A;        nev = kevent(kq, <span class="Constant">NULL</span>, <span class="Constant">0</span>, evList, <span class="Constant">32</span>, <span class="Constant">NULL</span>);&#x000A;        <span class="Statement">if</span> (nev &lt; <span class="Constant">1</span>)&#x000A;            err(<span class="Constant">1</span>, <span class="Constant">&quot;kevent&quot;</span>);&#x000A;        <span class="Statement">for</span> (i=<span class="Constant">0</span>; i&lt;nev; i++) {&#x000A;            <span class="Statement">if</span> (evList[i].flags &amp; EV_EOF) {&#x000A;                printf(<span class="Constant">&quot;disconnect</span><span class="Special">\n</span><span class="Constant">&quot;</span>);&#x000A;                fd = evList[i].ident;&#x000A;                EV_SET(&amp;evSet, fd, EVFILT_READ, EV_DELETE, <span class="Constant">0</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>);&#x000A;                <span class="Statement">if</span> (kevent(kq, &amp;evSet, <span class="Constant">1</span>, <span class="Constant">NULL</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>) == -<span class="Constant">1</span>)&#x000A;                    err(<span class="Constant">1</span>, <span class="Constant">&quot;kevent&quot;</span>);&#x000A;                conn_delete(fd);&#x000A;            }&#x000A;            <span class="Statement">else</span> <span class="Statement">if</span> (evList[i].ident == local_s) {&#x000A;                fd = accept(evList[i].ident, (<span class="Type">struct</span> sockaddr *)&amp;addr,&#x000A;                    &amp;socklen);&#x000A;                <span class="Statement">if</span> (fd == -<span class="Constant">1</span>)&#x000A;                    err(<span class="Constant">1</span>, <span class="Constant">&quot;accept&quot;</span>);&#x000A;                <span class="Statement">if</span> (conn_add(fd) == <span class="Constant">0</span>) {&#x000A;                    EV_SET(&amp;evSet, fd, EVFILT_READ, EV_ADD, <span class="Constant">0</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>);&#x000A;                    <span class="Statement">if</span> (kevent(kq, &amp;evSet, <span class="Constant">1</span>, <span class="Constant">NULL</span>, <span class="Constant">0</span>, <span class="Constant">NULL</span>) == -<span class="Constant">1</span>)&#x000A;                        err(<span class="Constant">1</span>, <span class="Constant">&quot;kevent&quot;</span>);&#x000A;                    send_msg(fd, <span class="Constant">&quot;welcome!</span><span class="Special">\n</span><span class="Constant">&quot;</span>);&#x000A;                } <span class="Statement">else</span> {&#x000A;                    printf(<span class="Constant">&quot;connection refused</span><span class="Special">\n</span><span class="Constant">&quot;</span>);&#x000A;                    close(fd);&#x000A;                }&#x000A;            }&#x000A;            <span class="Statement">else</span> <span class="Statement">if</span> (evList[i].flags == EVFILT_READ) {&#x000A;                recv_msg(evList[i].ident);&#x000A;            }&#x000A;        }&#x000A;    }&#x000A;}&#x000A;</pre>
+      <p>
+        The two utility methods <em>send_msg</em> and <em>recv_msg</em> in
+        this example could be defined like so
+      </p>
+      <pre>&#x000A;<span class="Type">void</span>&#x000A;send_msg(<span class="Type">int</span> s, <span class="Type">char</span> *message, ...) {&#x000A;    <span class="Type">char</span> buf[<span class="Constant">256</span>];&#x000A;    <span class="Type">int</span> len;&#x000A;&#x000A;    <span class="Type">va_list</span> ap;&#x000A;    va_start(ap, message);&#x000A;    len = vsnprintf(buf, <span class="Statement">sizeof</span>(buf), message, ap);&#x000A;    va_end(ap);&#x000A;    send(s, buf, len, <span class="Constant">0</span>);&#x000A;}&#x000A;&#x000A;<span class="Type">void</span>&#x000A;recv_msg(<span class="Type">int</span> s) {&#x000A;    <span class="Type">char</span> buf[<span class="Constant">256</span>];&#x000A;    <span class="Type">size_t</span> bytes_read;&#x000A;&#x000A;    bytes_read = recv(s, buf, <span class="Statement">sizeof</span>(buf), <span class="Constant">0</span>);&#x000A;    <span class="Statement">if</span> ((<span class="Type">int</span>)bytes_read &lt; <span class="Constant">0</span>)&#x000A;        printf(<span class="Constant">&quot;</span><span class="Special">%d</span><span class="Constant"> bytes read</span><span class="Special">\n</span><span class="Constant">&quot;</span>, (<span class="Type">int</span>)bytes_read);&#x000A;}&#x000A;</pre>
+      <h2>A Simple Connection Pool</h2>
+      <p>
+        Sometimes writing a highly general mechanism is a wise choice, but in C it
+        sometimes makes more sense to implement data structures and functions that
+        implement functionality for a specific task. Not only does this produce very
+        concise code, but such specialized code can be used to remove line noise from
+        the main event loop.
+      </p>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> connpool.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;stdio.h&gt;</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;string.h&gt;</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;unistd.h&gt;</span>&#x000A;&#x000A;<span class="PreProc">#define NUSERS </span><span class="Constant">10</span>&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> forwards </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Type">static</span> <span class="Type">int</span> conn_index(<span class="Type">int</span>);&#x000A;<span class="Type">static</span> <span class="Type">int</span> conn_add(<span class="Type">int</span>);&#x000A;<span class="Type">static</span> <span class="Type">int</span> conn_delete(<span class="Type">int</span>);&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> globals </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Type">struct</span> uc {&#x000A;    <span class="Type">int</span> uc_fd;&#x000A;    <span class="Type">char</span> *uc_addr;&#x000A;} users[NUSERS];&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> find the index of a file descriptor or a new slot if fd=0 </span><span class="Comment">*/</span>&#x000A;<span class="Type">int</span>&#x000A;conn_index(<span class="Type">int</span> fd) {&#x000A;    <span class="Type">int</span> uidx;&#x000A;    <span class="Statement">for</span> (uidx = <span class="Constant">0</span>; uidx &lt; NUSERS; uidx++)&#x000A;        <span class="Statement">if</span> (users[uidx].uc_fd == fd)&#x000A;            <span class="Statement">return</span> uidx;&#x000A;    <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;}&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> add a new connection storing the IP address </span><span class="Comment">*/</span>&#x000A;<span class="Type">int</span>&#x000A;conn_add(<span class="Type">int</span> fd) {&#x000A;    <span class="Type">int</span> uidx;&#x000A;    <span class="Statement">if</span> (fd &lt; <span class="Constant">1</span>) <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;    <span class="Statement">if</span> ((uidx = conn_index(<span class="Constant">0</span>)) == -<span class="Constant">1</span>)&#x000A;        <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;    <span class="Statement">if</span> (uidx == NUSERS) {&#x000A;        close(fd);&#x000A;        <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;    }&#x000A;    users[uidx].uc_fd = fd; <span class="Comment">/*</span><span class="Comment"> users file descriptor </span><span class="Comment">*/</span>&#x000A;    users[uidx].uc_addr = <span class="Constant">0</span>; <span class="Comment">/*</span><span class="Comment"> user IP address </span><span class="Comment">*/</span>&#x000A;    <span class="Statement">return</span> <span class="Constant">0</span>;&#x000A;}&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> remove a connection and close it's fd </span><span class="Comment">*/</span>&#x000A;<span class="Type">int</span>&#x000A;conn_delete(<span class="Type">int</span> fd) {&#x000A;    <span class="Type">int</span> uidx;&#x000A;    <span class="Statement">if</span> (fd &lt; <span class="Constant">1</span>) <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;    <span class="Statement">if</span> ((uidx = conn_index(fd)) == -<span class="Constant">1</span>)&#x000A;        <span class="Statement">return</span> -<span class="Constant">1</span>;&#x000A;&#x000A;    users[uidx].uc_fd = <span class="Constant">0</span>;&#x000A;    users[uidx].uc_addr = <span class="Constant">NULL</span>;&#x000A;&#x000A;    <span class="Comment">/*</span><span class="Comment"> free(users[uidx].uc_addr); </span><span class="Comment">*/</span>&#x000A;    <span class="Statement">return</span> close(fd);&#x000A;}&#x000A;</pre>
+      <h2>Using UNIX Domain Sockets</h2>
+      <p>
+        All of the mechanisms listed so far work identically for a TCP and a local
+        socket connection. The only difference is the way in which the way in which the
+        local socket is initialized
+      </p>
+      <pre>&#x000A;<span class="Type">struct</span> kevent evSet;&#x000A;<span class="Type">struct</span> sockaddr_un sun;&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> open a UNIX socket </span><span class="Comment">*/</span>&#x000A;local_s = socket(AF_UNIX, SOCK_STREAM, <span class="Constant">0</span>);&#x000A;memset(&amp;sun, <span class="Constant">0</span>, <span class="Statement">sizeof</span>(<span class="Type">struct</span> sockaddr_un));&#x000A;sun.sun_family = AF_UNIX;&#x000A;strlcpy(sun.sun_path, <span class="Constant">&quot;local.s&quot;</span>, <span class="Statement">sizeof</span>(sun.sun_path));&#x000A;bind(local_s, (<span class="Type">struct</span> sockaddr *)&amp;sun, SUN_LEN(&amp;sun))&#x000A;listen(local_s, <span class="Constant">5</span>)&#x000A;&#x000A;watch_loop(kq);&#x000A;</pre>
+      <p>
+        Note that there's no reason <em>kevent()</em> cannot be called twice in order
+        to register a local socket as well socket listening on a TCP port.
+      </p>
+      <h2>
+        Binding and Reacting on Multiple Address Families
+      </h2>
+      <p>
+        More than ten years after IPv6 was standardized very few corporate systems
+        have adopted it, but the programming interfaces that emerged to support it have
+        benefited system programmers because the interfaces themselves have become more
+        general so as to support multiple protocols. <em>getaddrinfo(3)</em> provides a
+        mechanism for binding sockets to addresses specified in their native, numeric
+        format, or by a hostname that is resolved according the order specified in
+      </p>
+      <em>
+        <!-- etc/resolv.conf</em>. -->
+      </em>
+      <p>
+        To start, establish a <em>addrinfo</em> structure with some data about the
+        kind of connection you're trying to make and a pointer to an array of results
+        that the OS is going to give us. <em>*ai</em> will refer to a ordered linked
+        list. One Linux <a href="http://www.akkadia.org/drepper/userapi-ipv6.html">IPv6
+        is sorted first</a>. If we actually wanted to listen on more than one address we
+        would have to loop through the results by following the <em>*ai_next</em>
+        pointer.
+      </p>
+      <p>
+        Since <em>getaddrinfo()</em> resolves hostnames as well as numeric addresses
+        it can return a linked list of results. This is handy, because you can use name
+        resolution to determine what services listen on multiple addresses. Start off
+        by looping through the results:
+      </p>
+      <pre>&#x000A;<span class="Type">struct</span> addrinfo *ai0, *ai;&#x000A;<span class="Type">struct</span> addrinfo hints;&#x000A;<span class="Type">int</span> s[MAXSOCK];&#x000A;<span class="Type">int</span> nsock;&#x000A;&#x000A;nsock = <span class="Constant">0</span>;&#x000A;memset(&amp;s, <span class="Constant">0</span>, MAXSOCK);&#x000A;<span class="Statement">for</span> (ai = ai0; ai &amp;&amp; nsock &lt; MAXSOCK; ai = ai-&gt;ai_next) {&#x000A;    <span class="Statement">if</span>((s[nsock] = socket(ai-&gt;ai_family, ai-&gt;ai_socktype, ai-&gt;ai_protocol)) &lt; <span class="Constant">0</span>)&#x000A;        <span class="Statement">continue</span>;&#x000A;    <span class="Statement">if</span>(bind(s[nsock], ai-&gt;ai_addr, ai-&gt;ai_addrlen) &lt; <span class="Constant">0</span>)&#x000A;        <span class="Statement">continue</span>;&#x000A;    listen(s[nsock], <span class="Constant">5</span>);&#x000A;    nsock++;&#x000A;}&#x000A;</pre>
+      <p>
+        The <em>kevent</em> structure is very helpful here because the last field is
+        a user-defined typeless pointer. When we call <em>kevent()</em> once for each
+        descriptor created by <em>listen()</em> this field can be used to identify the
+        event as a descriptor by whatever value <em>*ai0</em> has.
+      </p>
+      <pre>&#x000A;<span class="Statement">for</span> (i=<span class="Constant">0</span>; i&lt;nsock; i++) {&#x000A;    EV_SET(&amp;evSet, s[i], EVFILT_READ, EV_ADD, <span class="Constant">0</span>, <span class="Constant">0</span>, (<span class="Type">void</span> *)ai0);&#x000A;    kevent(kq, &amp;evSet, <span class="Constant">1</span>, (<span class="Type">void</span> *)<span class="Constant">0</span>, <span class="Constant">0</span>, (<span class="Type">struct</span> timespec*)<span class="Constant">0</span>);&#x000A;}&#x000A;</pre>
+      <p>
+        It doesn't matter what the pointer refers to in this case, I'm just using
+        the 32- or 64-bit address as a unique identifier. The event loop doesn't look
+        much different, it just uses a different equality test.
+      </p>
+      <pre>&#x000A;<span class="Statement">for</span> (;;) {&#x000A;    nev = kevent(kq, (<span class="Type">void</span> *)<span class="Constant">0</span>, <span class="Constant">0</span>, evlist, <span class="Constant">8</span>, (<span class="Type">void</span> *)<span class="Constant">0</span>);&#x000A;    <span class="Statement">for</span> (i = <span class="Constant">0</span>; i &lt; nev; i++) {&#x000A;        <span class="Statement">if</span> (evlist[i].udata == ai0) {&#x000A;            <span class="Comment">/*</span><span class="Comment"> Connection on FD created by listen(), call accept() </span><span class="Comment">*/</span>&#x000A;        }&#x000A;}&#x000A;</pre>
+      <p>
+        If <em>getaddrinfo()</em> is called with a name that resolves to an IP and
+        and IPv6 address the program to listen on both families.
+      </p>
+      <pre>&#x000A;$ netstat -an | grep 8080&#x000A;tcp        0      0  127.0.0.1.8080         *.*                    LISTEN&#x000A;tcp6       0      0  ::1.8080               *.*                    LISTEN&#x000A;</pre>
+      <h2>Cleanup</h2>
+      <p>
+        It's not alwas nessesary to explicitly delete <em>kqueue</em> filters,
+        because calling <em>close()</em> on a file descriptor will remove any kevents
+        that reference the descriptor. It is proper to free the linked-list created by
+        <em>getaddrinfo(3)</em>
+      </p>
+      <pre>&#x000A;freeaddrinfo(ai0);&#x000A;</pre>
+      <p>
+        For a listening socket you may, but are not required to close every
+        descriptor created by <em>socket(3)</em>, but these will also be closed when
+        the process terminates.
+      </p>
+      <h2>References</h2>
+      <p>
+        <a href="http://doc.geoffgarside.co.uk/kqueue/">Kqueues for Fun and
+        Profit</a>
+      </p>
+      <!--
+        <p></p>
+        <a href="http://beej.us/guide/bgipc/output/html/multipage/unixsock.html">Beej's Guide to Unix IPC</a>
+        "Is there a way to either: post a dummy message to the queue, or to cancel the
+        waiting kevent call so that I can reload my array when I decide to?"
+        You can create a dummy UDP socket and add a _disabled_ write filter. Whenever
+        you want to wake up your kqueue thread, just enable the write filter (then
+        disable it again when it wakes up). That's what I do.
+        http://julipedia.meroh.net/2004/10/example-of-kqueue.html
+      -->
+    </div>
+    <p class='timestamp'>
+      Last updated on December 30, 2016
+    </p>
+  </body>
+</html>

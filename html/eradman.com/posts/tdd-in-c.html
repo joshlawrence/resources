@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Test-Driven Development in C
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Test-Driven Development in C</h1>
+      <p>
+        The Internet is now littered with frameworks writing unit tests for C, which
+        is unfortunate because they suggest that writing test code for C requires a kind
+        of parallel project that is bolted on the side. Worse yet, papers and
+        presentations on the subject suggest adapting your project to a C++ framework
+        along with it's clumsy idioms. A dogged insistence on <a
+        href="http://martinfowler.com/articles/designDead.html">simplicity</a>
+        when structuring a project written in C enables you to pick the techniques that
+        fit particular designs. The business of writing tests requires some scafolding,
+        but <a href="http://marc.info/?l=openbsd-ports&m=139474670315494">not
+        much</a>.
+      </p>
+      <h2>A Simple Test Runner</h2>
+      <p>
+        Start by including the header file of the module or system under test.  The
+        following is based on <a
+        href="http://www.jera.com/techinfo/jtns/jtn002.html">MinUnit</a>, a minimal unit
+        testing framework for C by John Brewer
+      </p>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> runner.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;stdio.h&gt;</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&quot;sut.h&quot;</span>&#x000A;&#x000A;<span class="Type">int</span> tests_run = <span class="Constant">0</span>;&#x000A;</pre>
+      <p>
+        Next define some simple macros that will print a meaningful error and return
+      </p>
+      <em>
+        1</em> if the test condition is not true. <em>do { ... } while(0)</em> is a
+        standard way to include multiple statements in a macro, and the block gives
+        variable declarations local storage.
+      </em>
+      <pre>&#x000A;<span class="PreProc">#define FAIL() printf(</span><span class="Constant">&quot;</span><span class="Special">\n</span><span class="Constant">failure in </span><span class="Special">%s</span><span class="Constant">() line </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span><span class="PreProc">, </span><span class="Constant">__func__</span><span class="PreProc">, </span><span class="Constant">__LINE__</span><span class="PreProc">)</span>&#x000A;<span class="PreProc">#define _assert(test) </span><span class="Statement">do</span><span class="PreProc"> { </span><span class="Statement">if</span><span class="PreProc"> (!(test)) { FAIL(); </span><span class="Statement">return</span><span class="PreProc"> </span><span class="Constant">1</span><span class="PreProc">; } } </span><span class="Statement">while</span><span class="PreProc">(</span><span class="Constant">0</span><span class="PreProc">)</span>&#x000A;<span class="PreProc">#define _verify(test) </span><span class="Statement">do</span><span class="PreProc"> { </span><span class="Type">int</span><span class="PreProc"> r=test(); tests_run++; </span><span class="Statement">if</span><span class="PreProc">(r) </span><span class="Statement">return</span><span class="PreProc"> r; } </span><span class="Statement">while</span><span class="PreProc">(</span><span class="Constant">0</span><span class="PreProc">)</span>&#x000A;</pre>
+      <p>
+        The test runner itself is responsible for calling the <em>run_test</em> macro,
+        which simply run each test in turn until one fails.
+      </p>
+      <pre>&#x000A;<span class="Type">int</span> square_01() {&#x000A;    <span class="Type">int</span> x=<span class="Constant">5</span>;&#x000A;    _assert(square(x) == <span class="Constant">25</span>);&#x000A;    <span class="Statement">return</span> <span class="Constant">0</span>;&#x000A;}&#x000A;&#x000A;<span class="Type">int</span> all_tests() {&#x000A;    _verify(square_01);&#x000A;    <span class="Statement">return</span> <span class="Constant">0</span>;&#x000A;}&#x000A;&#x000A;<span class="Type">int</span> main(<span class="Type">int</span> argc, <span class="Type">char</span> **argv) {&#x000A;    <span class="Type">int</span> result = all_tests();&#x000A;    <span class="Statement">if</span> (result == <span class="Constant">0</span>)&#x000A;        printf(<span class="Constant">&quot;PASSED</span><span class="Special">\n</span><span class="Constant">&quot;</span>);&#x000A;    printf(<span class="Constant">&quot;Tests run: </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, tests_run);&#x000A;&#x000A;    <span class="Statement">return</span> result != <span class="Constant">0</span>;&#x000A;</pre>
+      <h2>Link-level Stubbing</h2>
+      <p>
+        Among the techniques available for faking functions in C, link-level stubs
+        are a great place to begin because they require no changes to production code!
+        One of the first functions you may want to replace is <em>main()</em>, so that
+        the test runner is the new entry point for the resulting binary.
+      </p>
+      <pre>&#x000A;<span class="Identifier">runner:</span> runner.o sut.o&#x000A;        strip -N main sut.o _sut.o&#x000A;        <span class="Identifier">${CC}</span> -o <span class="Identifier">$@</span> runner.o _sut.o <span class="Identifier">${LDFLAGS}</span>&#x000A;</pre>
+      <p>
+        Here we create a stripped version of the object code (<em>utility.o</em>) ,
+        which allows the linker to connect the new main from <em>runner.o</em>.  Of
+        course the test runner should always be executed as part of the build.
+      </p>
+      <pre>&#x000A;<span class="Identifier">all:</span> utility runner test&#x000A;&#x000A;<span class="Identifier">test:</span>&#x000A;<span class="Error">        ./runner</span>&#x000A;</pre>
+      <h2>Faking Interfaces with the C Preprocessor</h2>
+      <p>
+        Linking a test runner only works if functions have a global scope (e.g.,
+        don't use the <em>static</em> storage class). It may be sensible to inject the
+        test code into each module using the C preprocessor. This is a very powerful
+        technique, but it means maintaining separate build configurations, which has
+        several implications.
+      </p>
+      <p>
+        Everything needs to be built twice, so it really helps to use a fast
+        compiler, such as <a href="http://pcc.ludd.ltu.se/">PCC</a>. Build scripts and
+        makefiles are making very strategic substitutions here, so I would strongly
+        recommend staying clear of auto-tools. Instead factor out common elements and
+        include them in platform-specific build configurations.</p>
+      </p>
+      <pre>&#x000A;<span class="Comment"># config.mk</span>&#x000A;<span class="Identifier">CC </span>= pcc&#x000A;<span class="Identifier">INCS </span>=&#x000A;<span class="Identifier">LIBS </span>=&#x000A;<span class="Identifier">CFLAGS </span>= -O -g -std=c99 -pedantic -Wall <span class="Identifier">${INCS}</span>&#x000A;<span class="Identifier">LDFLAGS </span>= -static <span class="Identifier">${LIBS}</span>&#x000A;</pre>
+      <p>
+        Compile each source file with the <em>-D</em> flag to set macros that the
+        preprocessor can use.
+      </p>
+      <pre>&#x000A;<span class="PreProc">include</span> config.mk&#x000A;&#x000A;<span class="Identifier">sut.o:</span>&#x000A;<span class="Error">        @echo CC $&lt;</span>&#x000A;<span class="Special">        @</span><span class="Identifier">${CC}</span> -c -DTEST <span class="Identifier">${CFLAGS}</span> <span class="Identifier">$&lt;</span>&#x000A;</pre>
+      <p>
+        Preprocessor instructions can be placed anywhere, but one way of organizing
+        code is to break it into two distinct segments. The first is the system under
+        test, and should contain all of the core functionality of the module, the
+        second will include <em>main()</em> and other definitions that may be replaced
+        by fake functions in the specification header.
+      </p>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> sut.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> functions to be tested </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="cPreCondit">#ifdef TEST</span>&#x000A;<span class="PreProc">#include </span><span class="Constant">&quot;sut_spec.h&quot;</span>&#x000A;<span class="cPreCondit">#else</span>&#x000A;&#x000A;<span class="Comment">/*</span><span class="Comment"> functions to be faked </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="cPreCondit">#endif</span>&#x000A;</pre>
+      <h2>Dynamic Mocks Using Global Function Pointers</h2>
+      <p>
+        If you don't mind one step of indirection, functions can be aliased with a
+        function pointer which the test runner can then redefine at runtime.
+      </p>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> sut.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Type">int</span> (*myfunc)(<span class="Type">int</span>);&#x000A;&#x000A;<span class="Type">int</span> myfunc_IO(<span class="Type">int</span> x) {&#x000A;    <span class="Comment">/*</span><span class="Comment"> ... </span><span class="Comment">*/</span>&#x000A;}&#x000A;<span class="Type">int</span> (*myfunc)(<span class="Type">int</span>) = myfunc_IO;&#x000A;</pre>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> runner.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Type">int</span> myfunc_fake(<span class="Type">int</span> x) {&#x000A;    <span class="Comment">/*</span><span class="Comment"> ... </span><span class="Comment">*/</span>&#x000A;}&#x000A;&#x000A;<span class="Type">void</span> redefine_func_pointers() {&#x000A;    myfunc = myfunc_fake;&#x000A;}&#x000A;</pre>
+      <p>
+        Since globals in C are initialized to <em>0</em>, an <em>if</em> statement
+        can be used in corner cases where you might want to determine if function
+        pointer has been defined but not initialized. Replacing <em>main()</em> is an
+        example of when you might need to do this.
+      </p>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> sut.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="Type">int</span> (*test_runner_main)(<span class="Type">int</span>, <span class="Type">char</span> **);&#x000A;&#x000A;<span class="Type">int</span> main(<span class="Type">int</span> argc, <span class="Type">char</span> **argv) {&#x000A;    <span class="Statement">if</span>((*test_runner_main))&#x000A;        <span class="Statement">return</span>(test_runner_main(argc, argv));&#x000A;    <span class="Comment">/*</span><span class="Comment"> ... </span><span class="Comment">*/</span>&#x000A;}&#x000A;</pre>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> runner.c </span><span class="Comment">*/</span>&#x000A;&#x000A;<span class="PreProc">#include </span><span class="Constant">&quot;sut.c&quot;</span>&#x000A;&#x000A;<span class="Type">int</span> test_main(<span class="Type">int</span> argc, <span class="Type">char</span> **argv) {&#x000A;    <span class="Comment">/*</span><span class="Comment"> run tests </span><span class="Comment">*/</span>&#x000A;}&#x000A;<span class="Type">int</span> (*test_runner_main)(<span class="Type">int</span> argc, <span class="Type">char</span> **argv) = test_main;&#x000A;</pre>
+      <h2>
+        Locating Assertions that Trigger a Segfaults
+      </h2>
+      <p>
+        Many system calls are designed to be fast, not safe.  If a function such as
+      </p>
+      <em>
+        strcmp(3)</em> is given a NULL pointer it will trigger a segfault.
+        Fortunately, it's possible to catch <em>SIGSEGV</em> and generate a core dump at
+        the same time.
+      </em>
+      <pre>&#x000A;<span class="Type">const</span> <span class="Type">char</span>* func;&#x000A;<span class="Type">int</span> line;&#x000A;&#x000A;<span class="PreProc">#define _() func=</span><span class="Constant">__func__</span><span class="PreProc">; line=</span><span class="Constant">__LINE__</span><span class="PreProc">;</span>&#x000A;<span class="PreProc">#define ok(test) </span><span class="Statement">do</span><span class="PreProc"> { _(); </span><span class="Statement">if</span><span class="PreProc"> (!(test)) { fail(); </span><span class="Statement">return</span><span class="PreProc"> </span><span class="Constant">1</span><span class="PreProc">; } } </span><span class="Statement">while</span><span class="PreProc">(</span><span class="Constant">0</span><span class="PreProc">)</span>&#x000A;<span class="PreProc">#define run(test) </span><span class="Statement">do</span><span class="PreProc"> { reset_state(); tests_run++; test(); } </span><span class="Statement">while</span><span class="PreProc">(</span><span class="Constant">0</span><span class="PreProc">)</span>&#x000A;<span class="Type">void</span> fail() { printf(<span class="Constant">&quot;test failure in </span><span class="Special">%s</span><span class="Constant">() line </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, func, line); }&#x000A;&#x000A;<span class="Type">void</span> sighandler(<span class="Type">int</span> signum) {&#x000A;        fail();&#x000A;        <span class="Comment">/*</span><span class="Comment"> generate core dump </span><span class="Comment">*/</span>&#x000A;        signal(signum, <span class="Constant">SIG_DFL</span>);&#x000A;        kill(getpid(), signum);&#x000A;}&#x000A;</pre>
+      <pre>&#x000A;<span class="Comment">/*</span><span class="Comment"> main() </span><span class="Comment">*/</span>&#x000A;    signal(<span class="Constant">SIGSEGV</span>, sighandler)&#x000A;</pre>
+      <p>
+        In this test runner each assert macro records the line number and function
+        name to global variables, which the signal handler uses to print the location of
+        the assertion that failed.
+      </p>
+      <h2>
+        Compile-time Checks and Debugging
+      </h2>
+      <p>
+        One valuable assurance is that all of your tests are run. Adding
+        <em>-Wall</em> to CFLAGS will cause GCC to warn you if a function is defined
+        but never called.
+      </p>
+      <pre>&#x000A;runner.c:81: warning: `test_env_subset' defined but not used&#x000A;</pre>
+      <p>
+        It's often said that test-first programming makes us less dependent on the
+        debugger, and that's true, but a test runner also creates an environment where
+        a debugger can be easily employed because the runner systematically exercises
+        one function at a time. Make sure that debugging is turned on, and that your
+        linker is not striping executables (<em>-s</em>).
+      </p>
+      <pre>&#x000A;<span class="Identifier">CFLAGS </span>+= -g&#x000A;</pre>
+      <p>
+        It is also sometimes handy to add a shell script to the build that
+        automatically prints out a backtrace of any core dumps that occurred.
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;cat <span class="Statement">&lt;&lt;EOF</span><span class="Constant"> &gt; /tmp/report.gdb</span>&#x000A;<span class="Constant">bt full</span>&#x000A;<span class="Constant">quit</span>&#x000A;<span class="Statement">EOF</span>&#x000A;&#x000A;<span class="Statement">for</span> I <span class="Statement">in</span> <span class="Special">`ls *.core </span><span class="Constant">2</span><span class="Special">&gt; /dev/null`</span>; <span class="Statement">do</span>&#x000A;        <span class="Statement">echo</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">---</span><span class="Statement">&quot;</span>&#x000A;        gdb <span class="Statement">-q</span> <span class="Statement">-x</span> /tmp/report.gdb <span class="PreProc">${</span><span class="PreProc">I</span><span class="Error">%.core</span><span class="PreProc">}</span> <span class="Statement">-c</span> <span class="PreProc">${</span><span class="PreProc">I</span><span class="PreProc">}</span>&#x000A;<span class="Statement">done</span>&#x000A;&#x000A;rm /tmp/report.gdb</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

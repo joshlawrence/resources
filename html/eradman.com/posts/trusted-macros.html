@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Trusted Macros in C
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Trusted Macros in C</h1>
+      <p>
+        One of the design goals of <a
+        href="http://expectations.rubyforge.org/">expectations</a>, a unit-test
+        framework for Ruby is to encourage people to <a
+        href="http://xunitpatterns.com/Principles%20of%20Test%20Automation.html#Verify%20One%20Condition%20per%20Test">
+        Verify One Condition per Test</a>. When programming in C I think this
+        principle needs to be called Verify One Function per Test. Macros are a bit
+        different in that they should be generalized bits of code that prove
+        themselves through tests, reasoning, and even discussion about compiler
+        standards.
+      </p>
+      <p>
+        If a macro implements application logic, then it should be formulated as a
+        function and unit-tested. If macros are proven by virtue of their origin or
+        some kind of outside reference then a programmer is free to treat them as
+        if they were language primitives that work even on unknown platforms.</p>
+      </p>
+      <h2>Example: MEMBER_LENGTH</h2>
+      <p>
+        In C it isn't possible to read the size of a struct member without a
+        reference to the struct, so this doesn't work
+      </p>
+      <pre>&#x000A;<span class="Type">typedef</span> <span class="Type">struct</span> {&#x000A;    <span class="Type">int</span> intArray[<span class="Constant">2</span>];&#x000A;    <span class="Type">char</span> charArray[<span class="Constant">4</span>];&#x000A;    <span class="Type">double</span> doubleArray[<span class="Constant">6</span>];&#x000A;} myStruct;&#x000A;&#x000A;printf(<span class="Constant">&quot;size of myStruct.intArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, <span class="Statement">sizeof</span> myStruct.intArray);&#x000A;<span class="Comment">/*</span>&#x000A;<span class="Comment">member.c: In function `main':</span>&#x000A;<span class="Comment">member.c:10: error: syntax error before '.' token</span>&#x000A;<span class="Comment">*/</span>&#x000A;</pre>
+      <p>
+        <em>myStruct</em> has no spacial charactarisitics until we create an
+        instance. One way to solve this is to make one
+      </p>
+      <pre>&#x000A;myStruct myStructInstance;&#x000A;printf(<span class="Constant">&quot;size of myStruct.intArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, <span class="Statement">sizeof</span> myStructInstance.intArray);&#x000A;</pre>
+      <pre>&#x000A;$ ./a.out&#x000A;size of myStruct.intArray is 8&#x000A;</pre>
+      <p>
+        It turns out that this value can be calculated at compile time by casting a
+        null pointer and then using <em>sizeof</em> on one of it's elements
+      </p>
+      <pre>&#x000A;printf(<span class="Constant">&quot;size of myStruct.intArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, <span class="Statement">sizeof</span>(((myStruct *)<span class="Constant">0</span>)-&gt;intArray));&#x000A;</pre>
+      <p>
+        This is the sort of code that belongs in a macro because it's useful,
+        strange, and valid. It looks strange because it's not legitimate to dereference
+        a null pointer but it's valid because the calculation is done at compile-time
+        without an instantiated pointer!
+      </p>
+      <pre>&#x000A;<span class="PreProc">#include </span><span class="Constant">&lt;stdio.h&gt;</span>&#x000A;&#x000A;<span class="PreProc">#define LENGTH(x) (</span><span class="Statement">sizeof</span><span class="PreProc"> x / </span><span class="Statement">sizeof</span><span class="PreProc"> x[</span><span class="Constant">0</span><span class="PreProc">])</span>&#x000A;<span class="PreProc">#define MEMBER_SIZE(S, M) </span><span class="Statement">sizeof</span><span class="PreProc">(((S *)</span><span class="Constant">0</span><span class="PreProc">)-&gt;M)</span>&#x000A;<span class="PreProc">#define MEMBER_OF(S, M) ((S *)</span><span class="Constant">0</span><span class="PreProc">)-&gt;M</span>&#x000A;<span class="PreProc">#define MEMBER_LENGTH(S, M) LENGTH(MEMBER_OF(S, M))</span>&#x000A;&#x000A;<span class="Type">int</span> main() {&#x000A;    <span class="Type">typedef</span> <span class="Type">struct</span> {&#x000A;        <span class="Type">int</span> intArray[<span class="Constant">2</span>];&#x000A;        <span class="Type">char</span> charArray[<span class="Constant">4</span>];&#x000A;        <span class="Type">double</span> doubleArray[<span class="Constant">6</span>];&#x000A;    } myStruct;&#x000A;&#x000A;    printf(<span class="Constant">&quot;size of myStruct.intArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_SIZE(myStruct, intArray));&#x000A;    printf(<span class="Constant">&quot;size of myStruct.charArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_SIZE(myStruct, charArray));&#x000A;    printf(<span class="Constant">&quot;size of myStruct.doubleArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_SIZE(myStruct, doubleArray));&#x000A;&#x000A;    printf(<span class="Constant">&quot;length of myStruct.intArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_LENGTH(myStruct, intArray));&#x000A;    printf(<span class="Constant">&quot;length of myStruct.charArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_LENGTH(myStruct, charArray));&#x000A;    printf(<span class="Constant">&quot;length of myStruct.doubleArray is </span><span class="Special">%d</span><span class="Special">\n</span><span class="Constant">&quot;</span>, MEMBER_LENGTH(myStruct, doubleArray));&#x000A;&#x000A;    <span class="Statement">return</span> <span class="Constant">0</span>;&#x000A;}&#x000A;&#x000A;</pre>
+      <pre>&#x000A;$ cc struct_len_test.c&#x000A;$ ./a.out&#x000A;size of myStruct.intArray is 8&#x000A;size of myStruct.charArray is 4&#x000A;size of myStruct.doubleArray is 48&#x000A;length of myStruct.intArray is 2&#x000A;length of myStruct.charArray is 4&#x000A;length of myStruct.doubleArray is 6&#x000A;</pre>
+      <p>
+        After some experimentation it's clear that macros should be demonstrated,
+        explained, and then used. Use automated tests on functions.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

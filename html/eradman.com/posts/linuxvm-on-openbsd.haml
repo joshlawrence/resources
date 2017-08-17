@@ -1,0 +1,191 @@
+%h1 Running a Linux VM on OpenBSD
+
+%p
+  Writing portable applications requires testing on a variety of platforms.
+  Sometimes I run an alternate OS on a separate piece of hardware, but if you
+  travel running a VM with your target OS is very helpful.
+
+%p
+  The following sections are a tutorial on running Debian in a VM hosted by
+  OpenBSD.
+
+%h2 QEMU
+
+%p
+  First create a new disk image
+
+:codeblock
+  qemu-img create debian.img 4G
+
+%p
+  Then make a shell script to fire it up
+
+:codeblock
+  :::sh
+  #!/bin/sh
+
+  cd ~/vm
+  qemu-system-i386 \
+    -m 256M \
+    -net nic,vlan=1,model=e1000,macaddr=fe:e1:ba:d3:e7:33 \
+    -boot once=d \
+    -cdrom ~/iso/debian-7.0.0-i386-netinst.iso \
+    debian.img
+
+%p
+  By default the first ethernet port will be bridged with <em>tun0</em>. If
+  you want to use a different interface set the <em>ETHER</em>. See also the
+  excelent <a
+  href="http://www.openbsd.org/cgi-bin/cvsweb/ports/emulators/qemu/pkg/README?rev=1.10;content-type=text%2Fplain">OpenBSD
+  qemu/pkg/README</a> for more recommendations for running QEMU.
+
+%h2 Booting Linux
+
+%p
+  Linux 2.6 may hang after messages such as this
+
+:codeblock
+  Setting APIC routing to flat
+  ..TIMER: vector=0x30 apic1=0 pin1=0 apic2=-1 pin2=-1
+  ..MP-BIOS bug: 8254 timer not connected to IO-APIC
+  ...trying to set up timer (IRQ0) through the 8259A ...
+  ..... (found apic 0 pin 0) ...
+  ....... failed.
+  ...trying to set up timer as Virtual Wire IRQ...
+
+%p
+  Adding <em>no_timer_check</em> to the kernel boot parameters will skip this
+  check and should allow you to boot. To make this change permanent in Debian also
+  add this entry to the configuration variable <em>GRUB_CMDLINE_LINUX_DEFAULT</em>
+  in <em>/etc/defaults/grub</em>. Then run
+
+:codeblock
+  $ sudo grub-update
+
+%h2 Networking on the OpenBSD Host
+
+%p
+  I want OpenBSD and Debian to be able to obtain an IP via DHCP on their wired
+  interfaces and I don't want external networking required for an NFS share to the
+  VM. To accomplish this I need two interfaces since <em>dhclient</em> will erase
+  any other IPv4 addresses already assigned. We can't assign an address directly
+  to the bridge, but we can configure a virtual Ethernet device and add it.
+
+%p
+  <em>/etc/hostname.vether0</em>
+
+:codeblock
+  inet 172.16.0.1/28
+
+%p
+  <em>/etc/hostname.bridge0</em>
+
+:codeblock
+  add vether0
+  add em0
+
+%p
+  <em>/etc/sysctl.conf</em>
+
+%p
+  At home I can make internet accessible from the VM while OpenBSD is on
+  wireless by adjusting my firewall to route packets addressed to
+%em
+  172.16.0.0/28</em> via my laptop and add a PF rule to NAT the same
+  addresses
+
+:codeblock
+  :::pf
+  match out on $ext_if from 192.168.0.1/24 nat-to ($ext_if)
+  match out on $ext_if from 172.16.0.0/28 nat-to ($ext_if)
+
+:codeblock
+  route add 172.16.0.0/28 192.168.0.5
+
+%p
+  Where <em>192.168.0.5</em> is set in <em>dhcpd.conf</em> to be my Thinkpad
+  T60p
+
+:codeblock
+  host T60 {
+          hardware ethernet 00:1b:77:11:10:c5;
+          fixed-address 192.168.0.5;
+  }
+
+%p
+  Finally I turn on IP forwarding on may laptop in
+%em
+  /etc/sysctl.conf</em> which will allow it to forward packets from
+  one interface (192.168.0.0/24) to another (172.16.0.0/28)
+
+:codeblock
+  net.inet.ip.forwarding=1
+
+%p
+  Forwarding isn't requried for using the bridge, but it is required to reach
+  the Internet when connected to wireless because unlike wired interfaces a
+  wireless interface will only respond on a single MAC address.
+
+:codeblock
+  T60$ netstat -rn -f inet
+  Routing tables
+
+  Internet:
+  Destination        Gateway            Flags   Refs      Use   Mtu  Prio Iface
+  default            192.168.0.4        UGS        0     2449     -    12 wpi0
+  127.0.0.1          127.0.0.1          UH         1        0 33196     4 lo0
+  172.16.0.0/28      link#5             UC         2        0     -     4 vether0
+  172.16.0.1         fe:e1:ba:d0:b9:30  UHLc       0        2     -     4 lo0
+  172.16.0.2         fe:e1:ba:d3:e7:33  UHLc       0      107     -     4 vether0
+  192.168.0/24       link#2             UC         1        0     -     4 wpi0
+  192.168.0.4        00:10:a4:7a:9a:ad  UHLc       1      281     -     4 wpi0
+  192.168.0.5        127.0.0.1          UG         0       27 33196    56 lo0
+
+%h2 Networking on the Debian VM
+
+%p
+  Edit <em>/etc/network/interfaces</em> and add the following to enable DHCP on
+  the interface while maintaining another static address
+
+:codeblock
+  allow-hotplug eth0
+    iface eth0 inet dhcp
+
+  auto eth0:0
+    iface eth0:0 inet static
+    address 172.16.0.2
+    netmask 255.255.255.240
+    broadcast 172.16.0.15
+    gateway 172.16.0.1
+
+%p
+  See the Debian wiki page on <a
+  href="http://wiki.debian.org/NetworkConfiguration">NetworkConfiguration</a> for
+  other options.
+
+%h2
+  File Sharing
+
+%p
+  Add the following lines to <em>/etc/rc.conf.local</em> to start up
+  NFS-related services on boot
+
+:codeblock
+  mountd_flags=""
+  portmap_flags=""
+  nfsd_flags="-tun 4"
+
+
+%p
+  and list the paths and hosts to export
+
+:codeblock
+  /home/eradman 172.16.0.2
+
+%p
+  Now we can add a line to <em>/etc/fstab</em> in the VM that mounts the home
+  directory on boot
+
+:codeblock
+  172.16.0.1:/home/eradman /home/eradman nfs auto  0 0
+

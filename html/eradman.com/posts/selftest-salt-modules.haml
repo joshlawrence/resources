@@ -1,0 +1,152 @@
+%h1 Self-Testing Salt Utility Modules
+
+%p
+  At times the process of test-driven development feels hard, in part because so
+  many architectural features need to be worked out in order to make a system
+  that is testable. Writing tests for custom modules embedded in your salt
+  project is easy enough that it seems unnatural not to write the tests first.
+
+%h2 Why We Need _modules
+
+%p
+  The default template language is Jinja2, which relies heavily on custom
+  functions called filters. In Salt there is no way to include custom filters,
+  but you can write generic salt modules using the syntax
+
+
+:codeblock
+  :::python
+  salt['module.function'](args, ...)
+
+%p
+  In this way you can write a function for parsing a complex data structure,
+  such as
+
+:codeblock
+  :::yaml
+  # database-host assignments
+  pg:
+    pydio:
+      writer: 10.0.0.40
+      query: 10.0.0.41
+      pgver: 9.5
+    localharvest:
+      writer: 10.0.0.42
+      query: 10.0.0.43
+      pgver: 9.6
+
+%p
+  Salt can be extended in many ways, one of which is to drop a <em>.py</em>
+  file in a directory under your file root called <em>_modules</em>
+
+:codeblock
+  :::python
+  # _modules/pg_utils.py
+  def list_databases(d):
+     return []
+
+%p
+  Use in a Jinja template thusly
+
+:codeblock
+  :::sls
+  {% for db in salt['pg_utils.list_databases']() %}
+  ...
+  {% endfor %}
+
+%h2 Constructing the Test Harness
+
+%p
+  This is a python module, so we can use any testing framework that we like,
+  including unittest2. I use another approach, which is to is to create a
+  specialized assertion function that uses the salt <em>logger</em> to produce
+  clean error reports when called locally or across minions.
+
+:codeblock
+  :::python
+  # _modules/pg_utils.py
+  import inspect
+  import logging
+  from salt.exceptions import CommandExecutionError
+
+  log = logging.getLogger(__name__)
+
+  def eq(a, b):
+      error_details = {
+          'reverse': "\033[1;3m",
+          'reset': "\033[0m",
+          'file': __file__,
+          'line': inspect.currentframe().f_back.f_lineno,
+          'a': a,
+          'b': b
+      }
+      if a != b:
+          log.error("assert failed: {a} != {reverse}{b}{reset}"
+              .format(**error_details))
+          raise CommandExecutionError("{file} on line {line} (see minion log)"
+              .format(**error_details))
+
+%p
+  Our test framework is comprised of a salt-aware assertion method called
+  <em>eq()</em>. It will log the assertion failure on the screen (if run
+  locally with salt-call) or in the minion log if run from a master. Just for
+  color the escape sequences call out the invalid data in the assertion message
+  by swapping the foreground and background.
+
+%p
+  We can test our new equality function from the command line
+
+:codeblock
+  $ salt-call -m _modules pg_utils.eq 11 12
+  [ERROR   ] assert failed: 11 != 12
+  Error running 'pg_utils.eq': _modules/pg_utils.py on line 197 (see minion log)
+
+%p
+  Finishing the test is simply a matter of writing a test fixture and making an
+  assertion
+
+:codeblock
+  :::python
+  # _modules/pg_utils.py
+  def selftest():
+      #...
+      pillar['pg'] = {
+        'pydio': {'writer': '10.0.0.40', 'query': '10.0.0.41', 'pgver': '9.5'}
+        'localharvest: {'writer': '10.0.0.42, 'query': '10.0.0.43', 'pgver': '9.6'}
+      }
+      eq( list_databases(), ['localharvest', 'pydio'] )
+      return "TESTS COMPLETE for {}".format(__name__)
+
+%h2 Finishing Up
+
+%p
+  This may seem like a lot of work already, but only because we are inventing a
+  tiny salt-aware test harness. This is all complete reusable for future work.
+  Now we can run and observe the failure
+
+:codeblock
+  $ salt-call -m _modules pg_utils.selftest
+  [ERROR   ] assert failed: ['localharvest', 'pydio'] != []
+  Error running 'pg_utils.selftest': _modules/pg_utils.py on line 72 (see minion log)
+
+%p
+  Iteration on the function under test is now extremely fast!
+
+:codeblock
+  $ salt-call -m _modules pg_utils.selftest
+  local:
+      TESTS COMPLETE for salt.loaded.ext.module.pg_utils
+
+%p
+  By tailoring this test strategy to the salt environment we not only have full
+  access to the Salt API in our tests, but assertion failures are neatly
+  communicated over the master-minion bus. Hence we can run these test across
+  many hosts to verify the portability of the system under test
+
+:codeblock
+  $ salt '*' saltutil.sync_modules
+  $ salt '*' pg_utils.selftest
+  vm1.eradman.com:
+      TESTS COMPLETE for salt.loader.salt.ext.module.pg_utils
+  vm2.eradman.com:
+      TESTS COMPLETE for salt.loader.salt.ext.module.pg_utils

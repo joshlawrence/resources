@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Graphing Nameserver Statistics
+    </title>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Graphing Nameserver Statistics</h1>
+      <p>
+        Sometimes trends are more informative than snapshots. BIND can append
+        statistics to <em>/var/named/named.stats</em>, for example:
+      </p>
+      <pre>&#x000A;+++ Statistics Dump +++ (1232034903)&#x000A;success 510007943&#x000A;referral 9162844&#x000A;nxrrset 57241342&#x000A;nxdomain 272525211&#x000A;recursion 348209144&#x000A;failure 58016681&#x000A;/--- Statistics Dump --- (1232034903)&#x000A;</pre>
+      <p>
+        The number in parentheses is a timespamp, and can be translated by using
+        <em>date(1)</em>:
+      </p>
+      <pre>&#x000A;$ date -r 1232034903&#x000A;Thu Jan 15 10:55:03 EST 2009&#x000A;</pre>
+      <p>
+        By storing the results of these statistics in a round-robin database a graph
+        can be created to help identify transitory conditions or trends.
+      </p>
+      <p class='center'>
+        <img src="../library/graphing-bind/dns-day.png" width="579" height="419" alt="BIND statistics for the past 24 hours" />
+      </p>
+      <h2>
+        Step 1: Create an RRD file (<em>create_rrd.sh</em>)
+      </h2>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;/usr/local/bin/rrdtool create ~/templates/dns.rrd <span class="Statement">\</span>&#x000A;    <span class="Special">--step</span> <span class="Constant">300</span> <span class="Statement">\</span>&#x000A;    DS:success:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">1000000</span> <span class="Statement">\</span>&#x000A;    DS:referral:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">1000000</span> <span class="Statement">\</span>&#x000A;    DS:nxrrset:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">100000</span> <span class="Statement">\</span>&#x000A;    DS:nxdomain:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">100000</span> <span class="Statement">\</span>&#x000A;    DS:recursion:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">1000000</span> <span class="Statement">\</span>&#x000A;    DS:failure:COUNTER:<span class="Constant">600</span>:<span class="Constant">0</span>:<span class="Constant">10000</span> <span class="Statement">\</span>&#x000A;    RRA:AVERAGE:0.5:<span class="Constant">1</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:AVERAGE:0.5:<span class="Constant">6</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:AVERAGE:0.5:<span class="Constant">24</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:AVERAGE:0.5:<span class="Constant">288</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:MAX:0.5:<span class="Constant">1</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:MAX:0.5:<span class="Constant">6</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:MAX:0.5:<span class="Constant">24</span>:<span class="Constant">800</span> <span class="Statement">\</span>&#x000A;    RRA:MAX:0.5:<span class="Constant">288</span>:<span class="Constant">800</span>&#x000A;</pre>
+      <p>
+        You can then copy this blank RRD database to the directory where it will be used.
+      </p>
+      <h2>Step 2: Use a script to gather stats and update the RRD file (<em>dns.sh</em>)</h2>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;sudo /bin/cp /dev/null /var/named/named.stats&#x000A;sudo /usr/sbin/rndc stats&#x000A;&#x000A;<span class="Identifier">output</span>=<span class="Special">`grep </span><span class="Special">-v</span><span class="Special"> Statistics /var/named/named.stats | awk </span><span class="Statement">'</span>&#x000A;<span class="Constant">        {out=out c $2; c=&quot;:&quot;}</span>&#x000A;<span class="Constant">        END {print out}</span>&#x000A;<span class="Constant">        </span><span class="Statement">'</span><span class="Special">`</span>&#x000A;/usr/local/bin/rrdtool update <span class="Statement">\</span>&#x000A;    ~/logs/dns.rrd <span class="Statement">\</span>&#x000A;    <span class="Special">--template</span> <span class="Statement">\</span>&#x000A;    success:referral:nxrrset:nxdomain:recursion:failure <span class="Statement">\</span>&#x000A;    N:<span class="PreProc">$output</span>&#x000A;&#x000A;</pre>
+      <h2>
+        Step 3: Edit the <em>sudoers</em> file to allow these updates from this user:
+      </h2>
+      <pre>&#x000A;<span class="Statement">Cmnd_Alias</span> <span class="Identifier">STATS</span> <span class="Statement">=</span> <span class="Constant">/usr/sbin/rndc</span> <span class="Constant">stats</span><span class="Special">,</span> \&#x000A;                   /bin/cp /dev/null /var/named/named.stats&#x000A;<span class="Constant">rrd</span>  <span class="PreProc">ALL</span> <span class="Statement">=</span> <span class="Special">NOPASSWD:</span> <span class="PreProc">STATS</span>&#x000A;</pre>
+      <h2>
+        Step 4: Create a script to gather all data (<em>poll.sh</em>)
+      </h2>
+      <pre><span class="Comment">#!/bin/sh
+      scripts/localhost/load_avg.sh
+      scripts/localhost/procs.sh
+      scripts/localhost/dns.sh
+      scripts/localhost/disk.s</pre>
+      <h2>
+        Step 5: Schedule updates
+      </h2>
+      <pre>&#x000A;$ crontab -l&#x000A;#minute hour    mday    month   wday    command&#x000A;*/5     *       *       *       *       poll.sh&#x000A;</pre>
+      <h2>
+        Step 6: Generate graphs (<a href="http://haroon.sis.utoronto.ca/rrd/scripts/">rrd.cgi</a>)
+      </h2>
+      <pre>&#x000A;Title[load_avg]: Load Average&#x000A;PageTop[load_avg]: &lt;H1&gt;Load Average&lt;/H1&gt;&#x000A;Directory[load_avg]: localhost_stats&#x000A;PercentileValue[load_avg]: 95&#x000A;PercentileSources[load_avg]: 0+1+2&#x000A;Graph[load_avg]:&#x000A;    -v &amp;quot;Average Load&amp;quot;&#x000A;    --rigid&#x000A;    -l 0&#x000A;    DEF:a=load_avg.rrd:1min:AVERAGE&#x000A;    DEF:b=load_avg.rrd:5min:AVERAGE&#x000A;    DEF:c=load_avg.rrd:15min:AVERAGE&#x000A;    CDEF:cdefd=a,b,c,+,+&#x000A;    CDEF:flag=cdefd,%PERCENTILE0%,GT,1,0,IF&#x000A;    CDEF:cdefabelow=1,flag,EQ,0,a,IF&#x000A;    CDEF:cdefbbelow=1,flag,EQ,0,b,IF&#x000A;    CDEF:cdefcbelow=1,flag,EQ,0,c,IF&#x000A;    CDEF:cdefaabove=flag,a,*&#x000A;    CDEF:cdefbabove=flag,b,*&#x000A;    CDEF:cdefcabove=flag,c,*&#x000A;    AREA:cdefcbelow#990000:&amp;quot;15 Minute&amp;quot;&#x000A;    GPRINT:c:LAST:&amp;quot;Cur\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:c:AVERAGE:&amp;quot;Ave\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:c:MAX:&amp;quot;MAX\:%8.2lf %s\n&amp;quot;&#x000A;    STACK:cdefbbelow#cc0000:&amp;quot;5 Minute&amp;quot;&#x000A;    GPRINT:b:LAST:&amp;quot; Cur\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:b:AVERAGE:&amp;quot;Ave\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:b:MAX:&amp;quot;MAX\:%8.2lf %s\n&amp;quot;&#x000A;    STACK:cdefabelow#ff0000:&amp;quot;1 Minute&amp;quot;&#x000A;    GPRINT:a:LAST:&amp;quot; Cur\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:a:AVERAGE:&amp;quot;Ave\:%8.2lf %s&amp;quot;&#x000A;    GPRINT:a:MAX:&amp;quot;MAX\:%8.2lf %s\n&amp;quot;&#x000A;    LINE1:cdefd#000001:Total&#x000A;    HRULE:%PERCENTILE0%#7c03f1:&amp;quot;%PERCENTILEVALUE%%ile threshold value %PERCENTILE0%\n&amp;quot;&#x000A;    AREA:cdefcabove#000066:&amp;quot;15 Minute (above %PERCENTILEVALUE%%ile)&amp;quot;&#x000A;    STACK:cdefbabove#000099:&amp;quot;5 Minute (above %PERCENTILEVALUE%%ile)&amp;quot;&#x000A;    STACK:cdefaabove#0000ff:&amp;quot;1 Minute (above %PERCENTILEVALUE%%ile)\n&amp;quot;&#x000A;</pre>
+      <h2>Other Examples</h2>
+      <p>
+        Disk Usage
+      </p>
+      <p class='center'>
+        <img src="../library/graphing-bind/disk_usage-day.png" width="579" height="201" />
+      </p>
+      <p>
+        Load Average
+      </p>
+      <p class='center'>
+        <img src="../library/graphing-bind/load_avg-day.png" width="579" height="210" />
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on July 02, 2015
+    </p>
+  </body>
+</html>

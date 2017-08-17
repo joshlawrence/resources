@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Running a Linux VM on OpenBSD
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Running a Linux VM on OpenBSD</h1>
+      <p>
+        Writing portable applications requires testing on a variety of platforms.
+        Sometimes I run an alternate OS on a separate piece of hardware, but if you
+        travel running a VM with your target OS is very helpful.
+      </p>
+      <p>
+        The following sections are a tutorial on running Debian in a VM hosted by
+        OpenBSD.
+      </p>
+      <h2>QEMU</h2>
+      <p>
+        First create a new disk image
+      </p>
+      <pre>&#x000A;qemu-img create debian.img 4G&#x000A;</pre>
+      <p>
+        Then make a shell script to fire it up
+      </p>
+      <pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;&#x000A;<span class="Statement">cd</span> ~/vm&#x000A;qemu-system-i386 <span class="Statement">\</span>&#x000A;  <span class="Special">-m</span> 256M <span class="Statement">\</span>&#x000A;  <span class="Special">-net</span> <span class="Identifier">nic,vlan</span>=<span class="Identifier">1,model</span>=<span class="Identifier">e1000,macaddr</span>=fe:e1:ba:d3:e7:<span class="Constant">33</span> <span class="Statement">\</span>&#x000A;  <span class="Special">-boot</span> <span class="Identifier">once</span>=d <span class="Statement">\</span>&#x000A;  <span class="Special">-cdrom</span> ~/iso/debian-7.<span class="Constant">0</span>.0-i386-netinst.iso <span class="Statement">\</span>&#x000A;  debian.img&#x000A;</pre>
+      <p>
+        By default the first ethernet port will be bridged with <em>tun0</em>. If
+        you want to use a different interface set the <em>ETHER</em>. See also the
+        excelent <a
+        href="http://www.openbsd.org/cgi-bin/cvsweb/ports/emulators/qemu/pkg/README?rev=1.10;content-type=text%2Fplain">OpenBSD
+        qemu/pkg/README</a> for more recommendations for running QEMU.
+      </p>
+      <h2>Booting Linux</h2>
+      <p>
+        Linux 2.6 may hang after messages such as this
+      </p>
+      <pre>&#x000A;Setting APIC routing to flat&#x000A;..TIMER: vector=0x30 apic1=0 pin1=0 apic2=-1 pin2=-1&#x000A;..MP-BIOS bug: 8254 timer not connected to IO-APIC&#x000A;...trying to set up timer (IRQ0) through the 8259A ...&#x000A;..... (found apic 0 pin 0) ...&#x000A;....... failed.&#x000A;...trying to set up timer as Virtual Wire IRQ...&#x000A;</pre>
+      <p>
+        Adding <em>no_timer_check</em> to the kernel boot parameters will skip this
+        check and should allow you to boot. To make this change permanent in Debian also
+        add this entry to the configuration variable <em>GRUB_CMDLINE_LINUX_DEFAULT</em>
+        in <em>/etc/defaults/grub</em>. Then run
+      </p>
+      <pre>&#x000A;$ sudo grub-update&#x000A;</pre>
+      <h2>Networking on the OpenBSD Host</h2>
+      <p>
+        I want OpenBSD and Debian to be able to obtain an IP via DHCP on their wired
+        interfaces and I don't want external networking required for an NFS share to the
+        VM. To accomplish this I need two interfaces since <em>dhclient</em> will erase
+        any other IPv4 addresses already assigned. We can't assign an address directly
+        to the bridge, but we can configure a virtual Ethernet device and add it.
+      </p>
+      <p>
+        <em>/etc/hostname.vether0</em>
+      </p>
+      <pre>&#x000A;inet 172.16.0.1/28&#x000A;</pre>
+      <p>
+        <em>/etc/hostname.bridge0</em>
+      </p>
+      <pre>&#x000A;add vether0&#x000A;add em0&#x000A;</pre>
+      <p>
+        <em>/etc/sysctl.conf</em>
+      </p>
+      <p>
+        At home I can make internet accessible from the VM while OpenBSD is on
+        wireless by adjusting my firewall to route packets addressed to
+      </p>
+      <em>
+        172.16.0.0/28</em> via my laptop and add a PF rule to NAT the same
+        addresses
+      </em>
+      <pre>&#x000A;match out on <span class="Identifier">$ext_if</span> from <span class="Type">192.168.0.1</span><span class="Constant">/24</span> <span class="Statement">nat</span>-to (<span class="Identifier">$ext_if</span>)&#x000A;match out on <span class="Identifier">$ext_if</span> from <span class="Type">172.16.0.0</span><span class="Constant">/28</span> <span class="Statement">nat</span>-to (<span class="Identifier">$ext_if</span>)&#x000A;</pre>
+      <pre>&#x000A;route add 172.16.0.0/28 192.168.0.5&#x000A;</pre>
+      <p>
+        Where <em>192.168.0.5</em> is set in <em>dhcpd.conf</em> to be my Thinkpad
+        T60p
+      </p>
+      <pre>&#x000A;host T60 {&#x000A;        hardware ethernet 00:1b:77:11:10:c5;&#x000A;        fixed-address 192.168.0.5;&#x000A;}&#x000A;</pre>
+      <p>
+        Finally I turn on IP forwarding on may laptop in
+      </p>
+      <em>
+        <!-- etc/sysctl.conf</em> which will allow it to forward packets from -->
+        one interface (192.168.0.0/24) to another (172.16.0.0/28)
+      </em>
+      <pre>&#x000A;net.inet.ip.forwarding=1&#x000A;</pre>
+      <p>
+        Forwarding isn't requried for using the bridge, but it is required to reach
+        the Internet when connected to wireless because unlike wired interfaces a
+        wireless interface will only respond on a single MAC address.
+      </p>
+      <pre>&#x000A;T60$ netstat -rn -f inet&#x000A;Routing tables&#x000A;&#x000A;Internet:&#x000A;Destination        Gateway            Flags   Refs      Use   Mtu  Prio Iface&#x000A;default            192.168.0.4        UGS        0     2449     -    12 wpi0&#x000A;127.0.0.1          127.0.0.1          UH         1        0 33196     4 lo0&#x000A;172.16.0.0/28      link#5             UC         2        0     -     4 vether0&#x000A;172.16.0.1         fe:e1:ba:d0:b9:30  UHLc       0        2     -     4 lo0&#x000A;172.16.0.2         fe:e1:ba:d3:e7:33  UHLc       0      107     -     4 vether0&#x000A;192.168.0/24       link#2             UC         1        0     -     4 wpi0&#x000A;192.168.0.4        00:10:a4:7a:9a:ad  UHLc       1      281     -     4 wpi0&#x000A;192.168.0.5        127.0.0.1          UG         0       27 33196    56 lo0&#x000A;</pre>
+      <h2>Networking on the Debian VM</h2>
+      <p>
+        Edit <em>/etc/network/interfaces</em> and add the following to enable DHCP on
+        the interface while maintaining another static address
+      </p>
+      <pre>&#x000A;allow-hotplug eth0&#x000A;  iface eth0 inet dhcp&#x000A;&#x000A;auto eth0:0&#x000A;  iface eth0:0 inet static&#x000A;  address 172.16.0.2&#x000A;  netmask 255.255.255.240&#x000A;  broadcast 172.16.0.15&#x000A;  gateway 172.16.0.1&#x000A;</pre>
+      <p>
+        See the Debian wiki page on <a
+        href="http://wiki.debian.org/NetworkConfiguration">NetworkConfiguration</a> for
+        other options.
+      </p>
+      <h2>
+        File Sharing
+      </h2>
+      <p>
+        Add the following lines to <em>/etc/rc.conf.local</em> to start up
+        NFS-related services on boot
+      </p>
+      <pre>&#x000A;mountd_flags=&quot;&quot;&#x000A;portmap_flags=&quot;&quot;&#x000A;nfsd_flags=&quot;-tun 4&quot;&#x000A;&#x000A;</pre>
+      <p>
+        and list the paths and hosts to export
+      </p>
+      <pre>&#x000A;/home/eradman 172.16.0.2&#x000A;</pre>
+      <p>
+        Now we can add a line to <em>/etc/fstab</em> in the VM that mounts the home
+        directory on boot
+      </p>
+      <pre>&#x000A;172.16.0.1:/home/eradman /home/eradman nfs auto  0 0</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on November 26, 2016
+    </p>
+  </body>
+</html>

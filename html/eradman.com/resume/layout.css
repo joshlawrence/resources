@@ -1,0 +1,69 @@
+@import url(fonts/opensans.css);
+body { padding: 12px; background-color: #efefef; font-family: "Open Sans", Futura, Helvetica, sans-serif; color: #252525; }
+
+h1 { font-size: 44pt; text-shadow: 1px 1px 1px #476871; font-weight: 700; margin-top: 4px; margin-bottom: 0px; color: #333; font-family: "Open Sans Condensed", "Open Sans", Futura, Helvetica, sans-serif; }
+
+h5 { margin-top: 0px; font-size: 11pt; letter-spacing: 0.14em; font-weight: 700; font-family: "Open Sans Condensed", "Open Sans", Futura, Helvetica, sans-serif; color: #476871; }
+
+h2, h3, h4 { font-weight: 300; margin: 0 0 14px; clear: left; }
+
+h2 { font-size: 20pt; color: #666; }
+
+h3 { font-size: 16pt; color: #333; }
+
+h4 { font-size: 14pt; color: #333; }
+
+p, td { line-height: 1.5em; font-size: 11pt; margin-top: 0px; }
+
+table { margin-bottom: 18px; }
+
+td { vertical-align: top; padding-right: 10px; }
+
+a { color: #333; text-decoration: none; }
+
+a:hover { text-decoration: underline; }
+
+body > section { background-color: #fff; max-width: 740px; padding: 20px 25px; margin: 0 auto 15px; clear: left; }
+
+#contact-info { text-align: center; margin: 0 auto; }
+
+#contact-info p { font-size: 14px; margin-bottom: 8px; }
+
+#logo { margin-bottom: 20px; text-align: center; }
+
+span.daterange { color: #666; margin-right: 0.5em; }
+
+span.hilight { font-weight: 700; }
+
+#printpage { text-align: center; font-size: 9.5pt; letter-spacing: 0.1em; text-transform: uppercase; color: #666; line-height: 2.5em !important; font-family: Georgia, "Times New Roman", Times, serif; }
+
+.btn { text-decoration: none; cursor: pointer; }
+
+.btn:hover { text-decoration: underline; }
+
+.cf:after { content: ''; display: block; clear: both; visibility: hidden; }
+
+dl { margin-top: 2px; }
+
+dt { display: none; }
+
+dd { margin-left: 0px; font-weight: 300; font-size: 10.5pt; }
+
+dd:before { content: "\00bb"; margin-right: 3px; color: #476871; }
+
+@media screen { #logo { float: center; }
+  body { padding: 15px 15px; } }
+@media screen and (min-width: 780px) { #logo { float: left; }
+  #contact-info { float: right; width: 30%; margin-top: 11pt 0 0; text-align: left; }
+  body > section section { width: 74%; float: left; }
+  aside { display: block; float: right; width: 23%; } }
+@media print { #printpage { display: none !important; }
+  #logo { float: left; }
+  #contact-info { float: right; width: 30%; margin-top: 11pt 0 0; text-align: left; }
+  body > section section { width: 74%; float: left; }
+  aside { display: block; float: right; width: 23%; }
+  h1 { text-shadow: 1pt 1pt 0px #476871; }
+  p, td { font-size: 10pt; } }
+@page { size: auto; margin: 10mm 5mm 15mm 5mm;
+  /* top right bottom left */
+  section { page-break-inside: avoid; } }

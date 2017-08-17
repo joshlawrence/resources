@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Generating Statistics with PG
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Generating Statistics with PG</h1>
+      <h2>The Query Preamble</h2>
+      <p>
+        Sometimes there are a range of constants or fixed criteria that are plugged
+        into multiple common table expressions or filters. Stating some of the
+        configurable values up front adds a lot to readability
+      </p>
+      <pre>&#x000A;\<span class="Statement">set</span> <span class="Special">start</span> <span class="Constant">'2015-04-01'</span>&#x000A;\<span class="Statement">set</span> <span class="Special">end</span> <span class="Constant">'2015-04-08'</span>&#x000A;</pre>
+      <p>
+        The quotes are not included as part of the value. To use these dates, quote
+        the variable name
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> * <span class="Special">FROM</span> mytable&#x000A;<span class="Special">WHERE</span> time &gt; :<span class="Constant">'start'</span> <span class="Statement">AND</span> time &lt; :<span class="Constant">'end'</span>&#x000A;</pre>
+      <h2>Running Sum</h2>
+      <p>
+        Window functions are super valuable because they allow you to perform ordered
+        calculations on a range of rows
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> series,&#x000A;  <span class="Identifier">sum</span>(series) OVER (<span class="Special">ORDER</span> <span class="Special">BY</span> series)&#x000A;<span class="Special">FROM</span> generate_series(<span class="Constant">0</span>, <span class="Constant">4</span>) <span class="Special">AS</span> series&#x000A;<span class="Special">GROUP</span> <span class="Special">BY</span> series&#x000A;</pre>
+      <p>
+        This results in
+      </p>
+      <pre>&#x000A; series | sum&#x000A;--------+-----&#x000A;      0 |   0&#x000A;      1 |   1&#x000A;      2 |   3&#x000A;      3 |   6&#x000A;      4 |  10&#x000A;(5 rows)&#x000A;</pre>
+      <p>
+        If you would like to convert this number to a running total simply leave off
+        any seletion criteria, as in
+      </p>
+      <pre>&#x000A;  <span class="Identifier">sum</span>(series) OVER ()&#x000A;</pre>
+      <p>
+        Functions such as <em>sum</em> and <em>count</em> can be combined to provide
+        compound summary data. A real-world example might look like this:
+      </p>
+      <pre>&#x000A;<span class="Special">WITH</span> wait_times <span class="Special">AS</span> (&#x000A;  <span class="Statement">SELECT</span> start_time,&#x000A;    date_trunc(<span class="Constant">'minute'</span>, (time_end - time_start)) +&#x000A;      interval <span class="Constant">'1 minute'</span> <span class="Special">AS</span> alloc_wait&#x000A;  <span class="Special">FROM</span> tasks&#x000A;  <span class="Special">WHERE</span> time_end &gt; now() - interval <span class="Constant">'1 day'</span>&#x000A;)&#x000A;<span class="Statement">SELECT</span> <span class="Identifier">count</span>(alloc_wait) <span class="Special">as</span> <span class="Constant">&quot;# of tasks&quot;</span>,&#x000A;  alloc_wait,&#x000A;  <span class="Identifier">round</span>(&#x000A;    <span class="Identifier">sum</span>(<span class="Identifier">count</span>(alloc_wait)) OVER (<span class="Special">ORDER</span> <span class="Special">BY</span> alloc_wait)&#x000A;  / <span class="Identifier">sum</span>(<span class="Identifier">count</span>(alloc_wait)) OVER () * <span class="Constant">100</span>, <span class="Constant">2</span>) || <span class="Constant">' %'</span> <span class="Special">AS</span> total&#x000A;<span class="Special">FROM</span> wait_times&#x000A;<span class="Special">GROUP</span> <span class="Special">BY</span> alloc_wait&#x000A;<span class="Special">ORDER</span> <span class="Special">BY</span> alloc_wait&#x000A;</pre>
+      <pre>&#x000A; # of tasks | alloc_wait | total&#x000A;------------+------------+----------&#x000A;        150 | 00:01:00   | 68.81 %&#x000A;         46 | 00:02:00   | 89.91 %&#x000A;         18 | 00:03:00   | 98.17 %&#x000A;          1 | 00:04:00   | 98.62 %&#x000A;          1 | 00:28:00   | 99.08 %&#x000A;          2 | 00:34:00   | 100.00 %&#x000A;(6 rows)&#x000A;</pre>
+      <h2>Quick Histograms</h2>
+      <p>
+        If raw numbers seem hard to digest, simple text representations can also be
+        useful
+      </p>
+      <pre>&#x000A;<span class="Special">WITH</span> <span class="Special">values</span> <span class="Special">AS</span> (&#x000A;   <span class="Statement">SELECT</span>&#x000A;     id, (random() * <span class="Constant">40</span>)::<span class="Type">integer</span> <span class="Special">AS</span> <span class="Special">level</span>&#x000A;   <span class="Special">FROM</span> generate_series(<span class="Constant">100</span>,<span class="Constant">104</span>) <span class="Special">AS</span> id&#x000A;)&#x000A;<span class="Statement">SELECT</span> id, repeat(<span class="Constant">'*'</span>, <span class="Special">level</span>) <span class="Special">AS</span> <span class="Special">level</span>&#x000A;<span class="Special">FROM</span> <span class="Special">values</span>&#x000A;<span class="Special">ORDER</span> <span class="Special">BY</span> id;&#x000A;</pre>
+      <pre>&#x000A; id  |                 level&#x000A;-----+---------------------------------------&#x000A; 100 | *************************************&#x000A; 101 | *********************************&#x000A; 102 | ******&#x000A; 103 | *&#x000A; 104 | *******************&#x000A;(5 rows)</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on November 26, 2016
+    </p>
+  </body>
+</html>

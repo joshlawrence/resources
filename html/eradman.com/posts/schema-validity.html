@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Validating SQLite Schemas
+    </title>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Validating SQLite Schemas</h1>
+      <p>
+        Many of the advantages that test-first programming brings to imperative
+        languages also bring surprising advantages database design.
+      </p>
+      <h3>SQLite Triggers</h3>
+      <p>
+        Triggers provide a powerful means of enforcing data integrity, and we
+        usually know exactally what we hope to happen before we write an action. In the
+        following example we define a table first, then what I expect to happen when I
+        insert an invalid row into the table
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">TABLE</span> report (&#x000A;  id <span class="Type">INTEGER</span> PRIMARY KEY,&#x000A;  timestamp <span class="Type">INTEGER</span> <span class="Statement">NOT</span> <span class="Special">NULL</span>,&#x000A;  value <span class="Type">INTEGER</span> <span class="Statement">NOT</span> <span class="Special">NULL</span>&#x000A;);&#x000A;<span class="Comment">-- Input test</span>&#x000A;<span class="Comment">-- N/A is not allowed as a value</span>&#x000A;<span class="Special">BEGIN</span>;&#x000A;<span class="Statement">INSERT</span> <span class="Special">INTO</span> report (timestamp, value) <span class="Special">VALUES</span> (<span class="Constant">1297272536</span>, <span class="Constant">99</span>);&#x000A;<span class="Statement">INSERT</span> <span class="Special">INTO</span> report (timestamp, value) <span class="Special">VALUES</span> (<span class="Constant">1297272538</span>, <span class="Constant">'N/A'</span>);&#x000A;&#x000A;<span class="Statement">SELECT</span> <span class="Constant">'ERROR: insert on table &quot;report&quot; failed'</span>&#x000A;   <span class="Special">FROM</span> report <span class="Special">WHERE</span> (<span class="Statement">SELECT</span> count(id) <span class="Special">FROM</span> report) != <span class="Constant">1</span> LIMIT <span class="Constant">1</span>;&#x000A;&#x000A;<span class="Statement">SELECT</span> <span class="Constant">'ERROR: insert on table &quot;report&quot; violates constraint &quot;valid_report_values&quot;'</span>&#x000A;   <span class="Special">FROM</span> report <span class="Special">WHERE</span> timestamp=<span class="Constant">1297272538</span> <span class="Statement">or</span> sele&#x000A;&#x000A;<span class="Statement">ROLLBACK</span>;&#x000A;</pre>
+      <p>
+        Each <em>SELECT '...'</em> serves as assertion. On success we expect no
+        output. Here's what happens when I we test it
+      </p>
+      <pre>&#x000A;$ rm /tmp/test.db ; sqlite3 /mp/test.db &lt; schema.sql&#x000A;ERROR: insert on table &quot;report&quot; violates constraint &quot;valid_report_values&quot;&#x000A;</pre>
+      <p>
+        If this is run from a larger test suite you can also replace the filename
+        with <em>:memory:</em> instructs SQLite to create a database in RAM instead of
+        disk.
+      </p>
+      <p>
+        Next write a trigger to satisfy the test, and watch, it go green!
+      </p>
+      <pre>&#x000A;<span class="Statement">CREATE</span> <span class="Special">TRIGGER</span> valid_report_values&#x000A;  BEFORE <span class="Statement">INSERT</span> <span class="Special">ON</span> report&#x000A;  WHEN NEW.value = <span class="Constant">'N/A'</span>&#x000A;  <span class="Special">BEGIN</span>&#x000A;    <span class="Statement">SELECT</span> RAISE(IGNORE);&#x000A;  <span class="Special">END</span>;&#x000A;</pre>
+      <pre>&#x000A;$ sqlite3 :memory: &lt; schema.sql</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 27, 2015
+    </p>
+  </body>
+</html>

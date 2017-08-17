@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Self-Testing Salt Utility Modules
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Self-Testing Salt Utility Modules</h1>
+      <p>
+        At times the process of test-driven development feels hard, in part because so
+        many architectural features need to be worked out in order to make a system
+        that is testable. Writing tests for custom modules embedded in your salt
+        project is easy enough that it seems unnatural not to write the tests first.
+      </p>
+      <h2>Why We Need _modules</h2>
+      <p>
+        The default template language is Jinja2, which relies heavily on custom
+        functions called filters. In Salt there is no way to include custom filters,
+        but you can write generic salt modules using the syntax
+      </p>
+      <pre>&#x000A;salt[<span class="Constant">'</span><span class="Constant">module.function</span><span class="Constant">'</span>](args, ...)&#x000A;</pre>
+      <p>
+        In this way you can write a function for parsing a complex data structure,
+        such as
+      </p>
+      <pre>&#x000A;<span class="Comment"># database-host assignments</span>&#x000A;<span class="Identifier">pg</span><span class="Special">:</span>&#x000A;  <span class="Identifier">pydio</span><span class="Special">:</span>&#x000A;    <span class="Identifier">writer</span><span class="Special">:</span> 10.0.0.40&#x000A;    <span class="Identifier">query</span><span class="Special">:</span> 10.0.0.41&#x000A;    <span class="Identifier">pgver</span><span class="Special">:</span> <span class="Constant">9.5</span>&#x000A;  <span class="Identifier">localharvest</span><span class="Special">:</span>&#x000A;    <span class="Identifier">writer</span><span class="Special">:</span> 10.0.0.42&#x000A;    <span class="Identifier">query</span><span class="Special">:</span> 10.0.0.43&#x000A;    <span class="Identifier">pgver</span><span class="Special">:</span> <span class="Constant">9.6</span>&#x000A;</pre>
+      <p>
+        Salt can be extended in many ways, one of which is to drop a <em>.py</em>
+        file in a directory under your file root called <em>_modules</em>
+      </p>
+      <pre>&#x000A;<span class="Comment"># _modules/pg_utils.py</span>&#x000A;<span class="Statement">def</span> <span class="Identifier">list_databases</span>(d):&#x000A;   <span class="Statement">return</span> []&#x000A;</pre>
+      <p>
+        Use in a Jinja template thusly
+      </p>
+      <pre>&#x000A;<span class="PreProc">{% </span><span class="Statement">for</span><span class="PreProc"> db </span><span class="Statement">in</span><span class="PreProc"> salt['pg_utils.list_databases']() %}</span>&#x000A;<span class="PreProc">...</span>&#x000A;<span class="PreProc">{% </span><span class="Statement">endfor</span><span class="PreProc"> %}</span>&#x000A;</pre>
+      <h2>Constructing the Test Harness</h2>
+      <p>
+        This is a python module, so we can use any testing framework that we like,
+        including unittest2. I use another approach, which is to is to create a
+        specialized assertion function that uses the salt <em>logger</em> to produce
+        clean error reports when called locally or across minions.
+      </p>
+      <pre>&#x000A;<span class="Comment"># _modules/pg_utils.py</span>&#x000A;<span class="PreProc">import</span> inspect&#x000A;<span class="PreProc">import</span> logging&#x000A;<span class="PreProc">from</span> salt.exceptions <span class="PreProc">import</span> CommandExecutionError&#x000A;&#x000A;log = logging.getLogger(__name__)&#x000A;&#x000A;<span class="Statement">def</span> <span class="Identifier">eq</span>(a, b):&#x000A;    error_details = {&#x000A;        <span class="Constant">'</span><span class="Constant">reverse</span><span class="Constant">'</span>: <span class="Constant">&quot;</span><span class="Special">\033</span><span class="Constant">[1;3m</span><span class="Constant">&quot;</span>,&#x000A;        <span class="Constant">'</span><span class="Constant">reset</span><span class="Constant">'</span>: <span class="Constant">&quot;</span><span class="Special">\033</span><span class="Constant">[0m</span><span class="Constant">&quot;</span>,&#x000A;        <span class="Constant">'</span><span class="Constant">file</span><span class="Constant">'</span>: __file__,&#x000A;        <span class="Constant">'</span><span class="Constant">line</span><span class="Constant">'</span>: inspect.currentframe().f_back.f_lineno,&#x000A;        <span class="Constant">'</span><span class="Constant">a</span><span class="Constant">'</span>: a,&#x000A;        <span class="Constant">'</span><span class="Constant">b</span><span class="Constant">'</span>: b&#x000A;    }&#x000A;    <span class="Statement">if</span> a != b:&#x000A;        log.error(<span class="Constant">&quot;</span><span class="Constant">assert failed: {a} != {reverse}{b}{reset}</span><span class="Constant">&quot;</span>&#x000A;            .<span class="Identifier">format</span>(**error_details))&#x000A;        <span class="Statement">raise</span> CommandExecutionError(<span class="Constant">&quot;</span><span class="Constant">{file} on line {line} (see minion log)</span><span class="Constant">&quot;</span>&#x000A;            .<span class="Identifier">format</span>(**error_details))&#x000A;</pre>
+      <p>
+        Our test framework is comprised of a salt-aware assertion method called
+        <em>eq()</em>. It will log the assertion failure on the screen (if run
+        locally with salt-call) or in the minion log if run from a master. Just for
+        color the escape sequences call out the invalid data in the assertion message
+        by swapping the foreground and background.
+      </p>
+      <p>
+        We can test our new equality function from the command line
+      </p>
+      <pre>&#x000A;$ salt-call -m _modules pg_utils.eq 11 12&#x000A;[ERROR   ] assert failed: 11 != 12&#x000A;Error running 'pg_utils.eq': _modules/pg_utils.py on line 197 (see minion log)&#x000A;</pre>
+      <p>
+        Finishing the test is simply a matter of writing a test fixture and making an
+        assertion
+      </p>
+      <pre>&#x000A;<span class="Comment"># _modules/pg_utils.py</span>&#x000A;<span class="Statement">def</span> <span class="Identifier">selftest</span>():&#x000A;    <span class="Comment">#...</span>&#x000A;    pillar[<span class="Constant">'</span><span class="Constant">pg</span><span class="Constant">'</span>] = {&#x000A;      <span class="Constant">'</span><span class="Constant">pydio</span><span class="Constant">'</span>: {<span class="Constant">'</span><span class="Constant">writer</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">10.0.0.40</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">query</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">10.0.0.41</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">pgver</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">9.5</span><span class="Constant">'</span>}&#x000A;      <span class="Constant">'</span><span class="Constant">localharvest: {</span><span class="Constant">'</span>write<span class="Constant">r'</span><span class="Constant">: </span><span class="Constant">'</span><span class="Constant">10</span>.<span class="Constant">0.0</span>.<span class="Constant">42</span>, <span class="Constant">'</span><span class="Constant">query</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">10.0.0.43</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">pgver</span><span class="Constant">'</span>: <span class="Constant">'</span><span class="Constant">9.6</span><span class="Constant">'</span>}&#x000A;    }&#x000A;    eq( list_databases(), [<span class="Constant">'</span><span class="Constant">localharvest</span><span class="Constant">'</span>, <span class="Constant">'</span><span class="Constant">pydio</span><span class="Constant">'</span>] )&#x000A;    <span class="Statement">return</span> <span class="Constant">&quot;</span><span class="Constant">TESTS COMPLETE for {}</span><span class="Constant">&quot;</span>.<span class="Identifier">format</span>(__name__)&#x000A;</pre>
+      <h2>Finishing Up</h2>
+      <p>
+        This may seem like a lot of work already, but only because we are inventing a
+        tiny salt-aware test harness. This is all complete reusable for future work.
+        Now we can run and observe the failure
+      </p>
+      <pre>&#x000A;$ salt-call -m _modules pg_utils.selftest&#x000A;[ERROR   ] assert failed: ['localharvest', 'pydio'] != []&#x000A;Error running 'pg_utils.selftest': _modules/pg_utils.py on line 72 (see minion log)&#x000A;</pre>
+      <p>
+        Iteration on the function under test is now extremely fast!
+      </p>
+      <pre>&#x000A;$ salt-call -m _modules pg_utils.selftest&#x000A;local:&#x000A;    TESTS COMPLETE for salt.loaded.ext.module.pg_utils&#x000A;</pre>
+      <p>
+        By tailoring this test strategy to the salt environment we not only have full
+        access to the Salt API in our tests, but assertion failures are neatly
+        communicated over the master-minion bus. Hence we can run these test across
+        many hosts to verify the portability of the system under test
+      </p>
+      <pre>&#x000A;$ salt '*' saltutil.sync_modules&#x000A;$ salt '*' pg_utils.selftest&#x000A;vm1.eradman.com:&#x000A;    TESTS COMPLETE for salt.loader.salt.ext.module.pg_utils&#x000A;vm2.eradman.com:&#x000A;    TESTS COMPLETE for salt.loader.salt.ext.module.pg_utils</pre>
+    </div>
+    <p class='timestamp'>
+      Last updated on January 13, 2017
+    </p>
+  </body>
+</html>

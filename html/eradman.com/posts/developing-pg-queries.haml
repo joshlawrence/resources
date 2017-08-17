@@ -1,0 +1,179 @@
+%h1 Developing PostgreSQL Queries
+
+%p
+  Unit testing SQL does not seem to be a popular discipline, but I think
+  complex queries have a lot to gain from corroboration through automated testing.
+  As in testing any other kind of code, unit tests help separate concerns, and
+  facilitate decomposition such that the programmer can more easily think through
+  the process for solving a hard problem.
+
+%p
+  SQL is largely a declarative language for relational data, and as such the
+  programmer is first concerned with telling the database engine what to do with
+  very attention to how the internal execution will occur. Once a query produces
+  the correct result it often must be adjusted so as to provide better
+  performance. This kind of refactoring becomes much less perilous once a set of
+  tests are in place to prove that a new approach delivers the same result.
+
+%h2 A Simple Test Runner
+
+%p
+  At times you may choose not to implement a separate test runner in shell, but
+  a simple wrapper script can provide valuable options for debugging. One of my
+  favorite options to watch for a keywords such as <em>shell</em> which will drop
+  me into the UI for the database before destroying it. This allows me to
+  experiment with the test functions and sample data.
+
+:codeblock
+  :::sh
+  #!/bin/ksh
+  set -e
+  DB=${USER}_test
+  createdb $DB
+  cat {stage,query,verify}.sql | psql -tAq $DB 2>&1 | grep -v "^NOTICE"
+  [[ "$1" == 'shell' ]] && psql $DB
+  dropdb $DB
+
+%p
+  This runner assembles a test in three parts: <em>stage.sql</em> sets up
+  utility functions, tables, and sample data, <em>query.sql</em> creates the
+  views to be tested, and <em>verify.sql</em> runs the queries and compares
+  results.
+
+%h2 Test Functions
+
+%p
+  Postgres is nice enough to provide polymorphic types which can be used to
+  create a generic comparison function.
+
+:codeblock
+  :::sql
+  CREATE FUNCTION assert(expected anyelement, got anyelement) RETURNS SETOF void
+  AS $$
+  BEGIN
+    IF got!=expected THEN
+      RAISE EXCEPTION 'got % results, expected %', got, expected;
+    END IF;
+  END;
+  $$ LANGUAGE plpgsql;
+
+%p
+  This simple comparison function expects both arguments to be of the same
+  type, and it won't automatically promote types on your behalf.
+
+:codeblock
+  :::sql
+  -- incorrect: count() returns a bigint
+  SELECT assert(0, (SELECT count(*) FROM machines));
+  -- correct
+  SELECT assert(0, (SELECT count(*) FROM machines)::integer);
+
+%p
+  The <em>SETOF</em> keyword prevents the function from returning a blank
+  record, instead it returns a zero-length list.
+
+%h2
+  Populating Samle Data
+
+%p
+  <em>INSERT</em> statements can become very verbose. If PostgreSQL is the
+  only target, <em>COPY</em> tends to be more compact and readable since tabs are
+  the standard delimiter.
+
+:codeblock
+  :::sql
+  COPY machines (name, ram) FROM stdin;
+  computenode1   16
+  computenode2   16
+  computenode3   96
+  computenode4   96
+
+%p
+  In traditional TDD a minimal fresh fixture is constructed to only supply
+  enough data to satisfy the unit test. The same practice works well when
+  verifying database design as well. The sample data should not include every
+  column the production database contains, only the columns required by the views
+  or queries that are being exersised.
+
+%h2 Query Under Test
+
+%p
+  Because we split the test cycle into three different phases (stage, query,
+  verify), we have the opportunity to create a query file that will be used
+  without alteration to configure the production database. A simple view might
+  read as follows:
+
+:codeblock
+  :::sql
+  CREATE OR REPLACE VIEW himem_machines AS
+      SELECT name FROM machines
+      WHERE ram > 16;
+
+%h2 Testing for Expected Behavior
+
+%p
+  Now that we have sample data we can create a new table (prefixed with
+%em
+  t_</em> for test or temporary) that should mirror the expected results of
+  the views under test.
+
+:codeblock
+  :::sql
+  CREATE TEMPORARY TABLE t_himem_machines (
+      name character varying(32)
+  );
+
+  COPY machines (t_himem_machines) FROM stdin;
+  computenode3
+  computenode4
+  \.
+
+%p
+  Now that we have sample data, a query, and an expected result we can write a
+  view that shows the descrepency between the actual and expected results before
+  the exception is raised
+
+:codeblock
+  :::sql
+  CREATE TEMPORARY VIEW machine_diff AS
+      SELECT '+', * FROM (
+        SELECT * FROM himem_machines EXCEPT SELECT * FROM sample_machines
+      ) AS T1
+      UNION ALL
+      SELECT '-', * FROM (
+        SELECT * FROM himem_machines EXCEPT SELECT * FROM sample_machines
+      ) AS T2;
+
+  BEGIN
+      SELECT * FROM machine_diff;
+      SELECT assert(0, (SELECT count(*) FROM machine_diff)::integer);
+      SELECT 'SQL: rerun_candidates ..ok';
+  END;
+
+%h2 Unit Test Schemas
+
+%p
+  Schemas in Postgres can be used to overlay functionality, and even make
+  stubbing system functions possible.
+
+:codeblock
+  :::sql
+  CREATE ROLE unit_tester ROLE eradman;
+  CREATE SCHEMA unit_tests AUTHORIZATION unit_tester;
+  SET search_path TO unit_tests, "$user", public, pg_catalog;
+
+%p
+  <em>pg_catalog</em> is normally the first element of the search path, but by
+  adding it explicitly you can override built-in functions. There's no concept of
+  a global variable as such, but we can adjust the behavior of our mock functions
+  by updating a parameters table under the <em>unit_tests</em> schema.
+
+:codeblock
+  :::sql
+  -- Mask now() in pg_catalog by creating one in the unit_tests schema
+  CREATE OR REPLACE FUNCTION now() RETURNS timestamp AS $$
+  BEGIN
+      RETURN timestamp '2011-06-11';
+  END;
+  $$ LANGUAGE plpgsql;
+

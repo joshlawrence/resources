@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+Migrating from MySQL
+
+</title>
+<meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+<link href='../main.css' rel='stylesheet' type='text/css'>
+<link href='../code.css' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<h3 style='margin-left: 5px; margin-top: 20px;'>
+<a href='../index.html' id='myname'>Eric Radman</a>
+<span id='mytitle'>: a Journal</span>
+</h3>
+<div id='article'>
+<h1>Migrating from MySQL</h1>
+<p>
+I like to say that all database problems are application problems because
+building a responsive application requires cooperation with the facilities
+that the database provides. The implicit terms of the contract become most
+obvious when you try to swap out the backend.
+</p>
+<p>
+The matter of first importance is to keep a copy of the database running that
+will allow a progressive testing and migration of services
+</p>
+<h2>Creating a Replica</h2>
+<p>
+If you need a live stream of updates between a MySQL database and Postgres,
+look no further than
+<a href='http://pythonhosted.org/pg_chameleon/'>pg_chameleon.</a>
+To my surprise, it works. This project is possible because MySQL databases
+are normally used in a very simplistic way. (PostgreSQL provides a powerful
+programming environment which easily makes replication the other way a strange
+scenario.)
+</p>
+<p>
+Another method is simply to create and restore a periodic dump.
+<code>mysqldump</code>
+provides most of what you need to get off the ground
+</p>
+<pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;<span class="Identifier">tables</span>=<span class="Statement">&quot;</span>&#x000A;<span class="Constant">  locations</span>&#x000A;<span class="Constant">  subnets</span>&#x000A;<span class="Constant">  aliases</span>&#x000A;<span class="Statement">&quot;</span>&#x000A;<span class="Statement">for</span> t <span class="Statement">in</span> <span class="PreProc">$tables</span>&#x000A;<span class="Statement">do</span>&#x000A;  mysqldump <span class="Statement">-h</span> db1 \&#x000A;      <span class="Statement">-u</span> <span class="Statement">readonly</span> \&#x000A;      <span class="Special">--password=</span><span class="Statement">&quot;</span><span class="Constant">xyz</span><span class="Statement">&quot;</span> \&#x000A;      <span class="Special">--skip-lock-tables</span> \&#x000A;      <span class="Special">--skip-add-locks</span> \&#x000A;      <span class="Special">--compatible=postgresql</span> \&#x000A;      <span class="Special">--complete-insert</span> \&#x000A;      <span class="Special">--no-create-info</span> \&#x000A;      <span class="Special">--skip-extended-insert</span> mydb <span class="PreProc">$t</span> <span class="Statement">&gt;</span> <span class="PreProc">$t</span>.dump&#x000A;<span class="Statement">done</span>&#x000A;</pre>
+<p>
+This will create separate dumps for each table. There are some other
+features:
+</p>
+<ul>
+<li>
+<code>--skip-lock-tables</code>
+allows backups from on a read-only connection
+</li>
+<li>
+<code>--complete-insert</code>
+specifies column names so that we are not relying on the order they happen to be defined in
+</li>
+<li>
+<code>--skip-extended-insert</code>
+generates one line per record. This is very verbose but allows for
+easy navigation of the resulting file with
+<code>grep</code>
+or your favorite editor
+</li>
+</ul>
+<h2>Stream Editor Tasks</h2>
+<p>
+MySQL column names and table names are not case sensitive, so solving
+these discrepancies is inevitable
+</p>
+<pre>&#x000A;sed <span class="Special">-i</span> <span class="Statement">'</span><span class="Constant">s/&quot;Id&quot;/&quot;ID&quot;/g</span><span class="Statement">'</span> locations.dump&#x000A;</pre>
+<p>
+PostgreSQL is much stricter about type and referential integrity, so
+<code>sed</code>
+can be used to fix up data that would fail otherwise. In this example we fix
+up bogus dates
+</p>
+<pre>&#x000A;sed <span class="Special">-i</span> <span class="Special">-e</span> <span class="Statement">&quot;</span><span class="Constant">s/'0000-00-00 00:00:00'/NULL/g</span><span class="Statement">&quot;</span> <span class="Special">-e</span> <span class="Statement">&quot;</span><span class="Constant">s/,'/,E'/g</span><span class="Statement">&quot;</span> aliases.dump&#x000A;</pre>
+<h2>Restoring Data</h2>
+<p>
+Imperative for any database is a means of reproducing the schema. For
+SQLAlchemy this is accomplished using
+<em>create_all</em>
+</p>
+<pre>&#x000A;<span class="PreProc">from</span> sqlalchemy <span class="PreProc">import</span> Column, types&#x000A;<span class="PreProc">from</span> sqlalchemy <span class="PreProc">import</span> create_engine&#x000A;<span class="PreProc">from</span> sqlalchemy.ext.declarative <span class="PreProc">import</span> declarative_base&#x000A;&#x000A;Base = declarative_base()&#x000A;&#x000A;<span class="Statement">class</span> <span class="Identifier">Subnets</span>(Base):&#x000A;    __tablename__ = <span class="Constant">&quot;</span><span class="Constant">subnets</span><span class="Constant">&quot;</span>&#x000A;    subnet_id = Column(types.Integer, primary_key=<span class="Identifier">True</span>)&#x000A;    name = Column(types.Unicode(<span class="Constant">20</span>), unique=<span class="Identifier">True</span>)&#x000A;&#x000A;uri = <span class="Constant">&quot;</span><span class="Constant">postgresql://postgres@localhost/test</span><span class="Constant">&quot;</span>&#x000A;engine = create_engine(uri)&#x000A;Base.metadata.create_all(bind=engine)&#x000A;</pre>
+<p>
+Laying the schema creation out in a single text file is also a great tactic.
+</p>
+<p>
+MySQL does not quote strings in a SQL-standard complaint way. PostgreSQL can
+read MySQL strings by prepending the
+<a href='https://www.postgresql.org/docs/current/static/runtime-config-compatible.html#GUC-BACKSLASH-QUOTE'>
+backslash_quote
+</a>
+option to each dump
+</p>
+<pre>&#x000A;<span class="Statement">SET</span> standard_conforming_strings = <span class="Special">'</span><span class="Constant">off</span><span class="Special">'</span>;&#x000A;<span class="Statement">SET</span> backslash_quote = <span class="Special">'</span><span class="Constant">on</span><span class="Special">'</span>;&#x000A;</pre>
+<p>
+By default,
+<code>psql(1)</code>
+prints warnings and errors to
+<STDERR></STDERR>
+but  does not exit non-zero if n SQL statement fails. This may be
+fine, but for some operations you can fail the entire script by adding an
+<code>ERR</code>
+trap and setting
+<code>psql</code>
+to return an error code
+</p>
+<pre>&#x000A;<span class="Comment">#!/bin/sh</span>&#x000A;<span class="Statement">trap</span> <span class="Statement">'</span><span class="Constant">printf &quot;$0: exit code $? on line $LINENO\n&quot; &gt;&amp;2; exit 1</span><span class="Statement">'</span> ERR&#x000A;&#x000A;psql <span class="PreProc">$url</span> <span class="Special">-v</span> <span class="Identifier">ON_ERROR_STOP</span>=<span class="Constant">1</span> <span class="Special">-f</span> my.dump&#x000A;</pre>
+<h2>Resetting Sequences</h2>
+<p>
+Once the data is restored we need to reset sequences so that subsequent
+inserts to our database do not cause a collision
+</p>
+<pre>&#x000A;<span class="Statement">for</span> t <span class="Statement">in</span> <span class="PreProc">$tables</span>&#x000A;<span class="Statement">do</span>&#x000A;  <span class="Identifier">max_id</span>=<span class="Error">$(</span><span class="Special">psql </span><span class="Special">-Atq</span><span class="Special"> </span><span class="PreProc">$db</span><span class="Special"> </span><span class="Statement">&lt;&lt;SQL</span>&#x000A;<span class="Constant">  SELECT MAX(&quot;ID&quot;) FROM &quot;</span><span class="PreProc">$t</span><span class="Constant">&quot;;</span>&#x000A;<span class="Statement">SQL</span>&#x000A;<span class="Error">)</span>&#x000A;  psql <span class="Statement">-q</span> <span class="PreProc">$db</span> cluster <span class="Statement">&lt;&lt;SQL</span>&#x000A;<span class="Constant">  ALTER SEQUENCE &quot;</span><span class="PreProc">${</span><span class="PreProc">t</span><span class="PreProc">}</span><span class="Constant">_ID_seq&quot; RESTART WITH </span><span class="Error">$(</span><span class="PreProc">(</span><span class="PreProc">$max_id</span>+<span class="Constant">1</span><span class="PreProc">)</span><span class="Error">)</span><span class="Constant">;</span>&#x000A;<span class="Statement">SQL</span>&#x000A;<span class="Statement">done</span></pre>
+<span />
+<p>
+Again, much of this kind of work can be automatically translated by
+pg_chameleon. One advantage to scripting these steps one by one is that
+each error can be addressed individually without holding up the entire
+mechanism.
+</p>
+<h2>Adjusting Column Default Values</h2>
+<p>
+Some differences in the way application handle the data from a database can be
+handled by adjusting column defaults. The PostgreSQL
+<code>timestamptz</code>
+for example report milliseconds, whereas MySQL's
+<code>date</code>
+type only reports seconds. We can mimic this behavior when recording the
+current type using a column default like this:
+</p>
+<pre>&#x000A;<span class="Special">DEFAULT</span> date_trunc(<span class="Special">'</span><span class="Constant">second</span><span class="Special">'</span>, now())&#x000A;</pre>
+<p>
+What if we're using an ORM? If all else fails apply a schema adjustment as a
+separate operation after
+<code>create_all()</code>
+.  SQLAlchemy allows you to chain these functions these functions an them
+apply them by setting
+<code>server_default</code>
+.
+</p>
+<pre>&#x000A;<span class="PreProc">from</span> sqlalchemy <span class="PreProc">import</span> literal_column, func&#x000A;&#x000A;literal_second = literal_column(<span class="Constant">&quot;</span><span class="Constant">'second'</span><span class="Constant">&quot;</span>)&#x000A;db_now = func.date_trunc(literal_second, func.now())&#x000A;&#x000A;<span class="Statement">class</span> <span class="Identifier">Ticket</span>(Base):&#x000A;    __tablename__ = <span class="Constant">'</span><span class="Constant">ticket</span><span class="Constant">'</span>&#x000A;    <span class="Identifier">id</span> = Column(Integer(), primary_key=<span class="Identifier">True</span>)&#x000A;    added = Column(DateTime(), server_default=db_now)</pre>
+
+</div>
+<p class='timestamp'>
+Last updated on May 19, 2017
+</p>
+</body>
+</html>

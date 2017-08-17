@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Unit-Testable Shell Scripts
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Unit-Testable Shell Scripts</h1>
+      <h2>Push the Language</h2>
+      <p>
+        It's not surprising that unit testing can increase the qualify of code, but
+        as an engineering discipline it may be less obvious what affect it has on you,
+        the programmer. Even if you're new to an environment, the practice of unit
+        testing quickly prompts you to explore all of the most powerful features of a
+        language. Shell scripting is a great way to learn UNIX, and learning to write
+        unit tests in shell is a great way to learn shell scripting. Even though I had
+        used BSD and Linux for years I was surprised to see how much more concise and
+        expressive shell scripting became after writing unit tests.
+      </p>
+      <h2>
+        Start with a Test Runner
+      </h2>
+      <pre>&#x000A;<span class="Comment">#!/bin/ksh</span>&#x000A;&#x000A;<span class="Statement">typeset</span><span class="Identifier"> </span><span class="Special">-i</span><span class="Identifier"> tests_run=0</span>&#x000A;<span class="Identifier">function</span> <span class="Identifier">try {</span> <span class="Identifier">this</span>=<span class="Statement">&quot;</span><span class="PreProc">$1</span><span class="Statement">&quot;</span><span class="Statement">;</span> <span class="Identifier">}</span>&#x000A;<span class="Statement">trap</span> <span class="Statement">'</span><span class="Constant">printf &quot;$0: exit code $? on line $LINENO\nFAIL: $this\n&quot;; exit 1</span><span class="Statement">'</span> ERR&#x000A;<span class="Identifier">function</span> <span class="Identifier">assert {</span>&#x000A;        <span class="Statement">let</span> <span class="Identifier">tests_run+</span>=<span class="Constant">1</span>&#x000A;        <span class="Statement">[</span> <span class="Statement">&quot;</span><span class="PreProc">$1</span><span class="Statement">&quot;</span> <span class="Statement">=</span> <span class="Constant">&quot;$2&quot;</span> <span class="Statement">]</span> <span class="Statement">&amp;&amp;</span> <span class="Special">{</span> <span class="Statement">echo</span><span class="Constant"> -n </span><span class="Statement">&quot;</span><span class="Constant">.</span><span class="Statement">&quot;</span><span class="Statement">;</span> <span class="Statement">return</span><span class="Statement">;</span> <span class="Special">}</span>&#x000A;        <span class="Statement">printf</span> <span class="Statement">&quot;</span><span class="Special">\n</span><span class="Constant">FAIL: </span><span class="PreProc">$this</span><span class="Special">\n</span><span class="Constant">'</span><span class="PreProc">$1</span><span class="Constant">' != '</span><span class="PreProc">$2</span><span class="Constant">'</span><span class="Special">\n</span><span class="Statement">&quot;</span><span class="Statement">;</span> <span class="Statement">exit</span> <span class="Constant">1</span>&#x000A;<span class="Identifier">}</span>&#x000A;&#x000A;try <span class="Statement">&quot;</span><span class="Constant">test echo</span><span class="Statement">&quot;</span>&#x000A;<span class="Comment"># ...</span>&#x000A;assert <span class="Statement">&quot;</span><span class="Special">`</span><span class="Statement">echo</span><span class="Constant"> abc</span><span class="Special">`</span><span class="Statement">&quot;</span> <span class="Statement">&quot;</span><span class="Constant">abc</span><span class="Statement">&quot;</span>&#x000A;&#x000A;<span class="Statement">echo</span>; <span class="Statement">echo</span><span class="Constant"> </span><span class="Statement">&quot;</span><span class="Constant">PASS: </span><span class="PreProc">$tests_run</span><span class="Constant"> tests run</span><span class="Statement">&quot;</span>&#x000A;</pre>
+      <p>
+        My aim is to bend the syntax just enough to create a series of short stories
+        that begin with a description and end with a conclusion. To that end
+      </p>
+      <em>
+        try</em> is a function that simply stores a test description up front that
+        is displayed if a test fails.
+      </em>
+      <pre>&#x000A;$ ./ut_launcher.sh&#x000A;.&#x000A;PASS: 1 tests run&#x000A;</pre>
+      <p>
+        The <em>assert</em> function increments the counter and shows the failed
+        comparison.
+      </p>
+      <code>$ ./ut_launcher.sh
+      FAIL: test echo
+      'abC' != 'abc'</code>
+      <p>
+        If possible, it's much better to replace long function names with strings,
+        which allows us to form an accurate definition of each test. The constraints on
+        function and class names imposes an artificial barrier to naming that is not
+        easily circumvented in most testing frameworks that I'm familiar with. This
+        notation also serves as a very nice summary of the requirements for a particular
+        script which can be extracted with <em>grep</em> or <em>sed</em>
+      </p>
+      <pre>&#x000A;$ cat ut_launcher.sh  | sed -n 's/^try //p'&#x000A;&quot;clean python search path&quot;&#x000A;&quot;execuite python with arbitrary argments&quot;&#x000A;&quot;preserve STDIN&quot;&#x000A;&quot;use the 'run' command to execute a helper script with arguments&quot;&#x000A;&quot;return codes are preserved&quot;&#x000A;&quot;special 'shell' argument should invoke python shell&quot;&#x000A;</pre>
+      <p>
+        The <em>trap 'text' ERR</em> construct will eval the contents of the first
+        parameter if any command exits with a non-zero status. The informative error
+        message really makes the test-code-repeat cycle a lot of fun. Note that single
+        quotes are used so that variable interpolation occurs after the error
+        occurs.
+      </p>
+      <pre>&#x000A;$ ./ut_launcher.sh&#x000A;./ut_launcher.sh: exit code 1 on line 13&#x000A;FAIL: test echo&#x000A;</pre>
+      <h2>Source Configuration Files</h2>
+      <p>
+        One powerful method of testing the behavior of a shell script is to
+        make it's critical parts configurable through a settings file that is
+        sourced by the main script. Heredocs can also be used to embed other
+        scripts.
+      </p>
+      <pre>&#x000A;<span class="Comment"># ut_launcher.sh</span>&#x000A;&#x000A;<span class="Statement">export</span><span class="Identifier"> LAUNCHER_CONF=</span><span class="Special">`mktemp`</span>&#x000A;&#x000A;try <span class="Statement">&quot;</span><span class="Constant">clean python search path</span><span class="Statement">&quot;</span>&#x000A;cat <span class="Statement">&gt;</span> <span class="PreProc">$LAUNCHER_CONF</span> <span class="Statement">&lt;&lt;-'CONF'</span>&#x000A;<span class="Constant">    run=`cat &lt;&lt;'EOF'</span>&#x000A;<span class="Constant">    python -c 'import sys; print &quot;\n&quot;.join(sys.path)'</span>&#x000A;<span class="Constant">    EOF`</span>&#x000A;<span class="Statement">CONF</span>&#x000A;assert <span class="Statement">&quot;</span><span class="Special">`</span><span class="Identifier">PYTHONPATH</span>=<span class="Special">/proj/xyz ./launcher </span><span class="Statement">|</span><span class="Special"> grep xyz`</span><span class="Statement">&quot;</span> <span class="Statement">&quot;&quot;</span>&#x000A;&#x000A;unlink <span class="PreProc">$LAUNCHER_CONF</span>&#x000A;</pre>
+      <p>
+        Notice that if <em>LAUNCHER_CONF</em> is set it will use that,
+        otherwise it will read from a default location. Now we can modify the
+        behavior by generating a custom config before each <em>assert</em>.
+      </p>
+      <p>
+        <em>eval</em> is a bit tricky because is concatenating each argument to
+        form a single string. When use in conjunction with <em>exec</em>, <em>"$@"</em>
+        can normally be used to preserve arguments that include whitespace characters.
+        With <em>eval</em> we have to single-quote this again to ensure that the
+        expansion happens after the complete string to eval is formed.
+      </p>
+      <pre>&#x000A;<span class="Comment"># ut_launcher.sh</span>&#x000A;&#x000A;<span class="Statement">export</span><span class="Identifier"> LAUNCHER_CONF=</span><span class="Special">`mktemp`</span>&#x000A;&#x000A;try <span class="Statement">&quot;</span><span class="Constant">clean python search path</span><span class="Statement">&quot;</span>&#x000A;cat <span class="Statement">&gt;</span> <span class="PreProc">$LAUNCHER_CONF</span> <span class="Statement">&lt;&lt;-'CONF'</span>&#x000A;<span class="Constant">    run=`cat &lt;&lt;'EOF'</span>&#x000A;<span class="Constant">    python -c 'import sys; print &quot;\n&quot;.join(sys.path)'</span>&#x000A;<span class="Constant">    EOF`</span>&#x000A;<span class="Statement">CONF</span>&#x000A;assert <span class="Statement">&quot;</span><span class="Special">`</span><span class="Identifier">PYTHONPATH</span>=<span class="Special">/proj/xyz ./launcher </span><span class="Statement">|</span><span class="Special"> grep xyz`</span><span class="Statement">&quot;</span> <span class="Statement">&quot;&quot;</span>&#x000A;&#x000A;unlink <span class="PreProc">$LAUNCHER_CONF</span>&#x000A;</pre>
+      <p>
+        The use of <em>mktemp</em> will give us a unique name for each test run. If
+        these tests are run sequential we can keep overwriting the same file. When the
+        tests finish we'll clean up by removing the temporary file.</p>
+      </p>
+      <h2>
+        Say What Will Happen
+      </h2>
+      <p>
+        In some cases the most natural approach is to show what action would
+        be taken. The following example sets an environment variable, but reading an
+        option such as <em>--dry-run</em> could also serve the same purpose.
+      </p>
+      <pre>&#x000A;<span class="Comment"># ut_launcher.sh</span>&#x000A;&#x000A;<span class="Statement">export</span><span class="Identifier"> DRY_RUN=1</span>           <span class="Comment"># echo, do not call exec</span>&#x000A;try <span class="Statement">&quot;</span><span class="Constant">clean python search path</span><span class="Statement">&quot;</span>&#x000A;assert <span class="Statement">&quot;</span><span class="Special">`./launcher missile1 missile2 </span><span class="Statement">|</span><span class="Special"> grep missilelauncher`</span><span class="Statement">&quot;</span> <span class="Statement">\</span>&#x000A;    <span class="Statement">&quot;</span><span class="Constant">exec launch missile1 missile2</span><span class="Statement">&quot;</span>&#x000A;<span class="Comment"># launcher</span>&#x000A;&#x000A;<span class="Statement">[</span> <span class="PreProc">$DRY_RUN</span> <span class="Statement">]</span> &amp;&amp; <span class="Statement">echo</span><span class="Constant"> exec launch </span><span class="Statement">&quot;</span><span class="PreProc">$@</span><span class="Statement">&quot;</span><span class="Constant"> </span>|| <span class="Statement">exec</span> launch <span class="Statement">&quot;</span><span class="PreProc">$@</span><span class="Statement">&quot;</span>&#x000A;<span class="Statement">exit</span> <span class="PreProc">$?</span>&#x000A;</pre>
+      <p>
+        Using this method it's certainly possible to <em>echo</em> one thing and
+      </p>
+      <em>
+        exec</em> another, but this style is symmetrical in appearance and it's
+        easy to see what's happening.
+      </em>
+    </div>
+    <p class='timestamp'>
+      Last updated on November 26, 2016
+    </p>
+  </body>
+</html>

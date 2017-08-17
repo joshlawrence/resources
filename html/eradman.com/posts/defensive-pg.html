@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Defensive Techniques for Unrully Database Clients
+    </title>
+    <meta content='text/html; charset=US-ASCII' http-equiv='Content-Type'>
+    <link href='../main.css' rel='stylesheet' type='text/css'>
+    <link href='../code.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+    <h3 style='margin-left: 5px; margin-top: 20px;'>
+      <a href='../index.html' id='myname'>Eric Radman</a>
+      <span id='mytitle'>: a Journal</span>
+    </h3>
+    <div id='article'>
+      <h1>Defensive Techniques for Unrully Database Clients</h1>
+      <h2>Setting the Application Name</h2>
+      <p>
+        One of the most helpful techniques in diagnosing aberrant behavior is to know
+        who is connecting
+      </p>
+      <pre>&#x000A;pg=&gt; select client_addr,now()-backend_start as backend_start_age,&#x000A;      state,application_name from pg_stat_activity order by xact_start;;&#x000A;  client_addr  |   backend_start_age    |        state        | application_name&#x000A;---------------+------------------------+---------------------+------------------&#x000A; 10.232.25.99  | 00:14:41.518607        | active              | psql&#x000A; (1 rows)&#x000A;</pre>
+      <p>
+        The source address is useufl, but it's even better if you can identify the
+        specific application. Using the <a
+        href="http://www.postgresql.org/docs/9.4/static/libpq-connect.html">URI</a>
+        format the <em>application_name</em> can be set as an optional parameter
+      </p>
+      <pre>&#x000A;$ psql postgresql://user@localhost/testdb?application_name=rad_app&#x000A;</pre>
+      <p>
+        From a package like SQLAlchemy this is more obtuse. The trick is to set the
+        <em>connect_args</em> key in the connection parameters
+      </p>
+      <pre>&#x000A;<span class="PreProc">import</span> os, sys, pwd, socket&#x000A;<span class="PreProc">import</span> sqlalchemy&#x000A;&#x000A;prog = os.path.basename(sys.argv[<span class="Constant">0</span>]) <span class="Statement">or</span> <span class="Constant">'</span><span class="Constant">rad_app</span><span class="Constant">'</span>&#x000A;username = pwd.getpwuid (os.getuid ()).pw_name&#x000A;hostname = socket.gethostname().split(<span class="Constant">&quot;</span><span class="Constant">.</span><span class="Constant">&quot;</span>)[<span class="Constant">0</span>]&#x000A;connection_params = {databasebase=<span class="Constant">&quot;</span><span class="Constant">test</span><span class="Constant">&quot;</span>, user=<span class="Constant">&quot;</span><span class="Constant">test2</span><span class="Constant">&quot;</span>}&#x000A;connection_params[<span class="Constant">'</span><span class="Constant">connect_args</span><span class="Constant">'</span>] = {<span class="Constant">'</span><span class="Constant">application_name</span><span class="Constant">'</span>:&#x000A;    <span class="Constant">&quot;</span><span class="Constant">%s:%s@%s</span><span class="Constant">&quot;</span> % (prog, username, hostname)}&#x000A;engine = sqlalchemy.create_engine(connection_params)&#x000A;</pre>
+      <p>
+        The extra work of figuring out the program name, username and hostname not
+        only gives us the added capability of responding programmatically since it can
+        be parsed. Under normal circumstances it is impossible to limit connections by
+        connecting user, but now I can. The following query can be run periodically to
+        terminate any connection from any individual user that insists on holding more
+        than 100 database connections
+      </p>
+      <pre>&#x000A;\<span class="Statement">set</span> connections_per_user <span class="Constant">100</span>&#x000A;<span class="Special">WITH</span> activity <span class="Special">AS</span> (&#x000A;  <span class="Statement">SELECT</span>&#x000A;    pid, state, client_addr, application_name,&#x000A;    <span class="Identifier">greatest</span>(state_change, query_start, xact_start) <span class="Special">AS</span> last_activity,&#x000A;    <span class="Identifier">RANK</span>() OVER(PARTITION <span class="Special">BY</span>&#x000A;      (regexp_split_to_array(application_name, E<span class="Constant">'[:@]'</span>))[<span class="Constant">1</span>]&#x000A;      <span class="Special">ORDER</span> <span class="Special">BY</span> <span class="Identifier">greatest</span>(state_change, query_start, xact_start)),&#x000A;    regexp_split_to_array(application_name, E<span class="Constant">'[:@]'</span>) <span class="Special">AS</span> parts&#x000A;  <span class="Special">FROM</span> pg_stat_activity&#x000A;)&#x000A;<span class="Statement">SELECT</span>&#x000A;    pg_terminate_backend(pid) <span class="Special">AS</span> X,&#x000A;    client_addr, state, application_name,&#x000A;    date_trunc(<span class="Constant">'second'</span>, last_activity) <span class="Special">AS</span> last_activity,&#x000A;    <span class="Identifier">RANK</span>() OVER(PARTITION <span class="Special">BY</span> parts[<span class="Constant">2</span>] <span class="Special">ORDER</span> <span class="Special">BY</span> last_activity),&#x000A;    parts[<span class="Constant">2</span>] <span class="Special">AS</span> <span class="Identifier">user</span>&#x000A;<span class="Special">FROM</span> activity&#x000A;<span class="Special">WHERE</span> parts[<span class="Constant">2</span>] <span class="Special">IS</span> <span class="Statement">NOT</span> <span class="Special">NULL</span>&#x000A;<span class="Statement">AND</span> <span class="Identifier">rank</span> &gt; :connections_per_user&#x000A;</pre>
+      <h2>Stopping Idle Transactions</h2>
+      <p>
+        Starting a transaciton (<em>BEGIN</em>) without terminating it
+        (<em>COMMIT</em> or <em>ABORT</em>) has many serious implications. They
+        block schema changes, they cannot be serialized using a proxy such as <a
+        href="http://wiki.postgresql.org/wiki/PgBouncer">pgbouncer</a> and they
+        prevent autovaccum from running. When using <em>pgbouncer</em> an upper limit
+        can be set in the config
+      </p>
+      <pre>&#x000A;idle_transaction_timeout<span class="Statement">=</span><span class="Constant">3600</span>&#x000A;</pre>
+      <p>
+        Out of band these can be terminated using a periodic cron job
+      </p>
+      <pre>&#x000A;<span class="Statement">SELECT</span> usename, client_addr, now() - xact_start, application_name,&#x000A;    pg_terminate_backend(pid)&#x000A;<span class="Special">FROM</span> pg_stat_activity&#x000A;<span class="Special">WHERE</span> state=<span class="Constant">'idle in transaction'</span>&#x000A;<span class="Statement">AND</span> xact_start &lt; now() - interval <span class="Constant">'1 hour'</span>&#x000A;</pre>
+      <p>
+        Why would an programmer write software that leaves transactions open in the
+        first place? This is usually the fault of APIs that create dangerous implicit
+        behavior. The Python DBAPI mandates that transactions be opened implicitly by
+        default
+      </p>
+      <blockquote>
+        <strong>
+          Warning
+        </strong>
+        By default, any query execution, including a simple SELECT will start a
+        transaction: for long-running programs, if no further action is taken, the
+        session will remain "idle in transaction", an undesirable condition...
+        &mdash; <a
+        href="https://initd.org/psycopg/docs/connection.html#connection.autocommit">Psycopg autocommit</a>
+      </blockquote>
+      <p>
+        It is also possible to <a
+        href="http://lists.pgfoundry.org/pipermail/pgbouncer-general/2015-August/001356.html">sanitize
+        psycopg2 acitivity</a> in a PG proxy. This is an extreme measure of course,
+        but under demanding conditions this option is available.
+      </p>
+      <h2>Closing Connections</h2>
+      <p>
+        Once again Python DB libraries provide wrong behavior. The following code
+        appears to open and close a connection
+      </p>
+      <pre>&#x000A;<span class="Statement">with</span> psycopg2.connect(uri) <span class="Statement">as</span> conn:&#x000A;    <span class="Statement">with</span> conn.cursor() <span class="Statement">as</span> cur:&#x000A;        cur.execute(<span class="Constant">&quot;</span><span class="Constant">SELECT 1</span><span class="Constant">&quot;</span>)&#x000A;</pre>
+      <p>
+        But only the cursor is closed; the connection itself is left open. The correct
+        way to write this to close connections explicitly.
+      </p>
+      <pre>&#x000A;conn = psycopg2.connect(uri)&#x000A;<span class="Statement">with</span> conn.cursor() <span class="Statement">as</span> cur:&#x000A;    cur.execute(<span class="Constant">&quot;</span><span class="Constant">SELECT 1</span><span class="Constant">&quot;</span>)&#x000A;conn.close()&#x000A;</pre>
+      <p>
+        To release a connection with SQLAlchemy disable connection pooling.
+      </p>
+      <pre>&#x000A;<span class="PreProc">from</span> sqlalchemy.pool <span class="PreProc">import</span> NullPool&#x000A;engine = create_engine(uri, poolclass=NullPool)&#x000A;</pre>
+      <p>
+        The effects of connection pooling are purely negative since this uses extra
+        resources and there is no way to <a
+        href="http://stackoverflow.com/questions/28220674/">to automatically recover
+        from a disconnect</a>.
+      </p>
+    </div>
+    <p class='timestamp'>
+      Last updated on March 08, 2017
+      <br>
+      <a href='https://bitbucket.org/eradman/eradman.com'>eradman.com/source</a>
+    </p>
+  </body>
+</html>

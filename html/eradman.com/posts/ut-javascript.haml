@@ -1,0 +1,152 @@
+%h1 Testing JavaScript with HTML Fixtures
+
+%h2
+  Refresh-Button Testing
+
+%p
+  To meaningfully test JavaScript that is part of a web application one needs
+  to interact with the browser's DOM. Most large and small JS test frameworks
+  approach this problem by creating and document and then adding the tests to the
+  document:
+
+:codeblock
+  :::html
+  <!doctype html>
+  <html>
+    <head><meta charset="utf-8"></head>
+    <body>
+    <!-- insert HTML and SVG here -->
+    </body>
+    <script src="testrunner.js"></script>
+    <script src="mycode.js"></script>
+  </html>
+  </code>
+
+%p
+  The obvious problem is that this cannot be easily included in automated tests
+  since a manual browser load and refresh is required.
+
+%p
+  The second difficulty is that each individual tests require careful setup and
+  teardown if they modify the document they're embedded in. If you are testing
+  client code for a web application it almost certainly does modify the DOM state,
+  which results in interacting unit tests.
+
+%h2
+  Fresh Fixtures in Node.js
+
+%p
+  For the command line, <em>node</em> is an obvious place to start because it
+  has good exception handling (if you can put up with the long backtraces) and a
+  rich library. Now instead of writing a document with embedded tests we can start
+  writing tests that interact with data (the document):
+
+:codeblock
+  :::javascript
+  var assert = require('assert');
+
+%p
+  The downside to starting with Node is that there is no HTML, CSS or SVG. No
+  DOM.  To solve this problem we can use
+  %a{:href=>"https://github.com/tmpvar/jsdom"}jsdom,
+  a library with nearly 90 dependencies. Once installed we can construct a
+  document:
+
+:codeblock
+  :::javascript
+  var jsdom = require("jsdom").jsdom;
+
+%p
+  Immedately we are faced with the sad fact that JavaScript does no have the
+  concept of a `heredoc`. This can be emulated in heroic ways by calling the
+  `.toString()` method on a function containing a large comment.
+
+:codeblock
+  :::javascript
+  function hereDoc(f) {
+    return f.toString().
+        replace(/^[^\/]+\/\*!?/, '').
+        replace(/\*\/[^\/]+$/, '');
+  }
+  var html = hereDoc(function() {/*!
+  <!doctype html>
+  <html>
+  ...
+  </html>
+  */});
+%p
+  Alternatively we could load the string from a file. Now we'll include the
+  library we want to test:
+
+:codeblock
+  :::javascript
+  var app = require('../public/ui.js');
+
+%p
+  We still have to choose a test runner. The following example uses Mocha. The
+  important part is that we get a new jsdom object instantiated before each
+  test, so careful setup or teardown is not required:
+
+:codeblock
+  :::javascript
+  describe("app", function() {
+      var window = null;
+
+      beforeEach(function(){
+          window = jsdom(html).defaultView;
+      });
+
+      describe("test 1", function() {
+          it("contains an embeded product ID", function () {
+              content_div = window.document.getElementById('content')[0];
+              assert.equal(chart_div.innerHTML, "...");
+          });
+      });
+  });
+
+%h2
+  Native Browser Tests with phantom-assert
+
+%p
+  At the time of this writing <em>jsdom</em> no longer supports <a
+  href="http://nodejs.org/">node.js</a>, and requires <a
+  href="https://iojs.org/">io.js</a> instead. If this is or a lengthy chain of NPM
+  modules is not an option in your environment then it is possible to write
+  automated tests using a test runner for <a
+  href="http://phantomjs.org/">phantomjs</a>. The project I crated to prove this
+  concept is <a
+  href="https://bitbucket.org/eradman/phantom-assert">phantom-assert</a>, and
+  works by injecting each test function into the page and resetting the page
+  content inbetween each test. A simple example looks like this:
+
+:codeblock
+  :::javascript
+  var html = "fixture.html";
+  var tests = [];
+
+  tests.push(function count_chart_elements () {
+      assert(document.getElementsByClassName('chart').length, 1);
+  })
+
+%p
+  Using this model is impossible to create interacting tests because the page
+  content is refreshed after each test.%em
+  phantom-assert</em> is not a
+  micro-framework, it is a polished example who's source code can be read in less
+  than 5 minutes. This level of minimalism eliminates the need for configuration
+  because the framework itself can be easily modified and embedded directly into
+  your project.
+
+%h2
+  Other Test Frameworks
+
+%p
+  If you are interested in a more complete test harness, <a
+  href="https://bitbucket.org/zserge/klud.js">klud.js</a> is a micro-framework
+  that may fit your needs.
+
+%p
+  For functional testing or any testing on PhantomJS, <a
+  href="http://casperjs.org/">CasperJS</a> is full-featured and well
+  supported.
+
