@@ -6,3 +6,10 @@
 - https://lyngvaer.no/ (good css)
 - https://major.io/ (more good css)
 - https://nixers.net/ (forum)
+
+some interesting web and markup software:
+
+- https://kristaps.bsd.lv/lowdown/
+- https://kristaps.bsd.lv/sblg/
+
+
