@@ -7,7 +7,7 @@
 " else
 "source $VIMRUNTIME/defaults.vim
 
-syntax=on
+set syntax=on
 set background=dark
 
 set nocompatible
