@@ -1,7 +1,7 @@
 # openbsd setup notes
 
 - download the 6.1 installer:
-  https://ftp5.usa.openbsd.org/pub/OpenBSD/6.1/amd64/
+  https://ftp.openbsd.org/pub/OpenBSD/6.1/packages/amd64/
 
 this can later be used for `/etc/installurl` (note: this should be populated by default).
 
@@ -15,7 +15,7 @@ this can later be used for `/etc/installurl` (note: this should be populated by 
 
 package index:
 
-https://ftp5.usa.openbsd.org/pub/OpenBSD/6.1/packages/amd64/index.txt
+https://ftp.openbsd.org/pub/OpenBSD/6.1/packages/amd64/index.txt
 
 (must install wget to download the file)
 
@@ -43,6 +43,8 @@ create symbolic links like so (overwriting any previous default):
  ln -sf /usr/local/bin/python2.7-config /usr/local/bin/python-config
  ln -sf /usr/local/bin/pydoc2.7  /usr/local/bin/pydoc
 ```
+
+_TODO: setting up virtualenv_
 
 remember: D-Bus is called messagebus in openbsd. so:
 
