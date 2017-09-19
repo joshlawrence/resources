@@ -3,10 +3,10 @@
 - download the 6.1 installer:
   https://ftp5.usa.openbsd.org/pub/OpenBSD/6.1/amd64/
 
-this can later be used for `/etc/installurl`.
+this can later be used for `/etc/installurl` (note: this should be populated by default).
 
 ## setup
-
+- installer: if the installer hangs, use ctrl-c to cancel. `install` is a shell script and can be restarted from the shell.
 - check `/etc/installurl` to make sure the path for packages is correct.
 - run `syspatch` to update the system
 - copy `/etc/examples/doas.conf` to `/etc`.  `groups $user` to make sure your user is in the wheel group (user created at setup is put in wheel group by default).
@@ -18,6 +18,18 @@ package index:
 https://ftp5.usa.openbsd.org/pub/OpenBSD/6.1/packages/amd64/index.txt
 
 (must install wget to download the file)
+
+## apmd
+
+enable apmd:
+
+```
+rcctl enable apmd
+rcctl set apmd flags -A
+rcctl start apmd
+```
+
+see the openbsd [FAQ on System Administration](https://www.openbsd.org/faq/faq10.html) for more info.
 
 ## pkg notes
 

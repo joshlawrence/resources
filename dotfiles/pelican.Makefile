@@ -1,13 +1,19 @@
 PY?=python
 PELICAN?=pelican
 PELICANOPTS=
-EDITOR=/usr/bin/vim
 
 BASEDIR=$(CURDIR)
 INPUTDIR=$(BASEDIR)/content
 OUTPUTDIR=$(BASEDIR)/output
 CONFFILE=$(BASEDIR)/pelicanconf.py
 PUBLISHCONF=$(BASEDIR)/publishconf.py
+
+# variables for newpost
+
+PAGESDIR=$(INPUTDIR)/pages
+DATE := $(shell date +'%Y-%m-%d %H:%M:%S')
+SLUG := $(shell echo '${NAME}' | sed -e 's/[^[:alnum:]]/-/g' | tr -s '-' | tr A-Z a-z)
+EXT ?= md
 
 FTP_HOST=localhost
 FTP_USER=anonymous
@@ -124,19 +130,15 @@ github: publish
 
 .PHONY: html help clean regenerate serve serve-global devserver stopserver publish ssh_upload rsync_upload dropbox_upload ftp_upload s3_upload cf_upload github
 
-PAGESDIR=$(INPUTDIR)/pages
-DATE := $(shell date +'%Y-%m-%d %H:%M:%S')
-SLUG := $(shell echo '${NAME}' | sed -e 's/[^[:alnum:]]/-/g' | tr -s '-' | tr A-Z a-z)
-EXT ?= md
-
 newpost:
 ifdef NAME
-	echo "Title: $(NAME)" >  $(INPUTDIR)/$(SLUG).$(EXT)
-	echo "Slug: $(SLUG)" >> $(INPUTDIR)/$(SLUG).$(EXT)
-	echo "Date: $(DATE)" >> $(INPUTDIR)/$(SLUG).$(EXT)
-	echo ""              >> $(INPUTDIR)/$(SLUG).$(EXT)
-	echo ""              >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "Title: $(NAME)" > $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "Slug: $(SLUG)" >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "Date: $(DATE)" >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "Category: " >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "Tags: misc, posts" >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "" >> $(INPUTDIR)/$(SLUG).$(EXT)
+	printf '%s\n' "-- BEGIN CONTENT HERE --" >> $(INPUTDIR)/$(SLUG).$(EXT)
 else
-	@echo 'Variable NAME is not defined.'
-	@echo 'Do make newpost NAME='"'"'Post Name'"'"
+	@echo 'Usage: make newpost NAME="Post Name"'
 endif
