@@ -1,9 +1,8 @@
 # openbsd setup notes
 
 - download the 6.1 installer:
-  https://ftp.openbsd.org/pub/OpenBSD/6.1/packages/amd64/
-
-this can later be used for `/etc/installurl` (note: this should be populated by default).
+  https://fastly.cdn.openbsd.org/pub/OpenBSD/6.1/amd64/
+  _Note: to use this URL as `/etc/installurl`, use http only_
 
 ## setup
 - installer: if the installer hangs, use ctrl-c to cancel. `install` is a shell script and can be restarted from the shell.
