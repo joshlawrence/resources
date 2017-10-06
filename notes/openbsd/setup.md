@@ -56,3 +56,7 @@ rcctl start messagebus
 ## misc
 
 - shutdown with `doas shutdown -p now`
+
+# resources
+
+http://sohcahtoa.org.uk/openbsd.html
