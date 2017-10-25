@@ -1,15 +1,26 @@
 # links
 
+## software and scripts
+
 - http://git.2f30.org/
 - http://git.r-36.net/
 - http://git.suckless.org/
-- https://lyngvaer.no/ (good css)
-- https://major.io/ (more good css)
-- https://nixers.net/ (forum)
 
-some interesting web and markup software:
+## dotfiles and config
 
-- https://kristaps.bsd.lv/lowdown/
-- https://kristaps.bsd.lv/sblg/
+- http://dotshare.it/
+- https://wiki.archlinux.org/index.php/Xterm
+- https://wiki.archlinux.org/index.php/x_resources
+- https://www.reddit.com/r/unixporn/wiki/ricing
 
+general collection of dotfile resources:
 
+- https://wiki.archlinux.org/index.php/Dotfiles
+
+## community
+
+- https://nixers.net/
+
+## security
+
+- https://www.passwordstore.org/
