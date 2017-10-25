@@ -1,26 +1,23 @@
 # openbsd setup notes
 
-- download the 6.1 installer:
-  https://fastly.cdn.openbsd.org/pub/OpenBSD/6.1/amd64/
-  _Note: to use this URL as `/etc/installurl`, use http only_
+`Updated: 2017-10-25 for OpenBSD 6.2`
 
-## setup
-- installer: if the installer hangs, use ctrl-c to cancel. `install` is a shell script and can be restarted from the shell.
-- check `/etc/installurl` to make sure the path for packages is correct.
-- run `syspatch` to update the system
-- copy `/etc/examples/doas.conf` to `/etc`.  `groups $user` to make sure your user is in the wheel group (user created at setup is put in wheel group by default).
+## partitioning
 
-- package readmes are located in: `/usr/local/share/doc/pkg-readmes`
+read about partitioning here:
 
-package index:
+* <http://www.openbsd.org/faq/faq4.html#Partitioning>
+* <https://man.openbsd.org/disklabel#AUTOMATIC_DISK_ALLOCATION>
 
-https://ftp.openbsd.org/pub/OpenBSD/6.1/packages/amd64/index.txt
+swap should be 2x the amount of RAM.  `/usr/local` should have it's own partition.  `/var` and `/tmp` should probably be broken out but can be all under root until it's known how much will actually be used.
 
-(must install wget to download the file)
+- copy `/etc/default/doas.conf` to `/etc/doas.conf`
+- choose <https://fastly.cdn.openbsd.org/pub/OpenBSD/>) for your mirror, it will be automatically added to `/etc/installurl`.
+- make sure to run `syspatch`
 
-## apmd
+## services
 
-enable apmd:
+apmd:
 
 ```
 rcctl enable apmd
@@ -28,24 +25,7 @@ rcctl set apmd flags -A
 rcctl start apmd
 ```
 
-see the openbsd [FAQ on System Administration](https://www.openbsd.org/faq/faq10.html) for more info.
-
-## pkg notes
-
-python:
-
-```
-If you want to use this package as your default system python, as root
-create symbolic links like so (overwriting any previous default):
- ln -sf /usr/local/bin/python2.7 /usr/local/bin/python
- ln -sf /usr/local/bin/python2.7-2to3 /usr/local/bin/2to3
- ln -sf /usr/local/bin/python2.7-config /usr/local/bin/python-config
- ln -sf /usr/local/bin/pydoc2.7  /usr/local/bin/pydoc
-```
-
-_TODO: setting up virtualenv_
-
-remember: D-Bus is called messagebus in openbsd. so:
+dbus:
 
 ```
 pkg_add dbus
@@ -53,10 +33,59 @@ rcctl enable messagebus
 rcctl start messagebus
 ```
 
+manage wifi with wiconn:
+
+<https://github.com/n0xa/wiconn>
+
+_note: make the following changes to `doas.conf`:_
+
+```
+permit nopass :wheel as root cmd /usr/bin/pkill args dhclient
+permit nopass :wheel as root cmd /sbin/ifconfig
+permit nopass :wheel as root cmd /sbin/dhclient
+```
+
+copy `wiconn.sh` to `~/bin` and make it executable.
+
+## packages
+
+_install wget to fetch the list_
+
+<https://fastly.cdn.openbsd.org/pub/OpenBSD/6.2/packages/amd64/index.txt>
+
+list can be trimmed with:
+
+`awk '{print $10}' index.txt > pkgs.txt`
+
+_TODO: setting up virtualenv_
+
+other packages to install:
+
+* colorls
+* htop
+* emacs
+* vim
+* git
+* lynx
+* i3
+* feh
+* sakura
+* qutebrowser
+
 ## misc
 
+- in i3, change your terminal to sakura with the `-l` option
+- in `~/.profile`:
+    
+    alias ls="colorls -1G"
+    PS1="\h \w \$ "
+
+- add `PS1` to the list of exported variables
 - shutdown with `doas shutdown -p now`
+- package readmes are located in: `/usr/local/share/doc/pkg-readmes`
 
 # resources
 
-http://sohcahtoa.org.uk/openbsd.html
+- <http://sohcahtoa.org.uk/openbsd.html>
+- information on `W^X`: <https://deftly.net/posts/2017-10-12-using-cabal-on-openbsd.html>
+
