@@ -1,3 +1,5 @@
+;; hdb2 emacs config file
+;; last updated 2017-11-23
 
 ;; Added by Package.el.  This must come before configurations of
 ;; installed packages.  Don't delete this line.  If you don't want it,
@@ -16,13 +18,18 @@
 ;; backups
 
 ;; disable auto-save
-;;(setq auto-save-default nil)
-;;(setq make-backup-files nil)
+(setq auto-save-default nil)
+(setq make-backup-files nil)
 
-(setq
-  backup-by-copying t
-  backup-directory-alist '(("." . "~/.emacs.d/bkups"))
-  delete-old-versions t
-  kept-new-versions 6
-  kept-old-versions 2
-  version-control t)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-enabled-themes (quote (tango-dark))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
