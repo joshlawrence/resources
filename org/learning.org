@@ -1,0 +1,35 @@
+#+TITLE: Intro To Org Mode
+#+AUTHOR: Josh Lawrence
+#+DATE: [2017-11-23 Thu]
+#+EMAIL: josh@joshlawrence.me
+#+DESCRIPTION: An introduction to org mode
+#+TEXT: Some other text that I should include
+
+this is an intro to org mode, and a chance to use as many different org
+functions as possible to learn how everything works.
+
+I'm currently using sensible-defaults for emacs.  themes are a nightmare, and
+I'm not terribly interested in trying to use them.
+
+* getting started
+
+* keep going
+
+* something else
+
+* code blocks
+  This is some information that needs to go under the code blocks heading listed
+  above right there.  oh hey!  it auto-indents!
+
+* formatting
+  here *are* /some/ _different_ ~kinds~ +of+ formatting
+  now for some lists:
+  - this is one item
+  - this is two item
+  - this is three item, all done with M-RET
+  - does word wrapping work on menu items?  this needs to be a really really
+    really really long sentance.  it does!
+
+this is something else.
+
+* ah, finally!
