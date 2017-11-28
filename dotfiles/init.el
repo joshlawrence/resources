@@ -1,5 +1,4 @@
-;; hdb2 emacs config file
-;; last updated 2017-11-23
+;; hdb2 emacs config
 
 ;; Added by Package.el.  This must come before configurations of
 ;; installed packages.  Don't delete this line.  If you don't want it,
@@ -7,25 +6,21 @@
 ;; You may delete these explanatory comments.
 (package-initialize)
 
+(load-file "~/.emacs.d/sensible-defaults.el")
+(sensible-defaults/use-all-settings)
+(sensible-defaults/use-all-keybindings)
+(sensible-defaults/backup-to-temp-directory)
+(add-hook 'text-mode-hook 'turn-on-auto-fill)
+
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
-
-(add-hook 'text-mode-hook 'turn-on-auto-fill)
-(setq-default fill-column 80)
-
-(add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
-
-;; backups
-
-;; disable auto-save
-(setq auto-save-default nil)
-(setq make-backup-files nil)
-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-faces-vector
+   [default default default italic underline success warning error])
  '(custom-enabled-themes (quote (tango-dark))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
