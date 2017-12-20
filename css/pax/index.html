@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang=en>
+<meta charset=utf-8>
+<meta name=created content=2013-03-20>
+<link rel=stylesheet href="/index.css">
+<title>Use pax.</title>
+
+<header>
+  <h1>Use pax.</h1>
+</header>
+
+<p>By now you’ve probably seen this comic:</p>
+
+<figure>
+  <a href="http://xkcd.com/1168/">
+    <img src="http://imgs.xkcd.com/comics/tar.png" title="I don't know what's worse--the fact that after 15 years of using tar I still can't keep the flags straight, or that after 15 years of technological advancement I'm still mucking with tar flags that were 15 years old when I started.">
+  </a>
+</figure>
+
+<p>In 2001 the IEEE, promulgators of the POSIX standard, set out to fix this problem,<a href="#fn:cpio" id=fnref:cpio><sup>1</sup></a> and came up with a solution: <tt>pax</tt>.
+
+<p><tt>pax</tt>, like <tt>tar</tt>, is both the name of a file archive format and of a program used to create and unpack them; but the <tt>pax</tt> program, by default, produces and unpacks tar files, with a much simpler interface than <tt>tar</tt>: it’s quite easy to commit the basics of it to memory.
+
+<p><tt>pax</tt> was standardized in the POSIX standard of 2001, and is included with most Unix variants; if it doesn’t come with yours, it’s very probably available in the package manager under the name <tt>pax</tt>.
+
+<h1>Five-minute introduction to pax</h1>
+
+<p><tt>tar</tt> talks about ‘creating’ and ‘extracting’ archives; <tt>pax</tt> talks about ‘writing’ and ‘reading’ them.<a href="#fn:taroops" id=fnref:taroops><sup>2</sup></a> <tt>pax</tt> does not do file I/O to read or write an archive file itself: you always use it in a pipeline. With this in mind, let’s begin with an example:
+
+<pre><code>pax -r &lt; archive.tar</code></pre>
+
+<p>This invokes <tt>pax</tt> to read (<tt>-r</tt>) the file <tt>archive.tar</tt> and extract it to the current directory. The <tt>&lt;</tt> is a Unix shell idiom for creating a pipe from a file to a program; it’s functionally equivalent to <code>cat archive.tar | pax -r</code>, which, apart from being longer to type, is also a classic <a href="http://porkmail.org/era/unix/award.html#cat">Useless Use of Cat.</a>
+
+<p>If a file is compressed with gzip, bzip2, xz, etc., you just add the decompression program to the pipeline — or use the (non-standard, but supported by most implementations) <tt>-z</tt> and <tt>-j</tt> options for gzip and bzip2, respectively:
+
+<pre><code>gzip -d | pax -r < archive.tar.gz</code>
+<code>pax -rz < archive.tar.gz</code></pre>
+
+<p>Here’s an example that shows how to create an archive:<a href="#fn:sh" id=fnref:sh><sup>3</sup></a>
+
+<pre><code>pax -w &lt;&lt;&lt; directory > archive.tar</code></pre>
+
+<p>This tells <tt>pax</tt> to write (<tt>-w</tt>) an archive containing <tt>directory</tt> to the file <tt>archive.tar</tt>. Again, you can add compression programs to the chain, or use the <tt>-z</tt> and <tt>-j</tt> options:
+
+<pre><code>pax &lt;&lt;&lt; directory | gzip > archive.tar.gz</code>
+<code>pax -wz &lt;&lt;&lt; directory > archive.tar.gz</code></pre>
+
+<p>That’s about all you need to know in terms of making and unpacking archives with <tt>pax</tt>. It has a few more tricks up its sleeve, though.
+
+<p>You can list the names of the files in an archive by piping an archive to it without passing <tt>-r</tt>:
+
+<pre><code>pax &lt; archive.tar</code>
+<code>gzip -d &lt; archive.tar.gz | pax</code>
+<code>pax -z &lt; archive.tar.gz</code></pre>
+
+<p>You can also use <tt>pax</tt> to copy directory hierarchies by using <tt>-r</tt> and <tt>-w</tt> together. You could use <tt>cp -R</tt> for this, but there are some <a href="https://en.wikipedia.org/wiki/Cp_(Unix)#Examples">pitfalls</a> to that approach. (My personal preference is to run a local-to-local <tt>rsync</tt> job, but <tt>pax</tt> is there, if you want it.)
+
+<pre><code>pax -rw dest_dir <<< source_dir</code></pre>
+
+<p>You now know all you need to start using <tt>pax</tt>. The mental burden of all those fiddly <tt>tar</tt> options is now over for you. Go forth and archive!
+
+<div class=footnotes>
+<hr>
+
+<ol>
+  <li id=fn:cpio>This is not strictly true. What they wanted to do was to invent something that would replace both <tt>tar</tt> and the similar-but-incompatible <tt>cpio</tt>, which you can ask your local greybeard about. <a href="#fnref:cpio">↩</a>
+  <li id=fn:taroops>One advantage of this is that <kbd>r</kbd> and <kbd>w</kbd> are slightly further away from each other on the Qwerty keyboard than <kbd>c</kbd> and <kbd>x</kbd> are. If you don’t see how this is advantageous, read <a href="http://web.mit.edu/~simsong/www/ugh.pdf"><cite>The UNIX-HATERS Handbook,</cite></a> Chapter 2, under “Subject: tarred and feathered”. (Then read the whole book, and wonder how this operating system ever got so popular.) <a href="#fnref:taroops">↩</a>
+  <li id=fn:sh>Beware: this isn’t valid <tt>sh</tt> code, because <tt>sh</tt> lacks the <tt>&lt;&lt;&lt;</tt> operator, which are in popular shells like <tt>zsh</tt> and <tt>bash</tt>. Replace it with a pipe from <tt>echo</tt> and you’ll be fine. (e.g. <code>echo directory | pax -w > archive.tar</code>) <a href="#fnref:sh">↩</a>
+</ol>
+</div>
+
+<footer>
+  <p>— <a href="http://dpk.io/">David Kendal,</a> March 2013.
+</footer>

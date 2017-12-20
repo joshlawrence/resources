@@ -17,3 +17,8 @@
 ## community
 
 - https://nixers.net/
+
+## misc
+
+- shell tricks: http://www.etalabs.net/sh_tricks.html
+- nixer's sh tricks: https://nixers.net/showthread.php?tid=2169
