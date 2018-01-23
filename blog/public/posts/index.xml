@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Careful, Icarus.</title>
+    <link>https://joshlawrence.github.io/posts/</link>
+    <description>Recent content in Posts on Careful, Icarus.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Mon, 22 Jan 2018 13:02:02 -0600</lastBuildDate>
+    
+	<atom:link href="https://joshlawrence.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>My First Post</title>
+      <link>https://joshlawrence.github.io/posts/my-first-post/</link>
+      <pubDate>Mon, 22 Jan 2018 13:02:02 -0600</pubDate>
+      
+      <guid>https://joshlawrence.github.io/posts/my-first-post/</guid>
+      <description>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean pharetra blandit elementum. Donec accumsan lorem urna, et porttitor elit vestibulum sit amet. Cras non metus vulputate, posuere est a, suscipit massa. Phasellus venenatis hendrerit consectetur. Curabitur scelerisque hendrerit eros, at molestie lectus sodales non. Mauris finibus lorem ut pulvinar tristique. Aenean dictum leo metus, non aliquam ipsum vestibulum a. Nunc eu convallis augue.
+PS1=&amp;#34;\h \w \$ &amp;#34; Nunc magna dolor, ullamcorper in molestie ac, ultrices sed eros.</description>
+    </item>
+    
+  </channel>
+</rss>

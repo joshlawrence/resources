@@ -1,12 +1,16 @@
 ---
 title: About
-description: What does Minimo even means?!
+description: What's this all about?
 menu: main
 weight: -210
 ---
 
-Mínimo is a Spanish word that roughly translate to Minimal.
+"Careful, Icarus" comes from a cold-open on TLLS with Craig Ferguson:
 
-Minimo is a minimalist theme for Hugo.
+{{< youtube SIJRqyxxnSk >}}
 
-Minimo keeps the focus on your content and lets it shine!
+It's become a mantra of sorts for me, and it seemed like the perfect name for a blog.
+
+Now about me:
+
+I work as a sysadmin, dealing with mostly Linux machines. Father of three. I'm a musician, but I don't play out as much as I used to - still love it, though.

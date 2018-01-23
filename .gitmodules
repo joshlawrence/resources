@@ -1,7 +1,3 @@
 [submodule "blog/themes/minimo"]
 	path = blog/themes/minimo
 	url = https://github.com/MunifTanjim/minimo
-[submodule "blog/public"]
-	path = blog/public
-	url = https://github.com/joshlawrence/joshlawrence.github.io
-	branch = master

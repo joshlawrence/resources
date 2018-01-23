@@ -20,7 +20,7 @@ pygmentsCodefences = true
 defaultContentLanguage = "en"
 
 [params.info]
-description = "A blog about music, technology and life."
+description = "A blog about music, technology, life, and hubris."
 title404 = "Nothing's here!"
 
 [params.assets]
