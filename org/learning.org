@@ -1,35 +1,42 @@
-#+TITLE: Intro To Org Mode
-#+AUTHOR: Josh Lawrence
-#+DATE: [2017-11-23 Thu]
-#+EMAIL: josh@joshlawrence.me
-#+DESCRIPTION: An introduction to org mode
-#+TEXT: Some other text that I should include
-
 this is an intro to org mode, and a chance to use as many different org
 functions as possible to learn how everything works.
 
-I'm currently using sensible-defaults for emacs.  themes are a nightmare, and
-I'm not terribly interested in trying to use them.
 
-* getting started
+* this is a top level 
 
-* keep going
+  1. this is item 1
+  2. this is item 2
+  3. this is tiem 3
+     this is an idented item
+     this is another item
 
-* something else
+* this is a new item
 
-* code blocks
-  This is some information that needs to go under the code blocks heading listed
-  above right there.  oh hey!  it auto-indents!
+  - lksjdf
+  - lkjsdf
+  - lksjdf
+    - another
+    - another
+  - shift-tab does alot
 
-* formatting
-  here *are* /some/ _different_ ~kinds~ +of+ formatting
-  now for some lists:
-  - this is one item
-  - this is two item
-  - this is three item, all done with M-RET
-  - does word wrapping work on menu items?  this needs to be a really really
-    really really long sentance.  it does!
+* 
+* this is the top level
 
-this is something else.
+** item
 
-* ah, finally!
+   - another
+   - another
+   - another
+
+** another
+
+   1) meta enter then ctrl-c minus
+   2) another meta enter
+   3) shift plus R / L changes bullets
+
+** ctrl enter breaks out
+
+   1. more lists
+   2. plain lists
+      enter tab indents
+      more indents
