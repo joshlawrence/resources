@@ -1,0 +1,6 @@
+set tabstop=2
+set shiftwidth=2
+set shiftround
+set expandtab
+set textwidth=80
+set wrapmargin=2
