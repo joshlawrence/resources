@@ -4,7 +4,7 @@ lots of great resources in the grml repos:
 
 http://git.grml.org/
 
-specifically:
+some git commands:
 
-http://git.grml.org/?p=grml-etc-core.git
-
+- `git clone git://git.grml.org/grml-etc-core.git`
+- `git://git.grml.org/grml-desktop.git`
