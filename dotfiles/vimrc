@@ -1,9 +1,15 @@
 execute pathogen#infect()
 map <F1> :NERDTreeToggle<CR>
 syntax on
-filetype plugin indent on
+"filetype plugin indent on
+set expandtab
+set shiftwidth=2
+set softtabstop=2
+set autoindent
+set smartindent
+set cindent
 " auto word wrap to 80 columns
-"set textwidth=80
-"set formatoptions+=t
-"au BufNewFile,BufFilePre,BufRead *.md set filetype=markdown tw=80 fo+=t colorcolumn=80
+set textwidth=80
+set formatoptions+=t
+au BufNewFile,BufFilePre,BufRead *.md set filetype=markdown tw=80 fo+=t colorcolumn=80
 "set laststatus=2
