@@ -1,0 +1,21 @@
+# vim Notes
+
+The following setup seems to accomplish what I want to do with vim:
+
+- pathogen
+- NERDtree
+- vim-sensible
+
+## installation
+
+mkdir -p ~/.vim/autoload ~/.vim/bundle && \
+curl -LSso ~/.vim/autoload/pathogen.vim https://tpo.pe/pathogen.vim
+
+cd ~/.vim/bundle
+git clone git://github.com/tpope/vim-sensible.git
+
+git clone https://github.com/scrooloose/nerdtree.git ~/.vim/bundle/nerdtree
+
+cp ~/projects/resources/dotfiles/vimrc ~/.vimrc
+
+that's it!
