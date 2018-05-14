@@ -1,0 +1,5 @@
+execute pathogen#infect()
+if has("gui_running")
+  colorscheme dracula
+endif
+nmap <F6> :NERDTreeToggle<CR>
