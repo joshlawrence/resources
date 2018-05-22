@@ -1,7 +1,5 @@
 # openbsd setup notes
 
-`Updated: 2017-10-25 for OpenBSD 6.2`
-
 ## partitioning
 
 read about partitioning here:
@@ -9,7 +7,13 @@ read about partitioning here:
 * <http://www.openbsd.org/faq/faq4.html#Partitioning>
 * <https://man.openbsd.org/disklabel#AUTOMATIC_DISK_ALLOCATION>
 
+the one-big-partition approach:
+
+* <https://azcrumpty.weebly.com/journal/easy-openbsd-partition-scheme>
+
 swap should be 2x the amount of RAM.  `/usr/local` should have it's own partition.  `/var` and `/tmp` should probably be broken out but can be all under root until it's known how much will actually be used.
+
+## setup
 
 - copy `/etc/default/doas.conf` to `/etc/doas.conf`
 - choose <https://fastly.cdn.openbsd.org/pub/OpenBSD/>) for your mirror, it will be automatically added to `/etc/installurl`.
@@ -40,6 +44,7 @@ manage wifi with wiconn:
 _note: make the following changes to `doas.conf`:_
 
 ```
+permit setenv { -ENV PS1=$DOAS_PS1 SSH_AUTH_SOCK } :wheel
 permit nopass :wheel as root cmd /usr/bin/pkill args dhclient
 permit nopass :wheel as root cmd /sbin/ifconfig
 permit nopass :wheel as root cmd /sbin/dhclient
@@ -51,41 +56,32 @@ copy `wiconn.sh` to `~/bin` and make it executable.
 
 _install wget to fetch the list_
 
-<https://fastly.cdn.openbsd.org/pub/OpenBSD/6.2/packages/amd64/index.txt>
+https://fastly.cdn.openbsd.org/pub/OpenBSD/6.3/packages/amd64/index.txt
 
 list can be trimmed with:
 
 `awk '{print $10}' index.txt > pkgs.txt`
 
-_TODO: setting up virtualenv_
-
 other packages to install:
 
 * colorls
-* htop
-* emacs
 * vim
 * git
 * lynx
 * i3
 * feh
-* sakura
-* qutebrowser
+* rxvt-unicode
 
 ## misc
 
 - in i3, change your terminal to sakura with the `-l` option
-- in `~/.profile`:
-    
-    alias ls="colorls -1G"
-    PS1="\h \w \$ "
-
-- add `PS1` to the list of exported variables
+- install bash, change shell with `chsh -s /usr/local/bin/bash`
 - shutdown with `doas shutdown -p now`
 - package readmes are located in: `/usr/local/share/doc/pkg-readmes`
+- examples in: `/usr/local/share/examples`
+- templates in: `/usr/share/misc`
 
 # resources
 
 - <http://sohcahtoa.org.uk/openbsd.html>
 - information on `W^X`: <https://deftly.net/posts/2017-10-12-using-cabal-on-openbsd.html>
-
