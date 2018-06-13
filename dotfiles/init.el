@@ -5,7 +5,9 @@
 ;; M-x package-refresh-contents
 ;; now install the packages:
 ;; M-x package-install RET
-;; neotree doom-themes evil all-the-icons-install-fonts
+;; neotree doom-themes evil
+;; then install the fonts:
+;; M-x all-the-iconfs-install-fonts
 
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
