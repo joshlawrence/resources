@@ -4,9 +4,8 @@
 ;; instructions:
 ;; M-x package-refresh-contents
 ;; now install the packages:
-;; M-x package-install RET neotree doom-themes evil
-;; you also have to install fonts for neotree:
-;; https://github.com/domtronn/all-the-icons.el
+;; M-x package-install RET
+;; neotree doom-themes evil all-the-icons-install-fonts
 
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
