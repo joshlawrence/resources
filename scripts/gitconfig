@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # I'm tired of typing this...
 
 git config --global user.name "Josh Lawrence"
-git config --global user.email "josh.lawrence@dmpinvestments.net"
+git config --global user.email "josh@joshlawrence.me"
 git config --global color.ui true
 git config --global push.default simple
 

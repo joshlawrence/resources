@@ -1,4 +1,4 @@
 #!/bin/sh
 
-xrdb ~/.Xresources
+xrdb -load ~/.Xresources
 exec i3
