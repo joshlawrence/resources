@@ -13,6 +13,16 @@ the one-big-partition approach:
 
 swap should be 2x the amount of RAM.  `/usr/local` should have it's own partition.  `/var` and `/tmp` should probably be broken out but can be all under root until it's known how much will actually be used.
 
+notes from the mailinglist:
+
+> Make sure you have ~ 5GB for /usr/src/ and /usr/obj
+
+> I have had to increase the size of /usr to 6G and /usr/local to 20G to build all the packages
+
+also:
+
+https://marc.info/?l=openbsd-misc&m=149890809430366&w=2
+
 ## setup
 
 - copy `/etc/default/doas.conf` to `/etc/doas.conf`
