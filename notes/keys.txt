@@ -15,3 +15,29 @@ Equipment:
 
                             # -- HOME SETUP -- #
 
+I need the motif on the bottom to cover piano duties.  (note: since I'm
+running in mono, I need to stick to rhodes and clav.)
+
+the organ will be on top.  the major question is the leslie sim: it won't
+sound good in mono, so running with the sim off is an option (a la Brian
+Auger).  everything into a mixer.
+
+synth leads - probably not.
+
+                               # -- PLAN -- #               
+
+CLEANUP! STORE ALL LEADS AND CABLES.
+
+1. REMOVE M-AUDIO FROM TOP SHELF. (WHERE TO STORE?)
+2. MOVE TOP SHELF FORWARD AND TILT.
+3. MOVE ORGAN ON TOP SHELF, ADJUST. REMOVE HALFMOON.
+4. PLACE MOTIF.
+5. SETUP SOUNDS IN MASTER BANK - RHODES, CLAV, ETC. (MONO PIANO?)
+	
+	~ EMBRACE LO-FI! ~
+
+                         # -- LIVE SETUP NOTES -- #
+
+	- MIGHT NOT BE A BAD IDEA TO BUY A SPEAKER POLE.
+	- ARE YA GONNA TAKE THE GRANDMOTHER?
+
