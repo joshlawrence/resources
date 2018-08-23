@@ -1,0 +1,179 @@
+html {height:100%;}
+body {background: #fff;}
+.red {color:red;}
+span.no {color:#888;}
+td{font-family: monospace;}
+
+.scale-player{
+	cursor: pointer;
+	position:relative;
+	top:2px;
+	margin-left:4px;
+}
+.scale-chicklet {
+	background:#eee;
+	padding:2px;
+	border:1px solid #666;
+	border-radius: 3px;
+	line-height:20px;
+	margin-right:5px;
+	display:inline-block;
+}
+.bracelet {
+	border:1px solid #666;
+	padding:4px;
+	border-radius: 3px;
+	margin-right: 5px;
+	margin-bottom: 5px;
+	background:#eee;
+	display:inline-block;
+}
+.bracelet-group {
+	padding-left:5px;
+	padding-top:5px;
+	border:1px solid #666;
+	border-radius: 8px;
+	background:#bbb;
+	display:inline-block;
+	margin-right:8px;
+}
+.huge {
+	font-size:30px;
+	font-weight:bold;
+}
+code {
+	display:block;
+	overflow:none;
+	background: black;
+	color: lightgreen;
+	padding:10px;
+	white-space: pre;
+	line-height:20px;
+	border:2px solid #666;
+}
+figure {
+	border:1px solid black;
+	padding:10px;
+	background:#eee;
+	padding:20px;
+	border-radius: 25px;
+	-webkit-box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);
+	-moz-box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);
+	box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);
+	margin-bottom:20px;
+}
+caption {
+	font-weight: bold;
+}
+.lights {
+	height:75px;
+	width:51px;
+}
+.technical {
+	background-image: url('technical.png');
+	background-repeat: no-repeat;
+	background-position: 10px 10px;
+	background-size: 80px;
+	border:1px solid #888;
+	border-radius: 10px;
+	padding:10px;
+	padding-left:100px;
+}
+.well h3 {
+	margin-top:0px;
+}
+nav {
+	display:block;
+}
+#findertable {
+	border-collapse: collapse;
+}
+#findertable td {
+	text-align:center;padding:0;margin:0;
+}
+#finder .box {
+	width:30px;
+	height:30px;
+}
+.bs-docs-sidebar {
+	padding-left: 20px;
+	margin-top: 20px;
+	margin-bottom: 20px;
+}
+
+/* all links */
+.bs-docs-sidebar .nav>li>a {
+    color: #999;
+    padding: 4px 20px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+/* nested links */
+.bs-docs-sidebar .nav .nav>li>a {
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 30px;
+    font-size: 12px;
+}
+/* all links */
+.bs-docs-sidebar .nav>li>a {
+    /*add trasnparent border */
+    border-left: 2px solid transparent;
+}
+/* active & hover links */
+.bs-docs-sidebar .nav>.active>a, 
+.bs-docs-sidebar .nav>li>a:hover, 
+.bs-docs-sidebar .nav>li>a:focus {
+    color: #563d7c;                 
+    text-decoration: none;          
+    background-color: transparent;  
+    border-left: 2px solid #563d7c; 
+}
+/* all active links */
+.bs-docs-sidebar .nav>.active>a, 
+.bs-docs-sidebar .nav>.active:hover>a,
+.bs-docs-sidebar .nav>.active:focus>a {
+    font-weight: 700;
+}
+/* nested active links */
+.bs-docs-sidebar .nav .nav>.active>a, 
+.bs-docs-sidebar .nav .nav>.active:hover>a,
+.bs-docs-sidebar .nav .nav>.active:focus>a {
+    font-weight: 500;
+}
+
+/* hide all (inactive) nested list */
+.bs-docs-sidebar .nav ul.nav {
+    display: none;           
+}
+/* show active nested list */
+.bs-docs-sidebar .nav>.active>ul.nav {
+    display: block;           
+}
+.bs-docs-sidebar .nav>.active>a {  color: #563d7c; }
+section {
+	border-left:2px solid #999;
+	padding-left:20px;
+	margin-top:100px;
+}
+section > section {
+	margin-top:20px;
+	border-left:0;
+	padding-left:20px;
+	overflow:hidden;
+	padding-left:20px;
+	margin-bottom:40px;
+	background:#fff;
+	padding:20px;
+	border-radius: 25px;
+	-webkit-box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);
+	-moz-box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);
+	box-shadow: 0px 2px 14px 4px rgba(0,0,0,0.23);	 
+}
+
+section > section {
+	background: white; 
+}
+
+dd {margin-left:20px;margin-bottom:8px;}
