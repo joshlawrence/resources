@@ -3,3 +3,5 @@ set fill 79
 set tabsize 4
 set tabstospaces
 unset nowrap
+set unix
+set wordbounds
