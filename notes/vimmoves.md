@@ -58,7 +58,6 @@ a - insert after cursor
 A - insert end of line
 o - insert line BELOW
 O - insert line ABOVE
-ea - insert end of doc
 
 ## Statusline Stuff
 
