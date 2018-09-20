@@ -66,3 +66,12 @@ https://github.com/itchyny/lightline.vim
 http://learnvimscriptthehardway.stevelosh.com/chapters/17.html
 
 :set laststatus=2 - turn on the status line
+
+## netrw (directory browsing)
+
+:Explore
+:VExplore
+:SExplore
+
+- (minus) - go up a dir level
+
