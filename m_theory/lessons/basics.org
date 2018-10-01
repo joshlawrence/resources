@@ -1,0 +1,52 @@
+#+TITLE: Jazz Piano Basics
+#+DATE: <2018-10-01 Mon>
+#+AUTHOR: Josh Lawrence
+#+EMAIL: joshlawrence@fastmail.com
+#+OPTIONS: toc:nil
+
+Jazz piano basics for high school students.
+
+* Requirements
+- Major scales
+- Minor scales (natural minor or harmonic minor)
+
+For scales, knowing one or two keys should be sufficient for explaining concepts.  Ability to read music helpful but not required.
+
+* Scales
+This section needs to be reorganized.
+
+- Intervals :: The difference between two pitches
+  * 2nd, 3rd, etc.
+  * Major vs. minor
+- Scales :: Notes ordered by pitch
+  - Construct scales by altering degrees of the major scale:
+    * Mixolydian (or dominant 7th scale) :: 1 2 3 4 5 6 b7
+    * Dorian scale :: 1 2 b3 4 5 6 b7
+    * Half-diminished :: 1 b2 b3 4 b5 b6 b7
+
+* Chords
+#+BEGIN_QUOTE
+A chord, in music, is any harmonic set of pitches consisting of two or more (usually three or more) notes (also called "pitches") that are heard as if sounding simultaneously. -- Wikipedia https://en.wikipedia.org/wiki/Chord_(music)
+#+END_QUOTE
+
+Some notes about chords:
+
+- The root is not always the bottom note!
+- The 3rd of the chord determines the "gender"
+- Extended chords are chords that have notes added beyond the 7th.  There are three extensions: 9th, 11th, and 13th.
+  Note that you may see chords with 2, 4 and 6 in their name.  This /typically/ implies that these tones are *added* to a major chord.
+
+Start with simple 3 and 4 note chords in the RH and the root in the LH.
+
+** Chord Symbols
+- Major 7th
+- Dominant 7th
+- Minor
+- Half-diminished
+- Diminished
+- Alt
+
+** Voicings and Comping
+
+* Resources
+- The Jazz Piano Book by Mark Levine :: The definitive book on modern jazz piano
