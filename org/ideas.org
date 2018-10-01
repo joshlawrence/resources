@@ -1,0 +1,18 @@
+Some ideas for projects, things to learn, etc.
+
+* technical
+- learn emacs
+- write some python to select random notes from a given pool of notes
+
+some people from the ~#emacs~ room:
+- macrobat
+
+* writing
+- focus on writing more frequently. start dumping ideas into the blog
+- keep a running list of ideas here
+
+* musical
+- consolidate 2pianos set list into html (using org mode with html export?)
+- PLAY WITH THE MOOG
+- register the grandmother
+- return the digitakt, trade for something else?
