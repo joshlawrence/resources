@@ -1,7 +1,7 @@
 ;;; -*- lexical-binding: t -*-
 
 
-;; ====
+; ====
 ;; INIT
 
 
@@ -165,19 +165,19 @@
 
 
 ;; Enable transparent title bar on macOS
-(when (memq window-system '(mac ns))
-  (add-to-list 'default-frame-alist '(ns-appearance . light)) ;; {light, dark}
-  (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t)))
+;; (when (memq window-system '(mac ns))
+;;   (add-to-list 'default-frame-alist '(ns-appearance . light)) ;; {light, dark}
+;;   (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t)))
 
 
-;; Font
-(when (member "menlo" (font-family-list))
-  (set-face-attribute 'default nil :font "Menlo 15"))
-(setq-default line-spacing 2)
+;; ;; Font
+;; (when (member "menlo" (font-family-list))
+;;   (set-face-attribute 'default nil :font "Menlo 15"))
+;; (setq-default line-spacing 2)
 
 
-;; Nice and simple default light theme.
-(load-theme 'tsdh-light)
+;; ;; Nice and simple default light theme.
+;; (load-theme 'tsdh-light)
 
 
 ;; Pretty icons
@@ -215,8 +215,8 @@
 
 
 ;; Set colors to distinguish between active and inactive windows
-(set-face-attribute 'mode-line nil :background "SlateGray1")
-(set-face-attribute 'mode-line-inactive nil :background "grey93")
+;; (set-face-attribute 'mode-line nil :background "SlateGray1")
+;; (set-face-attribute 'mode-line-inactive nil :background "grey93")
 
 
 ;; File tree
