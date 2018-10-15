@@ -1,4 +1,4 @@
-;;; -*- lexical-binding: t -*-
+;; -*- lexical-binding: t -*-
 
 
 ; ====
@@ -179,6 +179,7 @@
 ;; ;; Nice and simple default light theme.
 ;; (load-theme 'tsdh-light)
 
+(load-theme 'tango-dark)
 
 ;; Pretty icons
 (use-package all-the-icons)
@@ -195,7 +196,7 @@
 
 
 ;; Highlight current line
-(global-hl-line-mode 1)
+;(global-hl-line-mode 1)
 
 
 ;; Show parens and other pairs.
@@ -558,11 +559,11 @@ point reaches the beginning or end of the buffer, stop there."
 ;; TERMINAL
 
 
-(use-package shell-pop
-  :config
-  (custom-set-variables
-   '(shell-pop-shell-type (quote ("ansi-term" "*ansi-term*" (lambda nil (ansi-term shell-pop-term-shell)))))
-   '(shell-pop-universal-key "s-=")))
+;(use-package shell-pop
+;  :config
+;  (custom-set-variables
+;   '(shell-pop-shell-type (quote ("ansi-term" "*ansi-term*" (lambda nil (ansi-term shell-pop-term-shell)))))
+;   '(shell-pop-universal-key "s-=")))
 
 
 ;; ===============
