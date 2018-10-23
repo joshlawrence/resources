@@ -1,0 +1,9 @@
+notes and resources
+
+https://docs.python.org/3/library/subprocess.html
+
+https://pymotw.com/3/subprocess/
+
+https://eli.thegreenplace.net/2017/interacting-with-a-long-running-child-process-in-python/
+
+https://github.com/Akuli/python-tutorial
