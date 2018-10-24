@@ -7,3 +7,11 @@ https://pymotw.com/3/subprocess/
 https://eli.thegreenplace.net/2017/interacting-with-a-long-running-child-process-in-python/
 
 https://github.com/Akuli/python-tutorial
+
+https://docs.python.org/3/library/glob.html
+
+http://blog.danwin.com/using-python-3-pathlib-for-managing-filenames-and-directories/
+
+https://jefftriplett.com/2017/pathlib-is-wonderful/
+
+https://christophergs.github.io/python/2017/01/01/python-glob/
