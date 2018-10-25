@@ -15,3 +15,7 @@ http://blog.danwin.com/using-python-3-pathlib-for-managing-filenames-and-directo
 https://jefftriplett.com/2017/pathlib-is-wonderful/
 
 https://christophergs.github.io/python/2017/01/01/python-glob/
+
+really good stuff on paths:
+
+http://blog.danwin.com/using-python-3-pathlib-for-managing-filenames-and-directories/
