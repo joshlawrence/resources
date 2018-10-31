@@ -2,6 +2,7 @@ execute pathogen#infect()
 syntax on
 set background=dark
 filetype plugin indent on
+set backspace=indent,eol,start
 set laststatus=2
 set expandtab ts=4 sw=4 ai
 set textwidth=80
