@@ -1,5 +1,8 @@
 # openbsd setup notes
 
+_note: this was written awhile back, so it's not really up-to-date.  also, I'm a
+bit of a newbie so this info could be very inaccurate - proceed with caution!_
+
 ## partitioning
 
 read about partitioning here:
