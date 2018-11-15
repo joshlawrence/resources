@@ -1,10 +1,36 @@
 execute pathogen#infect()
+set nocompatible
 syntax on
 set background=dark
 filetype plugin indent on
-set mouse=v
-set backspace=indent,eol,start
+set backspace=2
 set laststatus=2
-set expandtab ts=4 sw=4 ai
 set textwidth=80
+set smartindent
+set autoindent
+set smarttab
+set expandtab
+set softtabstop=4
+set shiftwidth=4
+set shiftround
+set tabstop=8
 set wrapmargin=2
+set noshowmode
+set mouse=a
+set number
+
+setglobal commentstring=#\ %s
+
+if exists('+clipboard')
+  set clipboard=unnamedplus
+endif
+
+set backup                
+set backupdir=~/.vim/bkup
+set directory=~/.vim/tmp
+
+set novisualbell
+set noerrorbells
+
+map <C-n> :NERDTreeToggle<CR>
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif

@@ -1,5 +1,0 @@
-Vim setup:
-
-https://github.com/tpope/vim-pathogen
-
-https://github.com/itchyny/lightline.vim
