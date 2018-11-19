@@ -21,12 +21,10 @@
 		</outline>
 		<outline text="General" title="General">
 			<outline htmlUrl="https://writing.kemitchell.com" title="/dev/lawyer" xmlUrl="https://writing.kemitchell.com/feed.xml" type="rss" text="/dev/lawyer"/>
-			<outline htmlUrl="http://leancrew.com/all-this/" title="And now it’s all this" xmlUrl="http://leancrew.com/all-this/feed/" type="rss" text="And now it’s all this"/>
 			<outline htmlUrl="https://begriffs.com" title="begriffs.com" xmlUrl="https://begriffs.com/atom.xml" type="rss" text="begriffs.com"/>
 			<outline htmlUrl="https://codeascraft.com" title="Code as Craft" xmlUrl="http://codeascraft.etsy.com/feed/" type="rss" text="Code as Craft"/>
 			<outline htmlUrl="https://blog.codinghorror.com/" title="Coding Horror" xmlUrl="http://feeds.feedburner.com/codinghorror/" type="rss" text="Coding Horror"/>
 			<outline htmlUrl="http://planet.freeipa.org/" title="FreeIPA Identity Management planet - technical blogs" xmlUrl="http://planet.freeipa.org/rss20.xml" type="rss" text="FreeIPA Identity Management planet - technical blogs"/>
-			<outline htmlUrl="http://www.fsf.org/blogs/recent-blog-posts" title="FSF blogs" xmlUrl="https://static.fsf.org/fsforg/rss/blogs.xml" type="rss" text="FSF blogs"/>
 			<outline htmlUrl="http://www.fsf.org/news/aggregator" title="FSF News" xmlUrl="https://static.fsf.org/fsforg/rss/news.xml" type="rss" text="FSF News"/>
 			<outline htmlUrl="https://www.linode.com/docs/" title="Guides &amp; Tutorials on Linode Guides &amp; Tutorials" xmlUrl="https://www.linode.com/docs/index.xml" type="rss" text="Guides &amp; Tutorials on Linode Guides &amp; Tutorials"/>
 			<outline htmlUrl="http://hyperboleandahalf.blogspot.com/" title="Hyperbole and a Half" xmlUrl="http://hyperboleandahalf.blogspot.com/feeds/posts/default" type="rss" text="Hyperbole and a Half"/>
@@ -42,15 +40,15 @@
 			<outline htmlUrl="https://xkcd.com/" title="xkcd.com" xmlUrl="https://xkcd.com/rss.xml" type="rss" text="xkcd.com"/>
 		</outline>
 		<outline text="Linux" title="Linux">
-			<outline htmlUrl="https://www.cyberciti.biz/" title="[RSS/Feed] nixCraft: Linux Tips, Hacks, Tutorials, And Ideas In Blog Format" xmlUrl="https://www.cyberciti.biz/atom-n-free/atom.xml" type="rss" text="[RSS/Feed] nixCraft: Linux Tips, Hacks, Tutorials, And Ideas In Blog Format"/>
 			<outline htmlUrl="https://fedoramagazine.org" title="Fedora Magazine" xmlUrl="https://fedoramagazine.org/feed/" type="rss" text="Fedora Magazine"/>
 			<outline htmlUrl="http://julio.meroh.net/" title="Julio Merino" xmlUrl="http://julio.meroh.net/feed.xml" type="rss" text="Julio Merino"/>
-			<outline htmlUrl="https://lwn.net" title="LWN.net" xmlUrl="http://lwn.net/headlines/newrss" type="rss" text="LWN.net"/>
 			<outline htmlUrl="https://newsletter.nixers.net/" title="Nixers Newsletter" xmlUrl="https://newsletter.nixers.net/feed.xml" type="rss" text="Nixers Newsletter"/>
 			<outline htmlUrl="https://planet.debian.org/" title="Planet Debian" xmlUrl="http://planet.debian.org/atom.xml" type="rss" text="Planet Debian"/>
+			<outline htmlUrl="https://www.unix-ninja.com/feed/rss" title="unix-ninja" xmlUrl="https://www.unix-ninja.com/feed/rss" type="rss" text="unix-ninja"/>
 		</outline>
 		<outline text="Music" title="Music">
 			<outline htmlUrl="http://www.analogindustries.com" title="Analog Industries" xmlUrl="http://feeds2.feedburner.com/AnalogIndustries" type="rss" text="Analog Industries"/>
+			<outline htmlUrl="http://blog.uvm.edu/tgcleary" title="BirdFeed" xmlUrl="http://blog.uvm.edu/tgcleary/feed/" type="rss" text="BirdFeed"/>
 			<outline htmlUrl="http://cdm.link" title="CDM Create Digital Music" xmlUrl="http://createdigitalmusic.com/feed/" type="rss" text="CDM Create Digital Music"/>
 			<outline htmlUrl="http://greglui.com" title="Greg Lui" xmlUrl="http://greglui.com/feed/" type="rss" text="Greg Lui"/>
 			<outline htmlUrl="https://yamahasynth.com/artists-old2" title="Latest blog entries" xmlUrl="https://yamahasynth.com/resources?format=feed" type="rss" text="Latest blog entries"/>
@@ -63,9 +61,7 @@
 		<outline text="Ops" title="Ops">
 			<outline htmlUrl="https://www.ansible.com/blog" title="Ansible Blog" xmlUrl="http://www.ansible.com/blog/rss.xml" type="rss" text="Ansible Blog"/>
 			<outline htmlUrl="http://www.brendangregg.com/blog" title="Brendan Gregg's Blog" xmlUrl="http://www.brendangregg.com/blog/rss.xml" type="rss" text="Brendan Gregg's Blog"/>
-			<outline htmlUrl="https://blog.docker.com" title="Docker Blog" xmlUrl="http://blog.docker.io/feed/" type="rss" text="Docker Blog"/>
 			<outline htmlUrl="https://dropboxtechblog.wordpress.com" title="Dropbox Tech Blog" xmlUrl="https://tech.dropbox.com/feed/" type="rss" text="Dropbox Tech Blog"/>
-			<outline htmlUrl="https://code.fb.com" title="Facebook Code" xmlUrl="https://code.facebook.com/posts/rss" type="rss" text="Facebook Code"/>
 			<outline htmlUrl="https://githubengineering.com/" title="GitHub Engineering" xmlUrl="http://githubengineering.com/atom.xml" type="rss" text="GitHub Engineering"/>
 			<outline htmlUrl="https://blog.linode.com" title="Linode Blog" xmlUrl="https://blog.linode.com/feed/" type="rss" text="Linode Blog"/>
 			<outline htmlUrl="https://medium.com/netflix-techblog?source=rss----2615bd06b42e---4" title="Netflix TechBlog - Medium" xmlUrl="http://techblog.netflix.com/feeds/posts/default" type="rss" text="Netflix TechBlog - Medium"/>
@@ -73,8 +69,7 @@
 			<outline htmlUrl="https://github.com/blog" title="The GitHub Blog" xmlUrl="https://github.com/blog.atom" type="rss" text="The GitHub Blog"/>
 		</outline>
 		<outline text="Programming" title="Programming">
-			<outline htmlUrl="https://dev.to" title="DEV Community" xmlUrl="https://dev.to/feed" type="rss" text="DEV Community"/>
-			<outline htmlUrl="https://kevinmarquette.github.io" title="Kevin Marquette on PowerShell Theory" xmlUrl="https://kevinmarquette.github.io/feed.xml" type="rss" text="Kevin Marquette on PowerShell Theory"/>
+			<outline htmlUrl="https://drewdevault.com" title="Drew DeVault's Blog" xmlUrl="https://drewdevault.com/feed.xml" type="rss" text="Drew DeVault's Blog"/>
 		</outline>
 		<outline text="Reddit" title="Reddit">
 			<outline htmlUrl="https://www.reddit.com/?feed=3779a76d5071f5af5ed4263af0d737f2dbb7b2c9&amp;user=ladder_filter" title="reddit: the front page of the internet" xmlUrl="https://www.reddit.com/.rss?feed=3779a76d5071f5af5ed4263af0d737f2dbb7b2c9&amp;user=ladder_filter" type="rss" text="reddit: the front page of the internet"/>

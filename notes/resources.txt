@@ -1,0 +1,57 @@
+## -- resources -- ##
+
+resources for wget, opendirs and converting/scripting.
+
+wget -e robots=off -r -nc -nH --cut-dirs=3 -np "URL"
+
+## links
+
+http://gamelay.usami.com/~netboy/w30/samples/
+
+## encoding/converting/misc
+
+find . -depth -name "* *" -execdir rename 's/ /_/g' "{}" \;
+
+#!/bin/bash
+for file in *.flv; do
+	i=$(basename "$file" .flv)
+	ffmpeg -i "$file" -c:a libvorbis -q:a 6 "$i.ogg"
+done
+
+#!/bin/bash
+for i in *.ogg; do 
+    mv "$i" "$(echo ${i%.ogg} | tr [:lower:] [:upper:]).ogg"; 
+done
+
+#!/bin/bash
+for i in *.m4a; do
+    ffmpeg -i "$i" -c:a libvorbis -qscale:a 5 "$i.ogg"
+done
+
+script to dump opendir page links to a file: scripts/dumpPageLinks.sh
+
+## creating temp directories
+
+#!/bin/bash
+rand=$(openssl rand -hex 6)
+mkdir -p ".$rand"/{wrk,out}
+
+## youtube-dl options (+mpv)
+
+youtube-dl already selects the BEST format, pass -F to see other formats.
+
+youtube-dl [-a FILE] --restrict-filenames [--prefer-free-formats] URL
+
+	...where FILE is a list of urls.
+
+to extract audio only:
+
+youtube-dl -x --audio-format mp3|vorbis|wav URL
+
+handy stuff here: https://wiki.archlinux.org/index.php/mpv
+
+note: https://mpv.io/manual/master/#options-ytdl
+
+function yta() {
+    mpv --ytdl-format=bestaudio ytdl://ytsearch:"$@"
+}
