@@ -55,3 +55,24 @@ note: https://mpv.io/manual/master/#options-ytdl
 function yta() {
     mpv --ytdl-format=bestaudio ytdl://ytsearch:"$@"
 }
+
+# -- renaming -- #
+
+https://www.gnu.org/software/bash/manual/bashref.html#Shell-Parameter-Expansion
+
+https://www.gnu.org/software/bash/manual/bashref.html#Filename-Expansion
+
+Here are a couple more different ways to manipulate filenames
+
+for f in *.jpg
+do
+    mv "$f" "before_part${f%.*}after_part.${f##*.}"
+    # OR mv "$f" "before_part$(basename "$f" ".jpg")after_part.jpg"
+done
+The parameter expansions in the mv command work as follows:
+
+${f%.*} - Delete the shortest matching pattern from the end of the string contained in $f, 
+in this case delete everything after and including the last dot. The single % means "shortest from the end".
+
+${f##*.} - Delete the longest matching pattern from the beginning of the string contained in $f, 
+in this case everything before and including the last dot (this includes any other dots as well). 
