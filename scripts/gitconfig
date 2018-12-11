@@ -1,11 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
-# I'm tired of typing this...
+# setup git on linux
 
 git config --global user.name "Josh Lawrence"
 git config --global user.email "josh@joshlawrence.me"
 git config --global color.ui true
 git config --global push.default simple
+git config --global color.diff auto
+git config --global color.status auto
+git config --global color.branch auto
 
 # editor
 git config --global core.editor vim
