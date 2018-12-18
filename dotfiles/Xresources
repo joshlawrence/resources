@@ -1,16 +1,14 @@
-!Xft.dpi:        96
-!Xft.antialias:  true
-!Xft.rgba:       rgb
-!Xft.hinting:    true
-!Xft.hintstyle:  hintslight
-!Xft.autohint:   false
-!Xft.lcdfilter:  lcddefault
+Xft.dpi:        96
+Xft.antialias:  true
+Xft.rgba:       rgb
+Xft.hinting:    true
+Xft.hintstyle:  hintslight
+Xft.autohint:   false
+Xft.lcdfilter:  lcddefault
 
-!URxvt.font: xft:Fira Code Medium:size=12
-!URxvt.boldFont: xft:Fira Code Medium:size=12
-URxvt.font: xft:Fira Mono:pixelsize=15:style=Light
-URxvt.boldFont: xft:Fira Mono:pixelsize=15:style=Light
-URxvt.letterSpace: -1
+URxvt.font: xft:Terminus:size=12:style=Regular
+URxvt.boldFont: xft:Terminus:size=12:style=Bold
+!URxvt.letterSpace: -1
 URxvt.scrollBar: false
 URxvt.scrollBar_right: false
 URxvt.scrollBar_floating: false
