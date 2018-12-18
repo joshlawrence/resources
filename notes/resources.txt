@@ -76,3 +76,12 @@ in this case delete everything after and including the last dot. The single % me
 
 ${f##*.} - Delete the longest matching pattern from the beginning of the string contained in $f, 
 in this case everything before and including the last dot (this includes any other dots as well). 
+
+find all zip files, create a directory based on file name, extract the contents to the directory:
+
+#!/bin/bash
+for i in *.zip; do
+    dir=${i%%.*}
+    mkdir "$dir"
+    unzip "$i" -d "$dir"
+done
