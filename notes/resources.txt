@@ -4,13 +4,19 @@ resources for wget, opendirs and converting/scripting.
 
 wget -e robots=off -r -nc -nH --cut-dirs=3 -np "URL"
 
-## links
-
-http://gamelay.usami.com/~netboy/w30/samples/
-
 ## encoding/converting/misc
 
-find . -depth -name "* *" -execdir rename 's/ /_/g' "{}" \;
+replace all spaces with underscores:
+
+find . -type f -name "*.wav" -exec rename 's/ /_/g' {} \;
+
+replace all instances of "_-_" with a single dash:
+
+find . -type f -name "*.wav" -exec rename 's/_-_/_/g' {} \;
+
+upper to lower:
+
+for i in *.wav; do mv "$i" "$(echo "$i" | tr '[A-Z]' '[a-z]')"; done
 
 #!/bin/bash
 for file in *.flv; do
