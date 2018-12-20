@@ -10,9 +10,9 @@
 
 ## breakbeat science tutorial
 
-https://youtu.be/99XWrvT7y9Y
+NOTES REGARDING TRACK 2:
 
-### track 2
+https://youtu.be/99XWrvT7y9Y?t=165
 
 - amen 160 sample
 - pattern is 4 bars long, with trigs on every 1/4 note (1, 5, 9, 13)
