@@ -1,36 +1,24 @@
-# digitakt notes #
+# DIGITAKT NOTES
 
-## getting started
+## SETUP
 
 * EMPTY RESET
 * boot up, format drive, reboot
 * create project
 * copy samples over
-* profit
 
-## breakbeat science tutorial
+## LOOP SLICING
 
-NOTES REGARDING TRACK 2:
+You can generally get a sample broken into even sections of 16 on the dt if you set each start point by multiples of 7.5 (7.5 x 16 = 120). The dt start point value maxes at 120 which is probably why everything factors well with that number.
 
-https://youtu.be/99XWrvT7y9Y?t=165
+```
+0 7.5 15 22.5 30 37.5 45 52.5 60
+67.5 75 82.5 90 97.5 105 112.5 120
+```
 
-- amen 160 sample
-- pattern is 4 bars long, with trigs on every 1/4 note (1, 5, 9, 13)
-- steps 1, 3, 5, 7... are parameter locked to a different part of the loop
-- SRC is set to loop instead of one-shot
-- SRC loop length is set to 7.5
-- TRIG has probability condition set for each step
-- AMP decay is set to 55
+## TRIGS
 
-LOOP SLICING:
-
-> As most people know holding a trig and pressing an encoder will lock the current value to that step, so in this example lets slice up a beat loop and place it evenly across 16 steps.
-
-> First load up or sample a loop, tempo is irrelevant, now place a trig on step 1, hold trig 1 then press the encoder for start (encoder E on SRC page) now exit step rec and tap pad where loop is assigned, tweak start encoder until you are on second hit of loop (or whatever hit you want next) place trig, hold trig, push enocder and now you have locked the value, repeat process until the beat is sounding how you want it to.
-
-> So hopefully by now you will see that this can be a fast way of setting a sound how you want initially, then locking the relevant parameters to a step simply by pressing the encoders whilst holding trig, changing sound parameters again for next desired sound, locking those in, repeat as necessary.  Copy and paste trig can really speed things up. And of course you can lock multiple parameters in this way too.
-
-### skills to practice
+there are 2 types of trigs, note and lock.
 
 TRIG COLORS:
 
@@ -42,9 +30,9 @@ ADDING TRIGS - GRID RECORDING MODE:
 * note trig = press trig key
 * lock trig = FUN + trig key
 
-ADDING TRIGS - LIVE RECORDING MODE (RED+PLAY):
+ADDING TRIGS - LIVE RECORDING MODE (RED + PLAY):
 
-_Set up quantize:  FUNC+TRIG, F for global quantize, FUNC+YES to apply. pressing REC + PLAY (x2) will enable/disable quantize._
+_Set up quantize:  FUNC + TRIG, F for global quantize, FUNC + YES to apply. pressing REC + PLAY (x2) will enable/disable quantize._
 
 * note trig = press TRIG
 * lock trig = any changes to parameters (while holding the step button?) will be recorded as p_locks.
@@ -56,11 +44,9 @@ REMOVING TRIGS:
 
 ## TODO
 
-* 10.10.4 - FILL MODE (FILL MODE is a trig condition.)
-* 10.10.5 - SWING
-* LFO math
 
-## misc notes
+
+## MISC
 
 - press + turn encoders for whole increments
 - FUNC + turn to snap back to zero
