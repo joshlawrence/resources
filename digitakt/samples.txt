@@ -21,3 +21,7 @@ what would be cool is a filename template of some kind:
 folder_name+sample_type+f_name+bpm.ext
 
 ...or something like that.
+
+## -- not related to the dt -- ##
+
+https://www.yamahasynth.com/motifxf-category/motif-xf-learning-about-the-sample-slice-and-slice-seq-sample-functions

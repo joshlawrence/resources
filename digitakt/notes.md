@@ -12,9 +12,11 @@
 You can generally get a sample broken into even sections of 16 on the dt if you set each start point by multiples of 7.5 (7.5 x 16 = 120). The dt start point value maxes at 120 which is probably why everything factors well with that number.
 
 ```
-0 7.5 15 22.5 30 37.5 45 52.5 60
-67.5 75 82.5 90 97.5 105 112.5 120
+0 | 7.5 | 15 | 22.5 | 30 | 37.5 | 45 | 52.5 | 60 (bar 1)
+67.5 | 75 | 82.5 | 90 | 97.5 | 105 | 112.5 | 120 (bar 2)
 ```
+
+true beatslicing isn't possible on the dt, so it's better to fly samples in as one-hits and arrange them into kits.
 
 ## TRIGS
 
@@ -44,7 +46,8 @@ REMOVING TRIGS:
 
 ## TODO
 
-
+- [ ] create 4 kits: acoustic, 808, dirty/processed acoustic, something else
+- [ ] save all 4 kits to last 4 patterns
 
 ## MISC
 
