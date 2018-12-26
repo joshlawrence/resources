@@ -1,0 +1,23 @@
+## -- samples -- ##
+
+http://simant.ru/pub/multimedia/Samples/
+
+https://archive.lucid-dreams.se/Samples/
+
+currently loaded into dt [from ~/Music/samples]:
+
+hdb2 [1.2M]
+kits1 [23M]
+lp [126M]
+modub [39M]
+oxford-od [512K]
+
+## -- notes -- ##
+
+dt sees any file name on the file system with the same name as being the same file, regardless of the directory.
+
+what would be cool is a filename template of some kind:
+
+folder_name+sample_type+f_name+bpm.ext
+
+...or something like that.
