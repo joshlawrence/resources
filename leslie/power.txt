@@ -1,0 +1,29 @@
+# -- AC wiring color codes -- #
+
+black = hot
+white = neutral
+green = ground
+
+brown = hot
+blue = neutral
+green/yellow stripe = ground
+
+switch hot
+fuse hot
+
+- in a 2-prong cable, ALWAYS used polarized plugs.
+
+indentifying the neutral on 2-prong cables:
+
+white stripe = neutral
+ribbed = neutral
+white = neutral
+
+WIDE blade is NEUTRAL
+SMALL blade is HOT
+
+---
+
+this guy knows everything:
+
+https://www.familyhandyman.com/electrical/wiring/wiring-switches-and-outlets/view-all/
