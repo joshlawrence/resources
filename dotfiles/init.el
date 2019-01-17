@@ -89,13 +89,18 @@ There are two things you can do about this warning:
 (setq-default tab-width 2)
 (setq-default c-basic-indent 2)
 
-(windmove-default-keybindings)
+(line-number-mode 1)
+(column-number-mode 1)
 
 ;; ranger
 (require 'ranger)
 (ranger-override-dired-mode t)
 (setq ranger-cleanup-on-disable t)
 (setq ranger-show-hidden t)
+(setq ranger-preview-file nil)
+
+;; tramp
+(setq tramp-default-method "ssh")
 
 ;; theme config
 
