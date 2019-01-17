@@ -22,6 +22,8 @@ white = neutral
 WIDE blade is NEUTRAL
 SMALL blade is HOT
 
+to stay consistent when running these wires, mark the HOT (SMALL blade) wire with a BLACK SHARPIE.
+
 ---
 
 this guy knows everything:
