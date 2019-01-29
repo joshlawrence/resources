@@ -112,6 +112,8 @@ There are two things you can do about this warning:
 
 ;(set-default-font "Menlo 14")
 (set-default-font "Fira Code 12")
+;; for linux
+;(set-default-font "Fira Mono 12")
 
 ;; Hide toolbar and scroll bar
 (tool-bar-mode -1)
