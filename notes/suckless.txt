@@ -1,0 +1,21 @@
+## -- suckless software -- ##
+
+anything from here: http://suckless.org/rocks/
+
+minimal software that I need to try out:
+
+- https://www.passwordstore.org/ :: password manager
+  see this howto: https://wiki.archlinux.org/index.php/Pass
+- http://source.netsurf-browser.org/netsurf.git/ :: web browser
+- https://unix4lyfe.org/darkhttpd/ :: web server, self-contained
+- http://eradman.com/entrproject/ :: run commands when files change
+- https://git.codemadness.org/sfeed/file/README.html :: sfeed (note the maildir stuff)
+- EMACS!!! (does this count as suckless? nope...)
+
+distros:
+
+- https://alpinelinux.org/
+
+other ideas:
+
+might be nice to move from gitlab and just use a simple blog service like twtxt (https://github.com/buckket/twtxt) and point to those posts from my github page.
