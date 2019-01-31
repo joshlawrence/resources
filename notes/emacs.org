@@ -54,11 +54,12 @@ https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 
 * Text formatting
 
-| Action          | Command |
-|-----------------+---------|
-| Uppercase word  | M-u     |
-| Lowercase word  | M-l     |
-| Capitalize word | M-c     |
+| Action            | Command            |
+|-------------------+--------------------|
+| Uppercase word    | M-u                |
+| Lowercase word    | M-l                |
+| Capitalize word   | M-c                |
+| Turn on auto-fill | M-x auto-fill-mode |
 
 * Search
 
