@@ -8,6 +8,7 @@ https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 |---------------+---------|
 | Open          | C-x C-f |
 | Save          | C-x C-s |
+| Save as       | C-x C-w |
 | Save and quit | C-x C-c |
 | UNDO          | C-_     |
 
