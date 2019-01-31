@@ -1,0 +1,67 @@
+A quick guide to emacs shortcuts.
+
+https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
+
+* Basics
+
+| Action        | Command |
+|---------------+---------|
+| Open          | C-x C-f |
+| Save          | C-x C-s |
+| Save and quit | C-x C-c |
+| UNDO          | C-_     |
+
+* Moving
+
+| Direction | By char | By word | By line | By page |
+|-----------+---------+---------+---------+---------|
+| Forward   | C-f     | M-f     | C-n     | C-v     |
+| Backward  | C-b     | M-b     | C-p     | M-v     |
+| Beginning |         |         | C-a     | M-<     |
+| End       |         |         | C-e     | M->     |
+
+* Deleting/killing (cutting text)
+
+| Direction | By char | By word | By line | By region |
+|-----------+---------+---------+---------+-----------|
+| Forward   | C-d     | M-d     | C-k     | C-w       |
+| Backward  | Del     | M-Del   |         |           |
+
+* Cut/copy/paste
+
+| Action       | Command |
+|--------------+---------|
+| Set mark     | C-SPC   |
+| Cut (kill)   | C-w     |
+| Copy         | M-w     |
+| Paste (yank) | C-y     |
+
+* Buffers/windows
+
+| Action                                   | Command |
+|------------------------------------------+---------|
+| Print list of buffers                    | C-x C-b |
+| Asks which buffer to select              | C-x b   |
+| Kill a buffer                            | C-x k   |
+|------------------------------------------+---------|
+| Split window - side                      | C-x 3   |
+| Split window - below                     | C-x 2   |
+| Split window and switch to buffer - side | C-x 4 b |
+| Move to other window                     | C-x o   |
+| Delete this window                       | C-x 0   |
+| Delete all windows except current        | C-x 1   |
+
+* Text formatting
+
+| Action          | Command |
+|-----------------+---------|
+| Uppercase word  | M-u     |
+| Lowercase word  | M-l     |
+| Capitalize word | M-c     |
+
+* Search
+
+| Action          | Command                      |
+|-----------------+------------------------------|
+| Search forward  | C-s (repeat for next result) |
+| Search backward | C-r (repeat for next result) |
