@@ -32,11 +32,7 @@ There are two things you can do about this warning:
 ;(setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
-(add-hook 'text-mode-hook 'turn-on-auto-fill)
-(add-hook 'text-mode-hook
-  '(lambda() (set-fill-column 80)))
-
-(global-set-key (kbd "M-o") 'other-window)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Smoother and nicer scrolling
 (setq scroll-margin 10
@@ -111,9 +107,7 @@ There are two things you can do about this warning:
 (set-face-attribute 'mode-line-inactive nil :background "grey93")
 
 ;(set-default-font "Menlo 14")
-(set-default-font "Fira Code 12")
-;; for linux
-;(set-default-font "Fira Mono 12")
+;(set-default-font "Fira Code 12")
 
 ;; Hide toolbar and scroll bar
 (tool-bar-mode -1)
