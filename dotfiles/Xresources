@@ -6,9 +6,11 @@ Xft.hintstyle:  hintslight
 Xft.autohint:   false
 Xft.lcdfilter:  lcddefault
 
-URxvt.font: xft:Terminus:size=12:style=Regular
-URxvt.boldFont: xft:Terminus:size=12:style=Bold
-!URxvt.letterSpace: -1
+!URxvt.font: xft:Terminus:size=12:style=Regular
+!URxvt.boldFont: xft:Terminus:size=12:style=Bold
+URxvt.font: xft:Fira Code Light:size=12:style=Regular
+!URxvt.boldFont: xft:Fira Code:size=12:style=Bold
+URxvt.letterSpace: -1
 URxvt.scrollBar: false
 URxvt.scrollBar_right: false
 URxvt.scrollBar_floating: false

@@ -67,3 +67,11 @@ https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 |-----------------+------------------------------|
 | Search forward  | C-s (repeat for next result) |
 | Search backward | C-r (repeat for next result) |
+
+* Setup
+
+Packages required for my emacs setup. Typically installed with ~M-x package-install RET <package-name>~.
+
+- doom-themes
+- neotree (remember to ~M-x all-the-icons-install-fonts~)
+- markdown-mode

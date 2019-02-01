@@ -1,5 +1,6 @@
-;; melpa
+;; emacs config
 
+;; melpa
 (require 'package)
 (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                     (not (gnutls-available-p))))
@@ -29,7 +30,7 @@ There are two things you can do about this warning:
 (setq use-package-always-ensure t)
 
 ;(add-to-list 'load-path "~/.emacs.d/local/")
-;(setq custom-theme-directory (concat user-emacs-directory "themes"))
+(setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
@@ -88,25 +89,29 @@ There are two things you can do about this warning:
 (line-number-mode 1)
 (column-number-mode 1)
 
-;; ranger
-(require 'ranger)
-(ranger-override-dired-mode t)
-(setq ranger-cleanup-on-disable t)
-(setq ranger-show-hidden t)
-(setq ranger-preview-file nil)
+;; neotree
+(require 'neotree)
+(global-set-key [f8] 'neotree-toggle)
 
 ;; tramp
 (setq tramp-default-method "ssh")
 
 ;; theme config
 
-(load-theme 'tsdh-light)
+;(load-theme 'tsdh-light)
+;(load-theme 'dracula t)
+
+(require 'doom-themes)
+(setq doom-themes-enable-bold t
+      doom-themes-enable-italic t)
+(load-theme 'doom-one t)
+(doom-themes-org-config)
 
 ;; Set colors to distinguish between active and inactive windows
-(set-face-attribute 'mode-line nil :background "SlateGray1")
-(set-face-attribute 'mode-line-inactive nil :background "grey93")
+;(set-face-attribute 'mode-line nil :background "SlateGray1")
+;(set-face-attribute 'mode-line-inactive nil :background "grey93")
 
-;(set-default-font "Menlo 14")
+;(set-default-font "Menlo 10")
 ;(set-default-font "Fira Code 12")
 
 ;; Hide toolbar and scroll bar
