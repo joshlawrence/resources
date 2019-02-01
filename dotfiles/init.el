@@ -113,6 +113,7 @@ There are two things you can do about this warning:
 
 ;(set-default-font "Menlo 10")
 ;(set-default-font "Fira Code 12")
+(set-default-font "IBM Plex Mono 12")
 
 ;; Hide toolbar and scroll bar
 (tool-bar-mode -1)
