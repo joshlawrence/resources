@@ -52,14 +52,19 @@ https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 | Delete this window                       | C-x 0   |
 | Delete all windows except current        | C-x 1   |
 
-* Text formatting
+* Text formatting/editing
 
-| Action            | Command            |
-|-------------------+--------------------|
-| Uppercase word    | M-u                |
-| Lowercase word    | M-l                |
-| Capitalize word   | M-c                |
-| Turn on auto-fill | M-x auto-fill-mode |
+| Action                 | Command            |
+|------------------------+--------------------|
+| Uppercase word         | M-u                |
+| Lowercase word         | M-l                |
+| Capitalize word        | M-c                |
+| Turn on auto-fill      | M-x auto-fill-mode |
+| Center a line          | M-o M-s            |
+| Comment/uncomment line | C-x C-;            |
+
+A note about auto-fill-mode: having ~(setq-default fill-column 80)~ doesn't turn
+on auto-fill-mode by default. It should be turned on manually when needed.
 
 * Search
 

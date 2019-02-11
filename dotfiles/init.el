@@ -33,7 +33,7 @@ There are two things you can do about this warning:
 (setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
+;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Smoother and nicer scrolling
 (setq scroll-margin 10
@@ -89,6 +89,8 @@ There are two things you can do about this warning:
 (line-number-mode 1)
 (column-number-mode 1)
 
+(setq-default fill-column 80)
+
 ;; neotree
 (require 'neotree)
 (global-set-key [f8] 'neotree-toggle)
@@ -98,8 +100,7 @@ There are two things you can do about this warning:
 
 ;; theme config
 
-;(load-theme 'tsdh-light)
-;(load-theme 'dracula t)
+;; (load-theme 'tsdh-light)
 
 (require 'doom-themes)
 (setq doom-themes-enable-bold t
@@ -108,11 +109,11 @@ There are two things you can do about this warning:
 (doom-themes-org-config)
 
 ;; Set colors to distinguish between active and inactive windows
-;(set-face-attribute 'mode-line nil :background "SlateGray1")
-;(set-face-attribute 'mode-line-inactive nil :background "grey93")
+;; (set-face-attribute 'mode-line nil :background "SlateGray1")
+;; (set-face-attribute 'mode-line-inactive nil :background "grey93")
 
-;(set-default-font "Menlo 10")
-;(set-default-font "Fira Code 12")
+;; (set-default-font "Menlo 10")
+;; (set-default-font "Fira Code 12")
 (set-default-font "IBM Plex Mono 12")
 
 ;; Hide toolbar and scroll bar
