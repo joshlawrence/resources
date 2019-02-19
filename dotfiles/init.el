@@ -94,6 +94,7 @@ There are two things you can do about this warning:
 ;; neotree
 (require 'neotree)
 (global-set-key [f8] 'neotree-toggle)
+(setq neo-theme 'ascii)
 
 ;; tramp
 (setq tramp-default-method "ssh")
