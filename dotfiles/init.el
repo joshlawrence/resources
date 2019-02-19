@@ -107,6 +107,7 @@ There are two things you can do about this warning:
       doom-themes-enable-italic t)
 (load-theme 'doom-one t)
 (doom-themes-org-config)
+(doom-themes-neotree-config)
 
 ;; Set colors to distinguish between active and inactive windows
 ;; (set-face-attribute 'mode-line nil :background "SlateGray1")
