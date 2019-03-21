@@ -21,10 +21,6 @@ set mouse=a
 
 setglobal commentstring=#\ %s
 
-if exists('+clipboard')
-  set clipboard=unnamedplus
-endif
-
 set backup                
 set backupdir=~/.vim/bkup
 set directory=~/.vim/tmp
