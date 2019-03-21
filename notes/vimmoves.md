@@ -6,7 +6,31 @@ https://stackoverflow.com/questions/102384/using-vims-tabs-like-buffers/103590#1
 
 https://joshldavis.com/2014/04/05/vim-tab-madness-buffers-vs-tabs/
 
-## Important Shortcuts and Commands
+https://sanctum.geek.nz/arabesque/vim-anti-patterns/
+
+## Moving/Inserting/Deleting
+
+h,j,k,l - yeah
+^ or 0 - start of line
+$ - end of line
+ctrl+B - pg up
+ctrl+F - pg down
+{ - start of prev paragraph or block
+} - end of next paragraph or block
+
+i - insert before cursor
+a - insert after cursor
+I - insert beginning of line
+A - insert end of line
+o - insert line BELOW
+O - insert line ABOVE
+
+y - copy
+d - cut (after visually selecting)
+P - paste before cursor
+p - paste after cursor
+
+## Formatting
 
 :set textwidth=80
 :set wrapmargin=2
@@ -17,6 +41,10 @@ gqG - reformat text from current position to bottom of file
 __Don't forget `fmt` and `par` as non-vim options__
 
 :center - centers a line of text
+:set expandtab ts=4 sw=4 ai - tabs to spaces, tab is 4 spaces, autoindent
+:%retab - convert the whole damn document
+
+## Buffers
 
 Tabs are just a arrangement of windows.  *Buffers* is what you want.  
 
@@ -32,42 +60,8 @@ Moving between buffers:
 :bd - delete buffer (close a file)
 :ls - list all buffers
 :e file - open file in new buffer
-:vsp file - open file in a split window
-C- ww - switch windows
-C- wq - quit window
 
-:set expandtab ts=4 sw=4 ai - tabs to spaces, tab is 4 spaces, autoindent
-
-:%retab - convert the whole damn document
-
-## Moving and Inserting
-
-h,j,k,l - yeah
-H - top of screen
-L - bottom of screen
-e - jump forward to start of word
-b - jump backwards to beginning of word
-0 - start of line
-$ - end of line
-ctrl + b - pg up
-ctrl + f - pg down
-
-i - insert before cursor
-I - insert beginning of line
-a - insert after cursor
-A - insert end of line
-o - insert line BELOW
-O - insert line ABOVE
-
-## Statusline Stuff
-
-https://github.com/itchyny/lightline.vim
-
-http://learnvimscriptthehardway.stevelosh.com/chapters/17.html
-
-:set laststatus=2 - turn on the status line
-
-## netrw (directory browsing)
+## Directory Browsing (netrw)
 
 :Explore
 :VExplore
