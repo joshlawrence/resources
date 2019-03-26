@@ -10,10 +10,3 @@ set shiftwidth=4
 set softtabstop=4
 set wrapmargin=2
 set mouse=a
-
-" ultisnips
-let g:UltiSnipsExpandTrigger = '<tab>'
-let g:UltiSnipsJumpForwardTrigger = '<c-j>'
-let g:UltiSnipsJumpBackwardTrigger = '<c-k>'
-let g:UltiSnipsListSnippets = '<c-tab>'
-let g:UltiSnipsSnippetDirectories=[$HOME."/.vim/mysnippets"]
