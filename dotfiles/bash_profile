@@ -1,0 +1,46 @@
+# ~/.bash_profile
+# last edited 2019-03-26 12:35:35 PM
+
+# read ~/.bashrc if it exists
+if [ -f ~/.bashrc ]; then
+  source ~/.bashrc
+fi 
+
+PS1=" \h \w \$ "
+
+# path
+export PATH="/usr/local/bin:/usr/local/sbin:~/bin:~/go/bin:/usr/local/opt/go/bin:$PATH"
+
+if [ -f ~/.bash_aliases ]; then
+  source ~/.bash_aliases
+fi
+
+# functions
+function mkcd() {
+  mkdir -p $1; cd $1
+}
+
+function extract () {
+  if [ -f $1 ] ; then
+    case $1 in
+      *.tar.bz2)   tar xjf $1     ;;
+      *.tar.gz)    tar xzf $1     ;;
+      *.bz2)       bunzip2 $1     ;;
+      *.rar)       unrar e $1     ;;
+      *.gz)        gunzip $1      ;;
+      *.tar)       tar xf $1      ;;
+      *.tbz2)      tar xjf $1     ;;
+      *.tgz)       tar xzf $1     ;;
+      *.zip)       unzip $1       ;;
+      *.Z)         uncompress $1  ;;
+      *.7z)        7z x $1        ;;
+      *)           echo "'$1' cannot be extracted via extract()" ;;
+    esac
+  else
+      echo "'$1' is not a valid file"
+  fi
+}
+
+# completion
+test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
