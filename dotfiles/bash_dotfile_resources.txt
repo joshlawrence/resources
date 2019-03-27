@@ -1,0 +1,12 @@
+# resources for bash dotfiles (.bash_profile, .bashrc, .bash_aliases, etc.)
+
+https://mywiki.wooledge.org/DotFiles
+
+https://wiki.archlinux.org/index.php/bash
+
+https://github.com/mloskot/archlinux-config/blob/master/home/mloskot/.bashrc
+
+https://wiki.archlinux.org/index.php/User:Grufo/Color_System%27s_Bash_Prompt
+
+https://git.archlinux.org/svntogit/packages.git/tree/trunk?h=packages/bash
+

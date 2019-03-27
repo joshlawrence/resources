@@ -1,15 +1,12 @@
 # ~/.bash_aliases
-alias ls="ls -1G"
-alias gam="$HOME/bin/gam/gam"
-alias tb="nc termbin.com 9999"
-alias weather="curl http://wttr.in/texarkana"
-alias timestamp="date +'%F %r' | tr -d '\n' | pbcopy"
+
 alias afk="/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend"
 alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
-alias grep="grep --color=auto"
-alias fgrep="fgrep --color=auto"
-alias egrep="egrep --color=auto"
-# mergepdf Usage: join [--output/-o <file>] file1 file2 etc...
+alias gam="$HOME/bin/gam/gam"
+alias ls="ls -1G"
 alias mergepdf="/System/Library/Automator/Combine\ PDF\ Pages.action/Contents/Resources/join.py"
+alias nano="nano -m -u -W --tabsize=4 --fill=85 --autoindent"
 alias reload="source $HOME/.bash_profile"
-alias nano="nano -m -u -W --tabsize=4 --fill=85 --autoindent --smooth"
+alias tb="nc termbin.com 9999"
+alias timestamp="date +'%F %r' | tr -d '\n' | pbcopy"
+alias weather="curl http://wttr.in/texarkana"

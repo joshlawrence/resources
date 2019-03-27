@@ -1,20 +1,48 @@
 # ~/.bash_profile
 
-# read ~/.bashrc if it exists
-if [ -f ~/.bashrc ]; then
-  source ~/.bashrc
-fi 
+# Test for an interactive shell.  There is no need to set anything
+# past this point for scp and rcp, and it's important to refrain from
+# outputting anything in those cases.
+if [[ $- != *i* ]] ; then
+	# Shell is non-interactive.  Begone, thot!
+	return
+fi
 
+# default prompt
 PS1=" \w \$ "
 
-# path
-export PATH="/usr/local/bin:/usr/local/sbin:~/bin:~/go/bin:/usr/local/opt/go/bin:$PATH"
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
 
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# path
+PATH="/usr/local/bin:$HOME/bin:$PATH"
+# path entry with go
+#PATH="/usr/local/bin:$HOME/bin:/usr/local/opt/go/bin:$HOME/go/bin:$PATH"
+
+# aliases
+# wrap these commands in functions to avoid accidental overwrites.
+rm() { command rm -i "$@"; }
+cp() { command cp -i "$@"; }
+mv() { command mv -i "$@"; }
+
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# source ~/.bash_aliases if it exists
 if [ -f ~/.bash_aliases ]; then
   source ~/.bash_aliases
 fi
 
-# functions
+# misc functions
 mkcd() {
   mkdir -p $1; cd $1
 }
@@ -23,31 +51,11 @@ pman () {
   man -t $1 | open -fa /Applications/Preview.app
 }
 
-mvlu () {
-  # Mnemonic: Move Verbose Lowercase Underscore 
-  # Rename files to lowercase, replacing spaces with 
-  # underscores, and deleting quotes and control 
-  # characters.
-  for fullpath in "${@}"; do
-    local path="$(dirname "${fullpath}")"
-    local file="$(basename "${fullpath}")"
-    mv --verbose -- \
-      "${path}"/"${file}" \
-      "${path}"/"$(echo "${file}" \
-        | tr '[:upper:]' '[:lower:]' \
-        | tr '[:blank:]' '_' \
-        | tr -d '[:cntrl:]' \
-        | tr -d \'\" \
-        | tr -d '()<>'
-      )"
-  done
-}
-
-# s(){
-#   ("$@" & disown ) >/dev/null 2>&1 </dev/null
-#   which "$1" >/dev/null 2>&1
-# }
-
 # completion
 test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+
+# source ~/.bashrc if it exists
+if [ -f ~/.bashrc ]; then
+  source ~/.bashrc
+fi 
