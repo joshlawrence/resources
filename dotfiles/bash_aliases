@@ -12,4 +12,4 @@ alias egrep="egrep --color=auto"
 # mergepdf Usage: join [--output/-o <file>] file1 file2 etc...
 alias mergepdf="/System/Library/Automator/Combine\ PDF\ Pages.action/Contents/Resources/join.py"
 alias reload="source $HOME/.bash_profile"
-alias writer="nano -m -u -W --tabsize=4 --fill=85 --autoindent --smooth"
+alias nano="nano -m -u -W --tabsize=4 --fill=85 --autoindent --smooth"
