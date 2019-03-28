@@ -1,4 +1,5 @@
 # ~/.bash_profile
+# v.2019-03-28
 
 # Test for an interactive shell.  There is no need to set anything
 # past this point for scp and rcp, and it's important to refrain from
@@ -43,12 +44,20 @@ if [ -f ~/.bash_aliases ]; then
 fi
 
 # misc functions
-mkcd() {
+mkcd () {
   mkdir -p $1; cd $1
 }
 
 pman () {
   man -t $1 | open -fa /Applications/Preview.app
+}
+
+ver () {
+  printf "%s" "v.$(date +'%F')" | pbcopy
+}
+
+reload () {
+  source "$HOME/.bash_profile"
 }
 
 # completion
