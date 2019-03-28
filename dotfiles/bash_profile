@@ -28,6 +28,10 @@ PATH="/usr/local/bin:$HOME/bin:$PATH"
 # path entry with go
 #PATH="/usr/local/bin:$HOME/bin:/usr/local/opt/go/bin:$HOME/go/bin:$PATH"
 
+# editor
+export VISUAL=vim
+export EDITOR="$VISUAL"
+
 # aliases
 # wrap these commands in functions to avoid accidental overwrites.
 rm() { command rm -i "$@"; }
@@ -57,6 +61,7 @@ ver () {
 }
 
 reload () {
+  unalias -a
   source "$HOME/.bash_profile"
 }
 
