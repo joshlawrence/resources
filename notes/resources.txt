@@ -91,3 +91,7 @@ for i in *.zip; do
     mkdir "$dir"
     unzip "$i" -d "$dir"
 done
+
+change file extensions:
+
+rename 's/\.txt$/\.md/' *.txt
