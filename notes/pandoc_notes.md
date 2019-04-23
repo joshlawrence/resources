@@ -8,13 +8,13 @@ http://pandoc.org/MANUAL.html#templates
 
 http://pandoc.org/MANUAL.html#extension-pandoc_title_block
 
----
+everything in this tutorial seems to work:
 
-from here: https://groups.google.com/forum/#!searchin/pandoc-discuss/PDF$20font|sort:date/pandoc-discuss/L-rjb6nZEpY/PoBhP9GCBwAJ
+https://learnbyexample.github.io/tutorial/ebook-generation/customizing-pandoc/
 
-`pandoc -s -o bash_notes.pdf -V geometry:"margin=1in" -V documentclass=scrartcl -V fontsize=14pt sysadmin/notes/bash_notes.md`
+see [md2pdf](scripts/md2pdf) for a bash script to convert files.  *NOTE:* code blocks must be limited to 80 characters.
 
-this discussion specifically talks about fonts and changing default.tex to match what is required:
+on macos, run `system_profiler SPFontsDataType` to list fonts.
 
-https://groups.google.com/forum/#!searchin/pandoc-discuss/PDF$20font|sort:date/pandoc-discuss/awbjhnL9vHE/fmS1kC7XSygJ
-
+to find fonts:
+`fc-list : family | cut -f1 -d"," | sort`

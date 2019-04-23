@@ -1,0 +1,39 @@
+#!/bin/bash
+# md2pdf - converts markdown to pdf using pandoc
+#
+# md2pdf [infile] [outfile]
+
+# check that pandoc is available
+command -v pandoc >/dev/null 2>&1 || { echo "pandoc not found, aborting." >&2; }
+
+# variables
+PG_MARGIN="left=2cm,right=2cm,top=2cm,bottom=2cm"
+FONT_MAIN="Helvetica"
+FONT_MONO="IBM Plex Mono Thin"
+FONT_SIZE="12pt"
+
+display_usage() {
+    cat<<EOM
+    Usage: $(basename $0) [infile] [outfile]
+    Error: $@
+EOM
+}
+
+# check to see if the user provided an infile and outfile
+if [ $# -ne 2 ]; then
+    display_usage "Did not specify infile and/or outfile."
+    exit 1
+fi
+
+# run pandoc
+echo "Converting $1 to $2..."
+
+pandoc "$1" \
+    -V linkcolor:blue \
+    -V geometry:letterpaper \
+    -V geometry:"$PG_MARGIN" \
+    -V mainfont="$FONT_MAIN" \
+    -V monofont="$FONT_MONO" \
+    -V fontsize="$FONT_SIZE" \
+    --pdf-engine=xelatex \
+    -o "$2"

@@ -1,0 +1,337 @@
+.Al Bayan PUA
+.Al Nile PUA
+.Al Tarikh PUA
+.Apple Color Emoji UI
+.Apple SD Gothic NeoI
+.Aqua Kana
+.Aqua Kana
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Display
+.Arabic UI Text
+.Arabic UI Text
+.Arabic UI Text
+.Arabic UI Text
+.Arabic UI Text
+.Arabic UI Text
+.Arial Hebrew Desk Interface
+.Baghdad PUA
+.Beirut PUA
+.Damascus PUA
+.DecoType Naskh PUA
+.Diwan Kufi PUA
+.Farah PUA
+.Geeza Pro Interface
+.Geeza Pro PUA
+.Helvetica LT MM
+.Helvetica Neue DeskInterface
+.Hiragino Kaku Gothic Interface
+.Hiragino Sans GB Interface
+.Keyboard
+.KufiStandardGK PUA
+.LastResort
+.Lucida Grande UI
+.Muna PUA
+.Nadeem PUA
+.Noto Nastaliq Urdu UI
+.PingFang HK
+.PingFang SC
+.PingFang TC
+.SF Compact Display
+.SF Compact Rounded
+.SF Compact Text
+.SF NS Display Condensed
+.SF NS Rounded
+.SF NS Symbols
+.SF NS Text Condensed
+.Sana PUA
+.Savoye LET CC.
+.Times LT MM
+Accords
+Al Bayan
+American Typewriter
+Andale Mono
+Anonymous Pro
+Apple Braille
+Apple Chancery
+Apple Color Emoji
+Apple SD Gothic Neo
+Apple Symbols
+AppleGothic
+AppleMyungjo
+Arial
+Arial Black
+Arial Hebrew
+Arial Hebrew Scholar
+Arial Narrow
+Arial Rounded MT Bold
+Arial Unicode MS
+Athelas
+Avenir
+Avenir
+Avenir
+Avenir
+Avenir
+Avenir
+Avenir
+Avenir Next
+Avenir Next
+Avenir Next
+Avenir Next
+Avenir Next
+Avenir Next Condensed
+Avenir Next Condensed
+Avenir Next Condensed
+Avenir Next Condensed
+Avenir Next Condensed
+Ayuthaya
+Bangla MN
+Bangla Sangam MN
+Baskerville
+Big Caslon
+Bodoni 72
+Bodoni 72 Oldstyle
+Bodoni 72 Smallcaps
+Bodoni Ornaments
+Bradley Hand
+Bravura
+Brush Script MT
+Chalkboard
+Chalkboard SE
+Chalkduster
+Charter
+Charter
+Cochin
+Comic Sans MS
+Copperplate
+Corsiva Hebrew
+Courier
+Courier New
+DIN Alternate
+DIN Condensed
+Damascus
+DejaVu Math TeX Gyre
+DejaVu Sans
+DejaVu Sans
+DejaVu Sans
+DejaVu Sans Mono
+DejaVu Serif
+DejaVu Serif
+DejaVuSansMono Nerd Font
+DejaVuSansMono Nerd Font Mono
+Devanagari MT
+Devanagari Sangam MN
+Didot
+Droid Sans Mono
+Envy Code R
+Euphemia UCAS
+FarHat BC
+FarHat Chords 1
+FarHat Chords 2
+FarHat Fifth
+Fira Code
+Fira Code
+Fira Code
+Fira Code
+Fira Mono
+Fira Mono
+FontAwesome
+Futura
+GB18030 Bitmap
+Geeza Pro
+Geneva
+Georgia
+Gill Sans
+Gujarati MT
+Gujarati Sangam MN
+Gurmukhi MN
+Gurmukhi MT
+Gurmukhi Sangam MN
+Heiti SC
+Heiti TC
+Helvetica
+Helvetica Neue
+Herculanum
+Hiragino Kaku Gothic Pro
+Hiragino Kaku Gothic Pro
+Hiragino Kaku Gothic ProN
+Hiragino Kaku Gothic ProN
+Hiragino Kaku Gothic Std
+Hiragino Kaku Gothic StdN
+Hiragino Maru Gothic Pro
+Hiragino Maru Gothic ProN
+Hiragino Mincho Pro
+Hiragino Mincho Pro
+Hiragino Mincho ProN
+Hiragino Mincho ProN
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans
+Hiragino Sans GB
+Hiragino Sans GB
+Hoefler Text
+IBM Plex Mono
+IBM Plex Mono ExtraLight
+IBM Plex Mono Light
+IBM Plex Mono Medium
+IBM Plex Mono SemiBold
+IBM Plex Mono Thin
+ITF Devanagari
+ITF Devanagari Marathi
+Impact
+InaiMathi
+Inconsolata
+Iowan Old Style
+Iowan Old Style
+Kailasa
+Kannada MN
+Kannada Sangam MN
+Kefa
+Khmer MN
+Khmer Sangam MN
+Kohinoor Bangla
+Kohinoor Devanagari
+Kohinoor Telugu
+Kokonor
+Krungthep
+KufiStandardGK
+Lao MN
+Lao Sangam MN
+Lucida Grande
+Luminari
+Malayalam MN
+Malayalam Sangam MN
+Marion
+Marker Felt
+Material Icons
+Menlo
+Microsoft Sans Serif
+Monaco
+Mshtakan
+Myanmar MN
+Myanmar Sangam MN
+Nadeem
+New Peninim MT
+Noteworthy
+Noto Nastaliq Urdu
+Optima
+Oriya MN
+Oriya Sangam MN
+Overpass Mono
+Overpass Mono
+Overpass Mono
+Oxygen Mono
+PT Mono
+PT Sans
+PT Sans Caption
+PT Sans Narrow
+PT Serif
+PT Serif Caption
+Palatino
+Papyrus
+Phosphate
+PingFang HK
+PingFang SC
+PingFang TC
+Plantagenet Cherokee
+Raanana
+Roboto Mono
+Roboto Mono
+Roboto Mono
+Roboto Mono
+Rockwell
+STIXGeneral
+STIXIntegralsD
+STIXIntegralsSm
+STIXIntegralsUp
+STIXIntegralsUpD
+STIXIntegralsUpSm
+STIXNonUnicode
+STIXSizeFiveSym
+STIXSizeFourSym
+STIXSizeOneSym
+STIXSizeThreeSym
+STIXSizeTwoSym
+STIXVariants
+STSong
+Sathu
+Savoye LET
+Seravek
+Seravek
+Seravek
+Seravek
+Shree Devanagari 714
+SignPainter
+Silom
+Sinhala MN
+Sinhala Sangam MN
+Skia
+Snell Roundhand
+Songti SC
+Songti TC
+Source Code Pro
+Source Code Pro
+Source Code Pro
+Source Code Pro
+Source Code Pro
+Source Code Pro
+Spleen
+Sukhumvit Set
+Superclarendon
+Symbol
+System Font
+System Font
+System Font
+System Font
+System Font
+Tahoma
+Tamil MN
+Tamil Sangam MN
+TeamViewer12
+TeamViewer13
+Telugu MN
+Telugu Sangam MN
+Thonburi
+Times
+Times New Roman
+Trattatello
+Trebuchet MS
+Ubuntu Mono
+Verdana
+Weather Icons
+Webdings
+Wingdings
+Wingdings 2
+Wingdings 3
+Zapf Dingbats
+Zapfino
+all\-the\-icons
+file\-icons
+github\-octicons
+فرح
+منى
+نسخ
+وسيم
+النيل
+بغداد
+بيروت
+صنعاء
+فارسي
+ديوان ثلث
+ديوان كوفي
+مِصحفي
+مِصحفي ذهبي
+التاريخ
