@@ -9,10 +9,13 @@
 command -v pandoc >/dev/null 2>&1 || { echo "pandoc not found, aborting." >&2; }
 
 # variables
+DOC_CLASS="extarticle"
 PG_MARGIN="left=2cm,right=2cm,top=2cm,bottom=2cm"
-FONT_MAIN="Helvetica"
-FONT_MONO="IBM Plex Mono Thin"
+FONT_MAIN="Arial"
+FONT_MONO="Courier New"
 FONT_SIZE="12pt"
+
+# TODO: -V monofontoptions:"Scale=0.7" \
 
 display_usage() {
     cat<<EOM
@@ -31,6 +34,8 @@ fi
 echo "Converting $1 to $2..."
 
 pandoc "$1" \
+    -f gfm \
+    -V documentclass:"$DOC_CLASS" \
     -V linkcolor:blue \
     -V geometry:letterpaper \
     -V geometry:"$PG_MARGIN" \
