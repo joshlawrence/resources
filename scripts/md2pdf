@@ -1,5 +1,7 @@
 #!/bin/bash
 # md2pdf - converts markdown to pdf using pandoc
+# adapted from:
+# https://learnbyexample.github.io/tutorial/ebook-generation/customizing-pandoc/
 #
 # md2pdf [infile] [outfile]
 
