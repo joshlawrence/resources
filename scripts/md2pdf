@@ -11,8 +11,8 @@ command -v pandoc >/dev/null 2>&1 || { echo "pandoc not found, aborting." >&2; }
 # variables
 DOC_CLASS="article"
 MD_FLAVOR="markdown"
-PG_MARGIN="left=.75in,right=.75in,top=1in,bottom=.5in"
-FONT_MAIN="Calibri-Regular"
+PG_MARGIN="left=1in,right=1in,top=.75in,bottom=.75in"
+FONT_MAIN="Calibri"
 FONT_MONO="IBM Plex Mono Medium"
 FONT_SIZE="12pt"
 
@@ -44,7 +44,7 @@ pandoc "$1" \
     -V geometry:"$PG_MARGIN" \
     -V mainfont="$FONT_MAIN" \
     -V monofont="$FONT_MONO" \
-    -V monofontoptions:"Scale=0.7" \
+    -V monofontoptions:"Scale=0.8" \
     -V fontsize="$FONT_SIZE" \
     --pdf-engine=xelatex \
     -o "$2"
