@@ -1,2 +1,0 @@
-# -- leslie speed controller project -- #
-
