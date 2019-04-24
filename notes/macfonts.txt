@@ -1,63 +1,6 @@
-.Al Bayan PUA
-.Al Nile PUA
-.Al Tarikh PUA
-.Apple Color Emoji UI
-.Apple SD Gothic NeoI
-.Aqua Kana
-.Aqua Kana
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Display
-.Arabic UI Text
-.Arabic UI Text
-.Arabic UI Text
-.Arabic UI Text
-.Arabic UI Text
-.Arabic UI Text
-.Arial Hebrew Desk Interface
-.Baghdad PUA
-.Beirut PUA
-.Damascus PUA
-.DecoType Naskh PUA
-.Diwan Kufi PUA
-.Farah PUA
-.Geeza Pro Interface
-.Geeza Pro PUA
-.Helvetica LT MM
-.Helvetica Neue DeskInterface
-.Hiragino Kaku Gothic Interface
-.Hiragino Sans GB Interface
-.Keyboard
-.KufiStandardGK PUA
-.LastResort
-.Lucida Grande UI
-.Muna PUA
-.Nadeem PUA
-.Noto Nastaliq Urdu UI
-.PingFang HK
-.PingFang SC
-.PingFang TC
-.SF Compact Display
-.SF Compact Rounded
-.SF Compact Text
-.SF NS Display Condensed
-.SF NS Rounded
-.SF NS Symbols
-.SF NS Text Condensed
-.Sana PUA
-.Savoye LET CC.
-.Times LT MM
-Accords
 Al Bayan
 American Typewriter
 Andale Mono
-Anonymous Pro
 Apple Braille
 Apple Chancery
 Apple Color Emoji
@@ -100,8 +43,19 @@ Bodoni 72 Oldstyle
 Bodoni 72 Smallcaps
 Bodoni Ornaments
 Bradley Hand
-Bravura
 Brush Script MT
+CMU Bright
+CMU Classical Serif
+CMU Concrete
+CMU Sans Serif
+CMU Sans Serif Demi Condensed
+CMU Serif
+CMU Serif Extra
+CMU Serif Upright Italic
+CMU Typewriter Text
+CMU Typewriter Text Variable Width
+Calibri
+Calibri
 Chalkboard
 Chalkboard SE
 Chalkduster
@@ -116,31 +70,14 @@ Courier New
 DIN Alternate
 DIN Condensed
 Damascus
-DejaVu Math TeX Gyre
-DejaVu Sans
-DejaVu Sans
-DejaVu Sans
-DejaVu Sans Mono
-DejaVu Serif
-DejaVu Serif
-DejaVuSansMono Nerd Font
-DejaVuSansMono Nerd Font Mono
 Devanagari MT
 Devanagari Sangam MN
 Didot
-Droid Sans Mono
-Envy Code R
 Euphemia UCAS
-FarHat BC
-FarHat Chords 1
-FarHat Chords 2
-FarHat Fifth
 Fira Code
 Fira Code
 Fira Code
 Fira Code
-Fira Mono
-Fira Mono
 FontAwesome
 Futura
 GB18030 Bitmap
@@ -193,7 +130,6 @@ ITF Devanagari
 ITF Devanagari Marathi
 Impact
 InaiMathi
-Inconsolata
 Iowan Old Style
 Iowan Old Style
 Kailasa
@@ -230,10 +166,6 @@ Noto Nastaliq Urdu
 Optima
 Oriya MN
 Oriya Sangam MN
-Overpass Mono
-Overpass Mono
-Overpass Mono
-Oxygen Mono
 PT Mono
 PT Sans
 PT Sans Caption
@@ -248,10 +180,6 @@ PingFang SC
 PingFang TC
 Plantagenet Cherokee
 Raanana
-Roboto Mono
-Roboto Mono
-Roboto Mono
-Roboto Mono
 Rockwell
 STIXGeneral
 STIXIntegralsD
@@ -282,26 +210,16 @@ Skia
 Snell Roundhand
 Songti SC
 Songti TC
-Source Code Pro
-Source Code Pro
-Source Code Pro
-Source Code Pro
-Source Code Pro
-Source Code Pro
-Spleen
+Source Sans Pro
+Source Sans Pro
 Sukhumvit Set
 Superclarendon
 Symbol
 System Font
 System Font
-System Font
-System Font
-System Font
 Tahoma
 Tamil MN
 Tamil Sangam MN
-TeamViewer12
-TeamViewer13
 Telugu MN
 Telugu Sangam MN
 Thonburi
@@ -309,7 +227,6 @@ Times
 Times New Roman
 Trattatello
 Trebuchet MS
-Ubuntu Mono
 Verdana
 Weather Icons
 Webdings

@@ -1,4 +1,10 @@
-# PANDOC NOTES
+# Pandoc Notes
+
+## Formatting
+
+(Pandoc markdown reference](https://pandoc.org/MANUAL.html#pandocs-markdown)
+
+## Exporting to PDF
 
 here:
 
