@@ -34,7 +34,7 @@ echo "Converting $1 to $2..."
 
 # options to try:
 # -V monofontoptions:"Scale=0.7" \
-# -V monofontoptions:"Scale=Matchlowercase" \
+# -V monofontoptions:"Scale=MatchLowercase" \
 
 pandoc "$1" \
     -f "$MD_FLAVOR" \
@@ -44,6 +44,7 @@ pandoc "$1" \
     -V geometry:"$PG_MARGIN" \
     -V mainfont="$FONT_MAIN" \
     -V monofont="$FONT_MONO" \
+    -V monofontoptions:"Scale=MatchLowercase" \
     -V fontsize="$FONT_SIZE" \
     --pdf-engine=xelatex \
     -o "$2"
