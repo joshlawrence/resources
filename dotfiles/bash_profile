@@ -1,5 +1,5 @@
 # ~/.bash_profile
-# v.2019-03-28
+# v.2019-05-22
 
 # Test for an interactive shell.  There is no need to set anything
 # past this point for scp and rcp, and it's important to refrain from
@@ -10,6 +10,8 @@ if [[ $- != *i* ]] ; then
 fi
 
 # default prompt
+#PS1=" \h:\W \u\$ "
+# my prompt
 PS1=" \w \$ "
 
 # don't put duplicate lines or lines starting with space in the history.
@@ -19,12 +21,15 @@ HISTCONTROL=ignoreboth
 # append to the history file, don't overwrite it
 shopt -s histappend
 
+# Make bash check its window size after a process completes
+shopt -s checkwinsize
+
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=1000
 HISTFILESIZE=2000
 
 # path
-PATH="/usr/local/bin:$HOME/bin:$PATH"
+PATH="$HOME/bin:$PATH"
 # path entry with go
 #PATH="/usr/local/bin:$HOME/bin:/usr/local/opt/go/bin:$HOME/go/bin:$PATH"
 
@@ -33,19 +38,27 @@ export VISUAL=vim
 export EDITOR="$VISUAL"
 
 # aliases
-# wrap these commands in functions to avoid accidental overwrites.
-rm() { command rm -i "$@"; }
-cp() { command cp -i "$@"; }
-mv() { command mv -i "$@"; }
-
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-
 # source ~/.bash_aliases if it exists
 if [ -f ~/.bash_aliases ]; then
   source ~/.bash_aliases
 fi
+
+# wrap these commands in functions to avoid accidental overwrites.
+#rm() { command rm -i "$@"; }
+#cp() { command cp -i "$@"; }
+#mv() { command mv -i "$@"; }
+
+#alias grep='grep --color=auto'
+#alias fgrep='fgrep --color=auto'
+#alias egrep='egrep --color=auto'
+
+#alias afk="/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend"
+alias afk="pmset displaysleepnow"
+alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+alias gam="$HOME/bin/gam/gam"
+alias ls="ls -1G"
+alias tb="nc termbin.com 9999"
+alias timestamp="date +'%F %r' | tr -d '\n' | pbcopy"
 
 # misc functions
 mkcd () {
