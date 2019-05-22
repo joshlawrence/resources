@@ -60,6 +60,10 @@ ver () {
   printf "%s" "v.$(date +'%F')" | pbcopy
 }
 
+genpass () {
+    openssl rand -hex 32 | cut -b -12 | pbcopy
+}
+
 reload () {
   unalias -a
   source "$HOME/.bash_profile"
