@@ -10,8 +10,6 @@ if [[ $- != *i* ]] ; then
 fi
 
 # default prompt
-#PS1=" \h:\W \u\$ "
-# my prompt
 PS1=" \w \$ "
 
 # don't put duplicate lines or lines starting with space in the history.
@@ -43,38 +41,25 @@ if [ -f ~/.bash_aliases ]; then
   source ~/.bash_aliases
 fi
 
-# wrap these commands in functions to avoid accidental overwrites.
-#rm() { command rm -i "$@"; }
-#cp() { command cp -i "$@"; }
-#mv() { command mv -i "$@"; }
-
-#alias grep='grep --color=auto'
-#alias fgrep='fgrep --color=auto'
-#alias egrep='egrep --color=auto'
-
-#alias afk="/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend"
+alias du="du -ach | sort -h"
 alias afk="pmset displaysleepnow"
-alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+alias cleanup="find . -type f -name '*.DS_Store' -print -delete"
 alias gam="$HOME/bin/gam/gam"
 alias ls="ls -1G"
 alias tb="nc termbin.com 9999"
 alias timestamp="date +'%F %r' | tr -d '\n' | pbcopy"
+alias ver="printf "%s" "v.$(date +'%F')" | pbcopy"
+alias genpass="openssl rand -hex 32 | cut -b -12 | pbcopy"
+alias getip="curl http://icanhazip.com"
+alias upload="open https://send.firefox.com/"
 
-# misc functions
+# functions
 mkcd () {
   mkdir -p $1; cd $1
 }
 
 pman () {
   man -t $1 | open -fa /Applications/Preview.app
-}
-
-ver () {
-  printf "%s" "v.$(date +'%F')" | pbcopy
-}
-
-genpass () {
-    openssl rand -hex 32 | cut -b -12 | pbcopy
 }
 
 reload () {
@@ -87,6 +72,6 @@ test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shel
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 
 # source ~/.bashrc if it exists
-if [ -f ~/.bashrc ]; then
-  source ~/.bashrc
-fi 
+#if [ -f ~/.bashrc ]; then
+#  source ~/.bashrc
+#fi 
