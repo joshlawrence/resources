@@ -33,31 +33,31 @@ export VISUAL=vim
 export EDITOR="$VISUAL"
 
 # aliases
+# quoting is HARD
+alias afk='pmset displaysleepnow'
+alias cleanup="find . -type f -name '.DS_Store' -print -delete"
+alias gam="$HOME/bin/gam/gam"
+alias ls='ls -1G'
+alias tb='nc termbin.com 9999'
+alias getip='curl http://icanhazip.com'
+alias upload='open https://send.firefox.com/'
+
 # source ~/.bash_aliases if it exists
 #if [ -f ~/.bash_aliases ]; then
 #  source ~/.bash_aliases
 #fi
 
-alias afk="pmset displaysleepnow"
-alias cleanup="find . -type f -name '.DS_Store' -print -delete"
-alias gam="$HOME/bin/gam/gam"
-alias ls="ls -1G"
-alias tb="nc termbin.com 9999"
-alias timestamp="date +'%F %r' | tr -d '\n'"
-alias getip="curl http://icanhazip.com"
-alias upload="open https://send.firefox.com/"
-
 # functions
-dtree () {
-  tree -h -C -L 1 $1
+timestamp () {
+  date +"%F %r" | tr -d "\n"
 }
 
-mkcd () {
-  mkdir -p $1; cd $1
+dtree () {
+  tree -h -C -L 1 "$1"
 }
 
 pman () {
-  man -t $1 | open -fa /Applications/Preview.app
+  man -t "$1" | open -fa /Applications/Preview.app
 }
 
 reload () {
@@ -66,11 +66,11 @@ reload () {
 }
 
 genpass () {
-  pwgen -N $1 -cn -1 12
+  pwgen -N "$1" -cn -1 12
 }
 
 # completion
-test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+test -e "$HOME/.iterm2_shell_integration.bash" && source "$HOME/.iterm2_shell_integration.bash"
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 
 # source ~/.bashrc if it exists

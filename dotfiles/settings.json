@@ -1,24 +1,14 @@
 {
     "telemetry.enableTelemetry": false,
     "telemetry.enableCrashReporter": false,
-    "editor.wordWrap": "wordWrapColumn",
-    "editor.wordWrapColumn": 80,
-    "[markdown]": {
-        "editor.wordWrap": "wordWrapColumn",
-        "editor.wordWrapColumn": 80,
-        "editor.quickSuggestions": false
-    },
     "editor.autoClosingQuotes": "never",
     "editor.autoClosingBrackets": "never",
     "editor.wordBasedSuggestions": false,
     "editor.minimap.enabled": false,
     "editor.fontFamily": "IBM Plex Mono",
+    "editor.fontSize": 14,
     "editor.fontLigatures": true,
-    "git.enabled": false,
-    "git.path": null,
-    "git.autofetch": false,
     "workbench.startupEditor": "newUntitledFile",
-    "window.zoomLevel": 0,
-    "workbench.colorTheme": "Visual Studio Light",
-    "extensions.ignoreRecommendations": true
+    "breadcrumbs.enabled": true,
+    "workbench.colorTheme": "Visual Studio Dark"
 }
