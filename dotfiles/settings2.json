@@ -1,0 +1,11 @@
+{
+    "telemetry.enableCrashReporter": false,
+    "telemetry.enableTelemetry": false,
+    "editor.minimap.enabled": false,
+    "editor.autoClosingQuotes": "never",
+    "editor.autoClosingBrackets": "never",
+    "editor.wordBasedSuggestions": false,
+    "editor.fontFamily": "Fira Code",
+    "editor.fontSize": 14,
+    "workbench.startupEditor": "newUntitledFile",
+}
