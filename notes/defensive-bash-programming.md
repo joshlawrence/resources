@@ -1,5 +1,3 @@
-[Source](http://www.kfirlavi.com/blog/2012/11/14/defensive-bash-programming "Permalink to Defensive BASH programming - Say what?")
-
 # Defensive BASH programming
 
 Here is my Katas for creating BASH programs that work. Nothing is new here, but
