@@ -38,29 +38,23 @@ done
 
 ## creating temp directories and files
 
-    MY_TMPFILE=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
-    trap 'rm -f $MY_TMPFILE' EXIT
-    # or
-    MY_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
-    trap 'rm -rf $MY_TMPDIR' EXIT
+```bash
+MY_TMPFILE=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
+trap 'rm -f $MY_TMPFILE' EXIT
+# or
+MY_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
+trap 'rm -rf $MY_TMPDIR' EXIT
+```
 
 ## youtube-dl options (+mpv)
 
 youtube-dl already selects the BEST format, pass -F to see other formats.
 
-youtube-dl [-a FILE] --restrict-filenames [--prefer-free-formats] URL
-
-	...where FILE is a list of urls.
-
 to extract audio only:
 
-    youtube-dl -x --audio-format mp3|vorbis|wav URL
+    youtube-dl -x --audio-format mp3|vorbis|wav --restrict-filenames URL
 
 handy stuff here: https://wiki.archlinux.org/index.php/mpv
-
-    function yta() {
-        mpv --ytdl-format=bestaudio ytdl://ytsearch:"$@"
-    }
 
 ## renaming
 
@@ -89,16 +83,6 @@ for i in *.zip; do
   dir=${i%%.*} # create a dir based on the filename with no dot or extension
   mkdir "$dir"
   unzip "$i" -d "$dir"
-done
-```
-
-find all zip files, create a directory based on file name, extract the contents to the directory:
-
-```bash
-for i in *.zip; do
-    dir=${i%%.*}
-    mkdir "$dir"
-    unzip "$i" -d "$dir"
 done
 ```
 
