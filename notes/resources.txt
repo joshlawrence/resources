@@ -95,3 +95,11 @@ done
 change file extensions:
 
 rename 's/\.txt$/\.md/' *.txt
+
+## fun with find
+
+find . -type f \( -name '03*' -a ! -name '*MED*' -a ! -name '*SOFT*' \) ! -path './kit1/*' -exec cp {} kit1 \;
+
+find . -type f \( ! -name '*MED*' -a ! -name '*SOFT*' \) ! -path './kit1/*' -exec cp {} kit1 \;
+
+find . -type f -name '*ROOM*' -print0 | while IFS= read -r -d '' i; do afplay "$i"; done
