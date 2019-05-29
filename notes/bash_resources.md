@@ -39,11 +39,8 @@ done
 ## creating temp directories and files
 
 ```bash
-MY_TMPFILE=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
-trap 'rm -f $MY_TMPFILE' EXIT
-# or
-MY_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXX")
-trap 'rm -rf $MY_TMPDIR' EXIT
+MY_TMPFILE="$(mktemp "${TMPDIR:-/tmp/}$(basename "$0").XXXXXXXXXX")"
+trap 'rm -f "$MY_TMPFILE"' EXIT
 ```
 
 ## youtube-dl options (+mpv)
