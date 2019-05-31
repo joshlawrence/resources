@@ -6,6 +6,10 @@
 
 ## encoding/converting/misc
 
+normalize audio with ffmpeg:
+
+    ffmpeg -i input.wav -filter:a loudnorm output.wav
+
 replace all spaces with underscores:
 
     find . -type f -name "*.wav" -exec rename 's/ /_/g' {} \;
