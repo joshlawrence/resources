@@ -1,12 +1,20 @@
+set nocompatible
+filetype off
+
 execute pathogen#infect()
+syntax on
 filetype plugin indent on
 
-" options
 set laststatus=2
-set textwidth=80
-set tabstop=8
-set expandtab
+set encoding=utf-8
+set tabstop=4
 set shiftwidth=4
-set softtabstop=4
+set autoindent
+
+set textwidth=80
 set wrapmargin=2
-set mouse=a
+
+set incsearch
+set showmatch
+set hlsearch
+
