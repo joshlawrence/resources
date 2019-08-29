@@ -33,7 +33,7 @@ There are two things you can do about this warning:
 (setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
-;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Smoother and nicer scrolling
 (setq scroll-margin 10
@@ -77,42 +77,31 @@ There are two things you can do about this warning:
 (setq require-final-newline t)
 
 ;; Never use tabs, use spaces instead.
-(setq tab-width 2)
-(setq js-indent-level 2)
-(setq css-indent-offset 2)
-(setq c-basic-offset 2)
-(setq-default indent-tabs-mode nil)
-(setq-default c-basic-offset 2)
-(setq-default tab-width 2)
-(setq-default c-basic-indent 2)
+(setq tab-width 4)
+;; (setq js-indent-level 2)
+;; (setq css-indent-offset 2)
+;; (setq c-basic-offset 2)
+;; (setq-default indent-tabs-mode nil)
+;; (setq-default c-basic-offset 2)
+;; (setq-default tab-width 2)
+;; (setq-default c-basic-indent 2)
 
 (line-number-mode 1)
 (column-number-mode 1)
 
+(add-hook 'text-mode-hook 'auto-fill-mode)
 (setq-default fill-column 80)
-
-;; neotree
-(require 'neotree)
-(global-set-key [f8] 'neotree-toggle)
-(setq neo-theme 'ascii)
 
 ;; tramp
 (setq tramp-default-method "ssh")
 
 ;; theme config
 
-;; (load-theme 'tsdh-light)
-
-(require 'doom-themes)
-(setq doom-themes-enable-bold t
-      doom-themes-enable-italic t)
-(load-theme 'doom-one t)
-(doom-themes-org-config)
-(doom-themes-neotree-config)
+;(load-theme 'tsdh-light)
 
 ;; Set colors to distinguish between active and inactive windows
-;; (set-face-attribute 'mode-line nil :background "SlateGray1")
-;; (set-face-attribute 'mode-line-inactive nil :background "grey93")
+;(set-face-attribute 'mode-line nil :background "SlateGray1")
+;(set-face-attribute 'mode-line-inactive nil :background "grey93")
 
 ;; (set-default-font "Menlo 10")
 ;; (set-default-font "Fira Code 12")
@@ -126,6 +115,9 @@ There are two things you can do about this warning:
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   (quote
+    ("9b59e147dbbde5e638ea1cde5ec0a358d5f269d27bd2b893a0947c4a867e14c1" default)))
  '(package-selected-packages (quote (use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

@@ -26,7 +26,7 @@ HISTSIZE=1000
 HISTFILESIZE=2000
 
 # path
-PATH="$HOME/bin:$PATH"
+PATH="$HOME/.local/bin:$PATH"
 
 # editor
 export VISUAL=vim
