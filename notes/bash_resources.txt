@@ -1,0 +1,136 @@
+# -- bash resources -- #
+
+## opendirs
+
+    wget -e robots=off -r -nc -nH --cut-dirs=3 -np "URL"
+
+## encoding/converting/misc
+
+normalize audio with ffmpeg:
+
+    ffmpeg -i input.wav -filter:a loudnorm output.wav
+
+replace all spaces with underscores:
+
+    find . -type f -name "*.wav" -exec rename 's/ /_/g' {} \;
+
+replace all instances of "_-_" with a single dash:
+
+    find . -type f -name "*.wav" -exec rename 's/_-_/_/g' {} \;
+
+upper to lower:
+
+    for i in *.wav; do mv "$i" "$(echo "$i" | tr '[A-Z]' '[a-z]')"; done
+
+#!/bin/bash
+for file in *.flv; do
+    i=$(basename "$file" .flv)
+    ffmpeg -i "$file" -c:a libvorbis -q:a 6 "$i.ogg"
+done
+
+#!/bin/bash
+for i in *.ogg; do 
+    mv "$i" "$(echo ${i%.ogg} | tr [:lower:] [:upper:]).ogg"; 
+done
+
+#!/bin/bash
+for i in *.m4a; do
+    ffmpeg -i "$i" -c:a libvorbis -qscale:a 5 "$i.ogg"
+done
+
+## creating temp directories and files
+
+#!/bin/bash
+MY_TMPFILE="$(mktemp "${TMPDIR:-/tmp/}$(basename "$0").XXXXXXXXXX")"
+trap 'rm -f "$MY_TMPFILE"' EXIT
+
+## youtube-dl options (+mpv)
+
+youtube-dl already selects the BEST format, pass -F to see other formats.
+
+to extract audio only:
+
+    youtube-dl -x --audio-format mp3|vorbis|wav --restrict-filenames URL
+
+handy stuff here: https://wiki.archlinux.org/index.php/mpv
+
+## renaming
+
+see the [greycat wiki page](https://mywiki.wooledge.org/BashFAQ/073) on parameter expansion.
+
+for all markdown files, change the extension to txt:
+
+#!/bin/bash
+for i in *.md; do
+    mv "$i" "${i%.md}.txt
+done
+
+find and rename files recursively:
+
+#!/bin/bash
+find . -type f -name '*.foo' -print0 | while IFS= read -r -d '' f; do
+    mv -- "$f" "${f%.foo}.bar"
+done
+
+for all zip files, create a directory based on file name, extract the contents to the directory:
+
+#!/bin/bash
+for i in *.zip; do
+    dir=${i%%.*} # create a dir based on the filename with no dot or extension
+    mkdir "$dir"
+    unzip "$i" -d "$dir"
+done
+
+using perl rename:
+
+    rename 's/\.txt$/\.md/' *.txt
+
+## fun with find
+
+    find . -type f \( -name '03*' -a ! -name '*MED*' -a ! -name '*SOFT*' \) ! -path './kit1/*' -exec cp {} kit1 \;
+    find . -type f \( ! -name '*MED*' -a ! -name '*SOFT*' \) ! -path './kit1/*' -exec cp {} kit1 \;
+    find . -type f -name '*ROOM*' -print0 | while IFS= read -r -d '' i; do afplay "$i"; done
+
+`-a` means and and `-o` means or.
+
+## logging
+
+    my_script > log 2>&1
+    my_script 2>&1 | tee log.txt
+    my_script 2>&1 | tee -a log.txt
+
+## script for matrix
+
+interesting script for matrix:
+
+#!/bin/bash
+# set your matrix ID & server URL, and the room you want to chat in:
+USERNAME='@whoever:matrix.org'
+SERVER='https://matrix.org'
+ROOM='#test:matrix.org'
+
+# prompt for a password; log in and grab an access_token
+read -s -p "Password for $USERNAME:" PASSWORD
+TOKEN=`curl -X POST $SERVER/_matrix/client/r0/login --data "{ 'type': 'm.login.password', 'login': '$USERNAME', 'password': '$PASSWORD' }" | jq .access_token`
+
+# resolve the room alias (#test:matrix.org) to a room ID (!vfFxDRtZSSdspfTSEr:matrix.org)
+ROOM_ID=`curl $SERVER/_matrix/client/r0/directory/room/$ROOM | jq .room_id`
+
+# check that you're joined to the room (redundant if you know you're already there)
+curl "$SERVER/_matrix/client/r0/join/$ROOM_ID?access_token=$TOKEN"
+
+# set a background loop running to receive messages, and use jq to filter out the
+# messages for the room you care about from the sync response.  For now we print them
+# as JSON pretty-printed by jq, but that's not too bad.
+(while true;
+    do SYNC=`curl -s $SERVER/_matrix/client/r0/sync?access_token=$TOKEN&timeout=30000&since=$SINCE`
+    echo $SYNC | jq ".rooms.join.$ROOM_ID.timeline"
+    SINCE=`echo $SYNC | jq .next_batch`
+done) &
+
+# set a foreground loop running to prompt for your own messages and send them
+# into the room as plaintext.
+while true;
+    do read -p "<$USERNAME> " INPUT;
+    `curl -s -X POST $SERVER/_matrix/client/r0/rooms/$ROOM_ID/m.room.message?access_token=$TOKEN --data "{ 'body': '$INPUT', 'msgtype': 'm.text'}"`
+done
