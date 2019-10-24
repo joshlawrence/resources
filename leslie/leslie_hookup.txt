@@ -1,11 +1,4 @@
 Leslie Hookup Notes
 -------------------
 
-socket wiring, starting from the top:
-
-RED
-BLACK
-YELLOW
-GREY
-BLUE
-BROWN
+this is confusing...
