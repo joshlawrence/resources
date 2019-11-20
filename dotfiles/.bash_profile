@@ -13,7 +13,7 @@ PS1=" \w \$ "
 
 # don't put duplicate lines or lines starting with space in the history
 # See bash(1) for more options
-HISTCONTROL=ignoreboth
+HISTCONTROL=ignoreboth:erasedups
 
 # append to the history file, don't overwrite it
 shopt -s histappend
@@ -26,7 +26,7 @@ HISTSIZE=1000
 HISTFILESIZE=2000
 
 # path
-PATH="$HOME/.local/bin:$PATH"
+PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 
 # editor
 export VISUAL=vim
@@ -49,7 +49,7 @@ alias upload='open https://send.firefox.com/'
 
 # functions
 timestamp () {
-  date +"%F %r" | tr -d "\n"
+  date +"%F %r" | tr -d "\n" | pbcopy
 }
 
 dtree () {
