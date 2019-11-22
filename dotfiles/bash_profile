@@ -29,8 +29,8 @@ HISTFILESIZE=2000
 PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 
 # editor
-export VISUAL=vim
-export EDITOR="$VISUAL"
+export EDITOR=/usr/local/bin/vim
+export VISUAL="$EDITOR"
 
 # aliases
 # quoting is HARD
@@ -40,7 +40,6 @@ alias gam="$HOME/bin/gam/gam"
 alias ls='ls -1G'
 alias tb='nc termbin.com 9999'
 alias getip='curl http://icanhazip.com'
-alias upload='open https://send.firefox.com/'
 
 # source ~/.bash_aliases if it exists
 #if [ -f ~/.bash_aliases ]; then
@@ -67,6 +66,11 @@ reload () {
 
 genpass () {
   pwgen -N "$1" -cn -1 12
+}
+
+fup () {
+  #ffsend upload --downloads 1 --archive --copy "$1"
+  ffsend upload --downloads 1 --copy "$1"
 }
 
 # completion
