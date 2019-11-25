@@ -118,3 +118,16 @@ find . -type f \( ! -name '*MED*' -a ! -name '*SOFT*' \) ! -path './kit1/*' -exe
 find . -type f -name '*ROOM*' -print0 | while IFS= read -r -d '' i; do afplay "$i"; done
 
 `-a` means and and `-o` means or.
+
+## script template ideas
+
+fail and bail:
+
+{ echo "Don't run me in production yet!" >&2; exit 1; }
+
+are you root?
+
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
