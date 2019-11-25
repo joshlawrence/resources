@@ -24,37 +24,37 @@ upper to lower:
 
 for i in *.wav; do mv "$i" "$(echo "$i" | tr '[A-Z]' '[a-z]')"; done
 
-#!/bin/bash
+#!/usr/bin/env bash
 for file in *.flv; do
     i=$(basename "$file" .flv)
     ffmpeg -i "$file" -c:a libvorbis -q:a 6 "$i.ogg"
 done
 
-#!/bin/bash
+#!/usr/bin/env bash
 for i in *.ogg; do 
     mv "$i" "$(echo ${i%.ogg} | tr [:lower:] [:upper:]).ogg"; 
 done
 
-#!/bin/bash
+#!/usr/bin/env bash
 for i in *.m4a; do
     ffmpeg -i "$i" -c:a libvorbis -qscale:a 5 "$i.ogg"
 done
 
-#!/bin/bash
+#!/usr/bin/env bash
 for i in *.md; do
     mv "$i" "${i%.md}.txt
 done
 
 find and rename files recursively:
 
-#!/bin/bash
+#!/usr/bin/env bash
 find . -type f -name '*.foo' -print0 | while IFS= read -r -d '' f; do
     mv -- "$f" "${f%.foo}.bar"
 done
 
 for all zip files, create a directory based on file name, extract the contents to the directory:
 
-#!/bin/bash
+#!/usr/bin/env bash
 for i in *.zip; do
     dir=${i%%.*} # create a dir based on the filename with no dot or extension
     mkdir "$dir"
@@ -63,7 +63,7 @@ done
 
 ## creating temp directories and files
 
-#!/bin/bash
+#!/usr/bin/env bash
 MY_TMPFILE="$(mktemp "${TMPDIR:-/tmp/}$(basename "$0").XXXXXXXXXX")"
 trap 'rm -f "$MY_TMPFILE"' EXIT
 
@@ -85,7 +85,7 @@ myscript 2>&1 | tee -a log.txt
 
 functions for logging in scripts:
 
-#!/bin/bash
+#!/usr/bin/env bash
 readonly SCRIPT_NAME=$(basename $0)
 
 log() {
