@@ -83,6 +83,24 @@ myscript 2>&1 | tee log.txt
 
 myscript 2>&1 | tee -a log.txt
 
+functions for logging in scripts:
+
+#!/bin/bash
+readonly SCRIPT_NAME=$(basename $0)
+
+log() {
+echo "$@"
+logger -p user.notice -t $SCRIPT_NAME "$@"
+}
+
+err() {
+echo "$@" >&2
+logger -p user.error -t $SCRIPT_NAME "$@"
+}
+
+log "writing to stdout"
+err "writing to stderr"
+
 ## youtube-dl options (+mpv)
 
 youtube-dl already selects the BEST format, pass -F to see other formats.
