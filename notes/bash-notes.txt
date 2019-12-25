@@ -12,13 +12,13 @@ ffmpeg -i input.wav -filter:a loudnorm output.wav
 
 ## renaming
 
-replace all spaces with underscores:
+replace all spaces with underscores (requires prename):
 
-find . -type f -name "*.wav" -exec rename 's/ /_/g' {} \;
+find . -type f -name "*.wav" -exec prename 's/ /_/g' {} \;
 
 replace all instances of "_-_" with a single dash:
 
-find . -type f -name "*.wav" -exec rename 's/_-_/_/g' {} \;
+find . -type f -name "*.wav" -exec prename 's/_-_/_/g' {} \;
 
 upper to lower:
 
