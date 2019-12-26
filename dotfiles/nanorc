@@ -1,0 +1,6 @@
+set autoindent
+set breaklonglines
+set fill 72
+set tabstospaces
+set mouse
+set unix
