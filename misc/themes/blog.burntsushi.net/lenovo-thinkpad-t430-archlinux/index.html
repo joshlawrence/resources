@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Running Archlinux on the Lenovo Thinkpad T430 - Andrew Gallant&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="I blog mostly about my own programming projects.">
+  
+  <meta name="author" content="">
+  <meta name="keywords" content="">
+  <link rel="canonical" href="index.html">
+
+  
+  <link rel="stylesheet" type="text/css" href="../css/basscss.css">
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/chroma-fruity-light.css">
+  <link rel="stylesheet" type="text/css" href="../css/override.css">
+</head>
+<body class="">
+
+<div class="site-wrap">
+  <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="../index.html" class="site-title">Andrew Gallant&#39;s Blog</a>
+      <nav class="site-nav right">
+      <a href="../about/index.html">About</a>
+<a href="../projects/index.html">Projects</a>
+<a href="https://github.com/BurntSushi">GitHub</a>
+
+
+      </nav>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</header>
+
+  <div class="post p2 p-responsive wrap" role="main">
+    <div class="measure">
+      <div class="post-header mb2">
+        <h1>Running Archlinux on the Lenovo Thinkpad T430</h1>
+        <span class="post-meta">Jul 1, 2012</span><br>
+        
+      </div>
+
+      <article class="post-content">
+      <p>In sum, Archlinux is working beautifully. What follows is a rough run down of
+my notes while installing, configuring, tuning and using Archlinux on the
+Lenovo Thinkpad T430.</p>
+<h3 id="specs">Specs</h3>
+<ul>
+<li>i7 3520M (Dual core, Four threads, 4M cache, 2.9GHz)</li>
+<li>14&rdquo; 1600x900 display</li>
+<li>Intel HD Graphics 4000, <strong>no discrete graphics card</strong></li>
+<li>4GB memory</li>
+<li>128GB Crucial m4 2.5&rdquo; (7mm) SSD (laptop came with a 320GB 7200rpm platter)</li>
+<li>9 cell 70++ battery</li>
+<li>Intel Centrino Wireless-N 2200 (2x2 BGN)</li>
+</ul>
+<h3 id="software-that-i-typically-use">Software that I typically use</h3>
+<p>No desktop environment. Openbox/pytyle3/pager-multihead. Gkrellm. Konsole.
+Google Chrome. Vim. Konversation. Wicd.</p>
+<h3 id="battery-life">Battery life</h3>
+<p>On 66% brightness, about 8 hours seems to be the sweet spot for
+typical usage (web browsing and vim). 100% brightness seems to knock this down
+to the 5-6 hour range. I've only had the laptop for a couple of days, so these
+numbers are pretty rough and based somewhat on extrapolation.</p>
+<p>I have all of the tweaks suggested by <code>powertop</code> enabled.
+This includes wifi, audio, SATA link and usb power management.</p>
+<p>I also have the <code>ondemand</code> CPU frequency governor enable, which is the default
+nowadays anyway. Changing governors (tested powersave, performance and
+conservative) works perfectly.</p>
+<h3 id="disable-kms-when-using-the-current-archlinux-installer">Disable KMS when using the current Archlinux installer</h3>
+<p>The current default Archlinux installer uses an older kernel that doesn't
+include the updated drivers for Intel's HD 4000 graphics (and possibly wifi?),
+so KMS fails once it tries to load&mdash;which ends up borking the display. To get
+around this, add &lsquo;nomodeset&rsquo; to the kernel boot parameters to disable KMS.
+You'll have to do this again on initial boot if you install the kernel that
+comes with the installer. Once an updated kernel is installed, this boot
+parameter is no longer needed since the driver for the Intel HD 4000 graphics
+chipset is included. The available snapshot installers have an updated kernel,
+and therefore disabling KMS is unnecessary if you're using them.</p>
+<h3 id="most-of-the-current-t420-wiki-page-is-relevanthttpswikiarchlinuxorgindexphplenovo-thinkpad-t420"><a href="https://wiki.archlinux.org/index.php/Lenovo_ThinkPad_T420">Most of the current T420 wiki page is relevant</a></h3>
+<p>And by that I mean, most things <em>just work</em>. Wifi, graphics (with
+xf86-video-intel), CPU frequency scaling, screen brightness, keyboard
+backlight, and <em>excellent</em> two finger scrolling (out-of-the-box with
+xf86-input-synaptics, no configuration necessary despite what the T420 wiki
+article says).</p>
+<h3 id="thinkfan">Thinkfan</h3>
+<p>I installed thinkfan and added the <code>thinkpad_acpi</code> kernel module to
+<code>MODULES</code> in <code>/etc/rc.conf</code>. I also added the <code>thinkfan</code> daemon to <code>DAEMONS</code> in
+<code>/etc/rc.conf</code>. To allow <code>thinkfan</code> to control the fan, enable <code>fan_control</code> by
+creating <code>/etc/modprobe.d/thinkfan.conf</code> with:</p>
+<pre><code>options thinkpad_acpi fan_control=1
+</code></pre><p>And this is my thinkfan <code>/etc/thinkfan.conf</code>:</p>
+<pre><code>sensor /sys/devices/virtual/thermal/thermal_zone0/temp
+
+(0, 0, 40)
+(1, 38, 43)
+(2, 41, 50)
+(3, 44, 54)
+(4, 51, 63)
+(5, 55, 67)
+(7, 61, 32767)
+</code></pre><p>The settings are tweaked (a little less aggressive) from
+<a href="http://www.jakubkotowski.com/2011/06/thinkpad-t420-thinkfan-settings.html">Thinkpad T420 thinkfan settings</a>.
+I've tested it with the utilities in the <code>cpuburn</code> package and it seems to
+work well. For me, the fan stays off when idle and kicks into its lowest
+settings on typical usage (web browsing and vim, for me).</p>
+<p>Recall that I do not have discrete graphics (i.e., nvidia) and have an SSD,
+which both have impact temperature.</p>
+<h3 id="acpid">acpid</h3>
+<p>This also worked out of the box with one small tweak. In
+<code>/etc/acpi/handler.sh</code>, I replaced</p>
+<div class="highlight"><pre class="chroma"><code class="language-sh" data-lang="sh">ac_adapter<span class="o">)</span>
+    <span class="k">case</span> <span class="s2">&#34;</span><span class="nv">$2</span><span class="s2">&#34;</span> in
+        AC<span class="p">|</span>ACAD<span class="p">|</span>ADP0<span class="o">)</span>
+</code></pre></div><p>with</p>
+<div class="highlight"><pre class="chroma"><code class="language-sh" data-lang="sh">ac_adapter<span class="o">)</span>
+    <span class="k">case</span> <span class="s2">&#34;</span><span class="nv">$2</span><span class="s2">&#34;</span> in
+        ACPI*<span class="p">|</span>AC<span class="p">|</span>ACAD<span class="p">|</span>ADP0<span class="o">)</span>
+</code></pre></div><p>This was needed because <code>ac_adapter ACPI0003:00</code> are the first two arguments
+used when the <code>ac_adapter</code> event is triggered.</p>
+<h3 id="pm-utils">pm-utils</h3>
+<p>Works beautifully. Literally no problems.</p>
+<h3 id="laptop-mode-tools">laptop-mode-tools</h3>
+<p>I don't use it. acpid, pm-utils and powertop's recommended tweaks are enough
+for me. (I use acpid to raise and lower the brightness when the AC adapter is
+[un]plugged, and make sure that on wakeup/boot, the brightness is set
+appropriately.)</p>
+<h3 id="sleep-button">Sleep button</h3>
+<p>For whatever reason I haven't been able to discover, I cannot detect any power
+button presses (neither through <code>acpi_listen</code> or <code>xev</code>). However, the T430 has
+an extra unlabeled button to the right of the &ldquo;turn microphone on/off&rdquo; button
+that shows up in xev as <code>XF86Launch1</code>. Thus, I put this in my <code>~/.xbindkeys</code>:</p>
+<pre><code>&quot;sudo pm-suspend&quot;
+  XF86Launch1
+</code></pre><p>And it's now a sleep button, as long as you set &lsquo;pm-suspend&rsquo; to require no
+password using <code>visudo</code>. For example:</p>
+<pre><code>%wheel ALL=(ALL) NOPASSWD: /usr/sbin/pm-suspend
+</code></pre><h3 id="web-cam">Web cam</h3>
+<p>I installed <code>guvcview</code> and then ran it. It worked. (It looks like the
+<code>uvcvideo</code> kernel module is automatically loaded.)</p>
+<h3 id="audiospeakers">Audio/speakers</h3>
+<p>Alsa just works. Speakers sound good enough to me. (I'm no audiophile though,
+and have never been too picky over audio quality. My ears aren't very
+discerning.)</p>
+<h3 id="what-i-havent-tested">What I Haven't tested</h3>
+<p>VGA. Mini display port. Mic. USB 3.0. mSATA. Memory card slot.</p>
+<p>I don't anticipate any problems with these things, though.</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>Archlinux works beautifully on this machine. I literally could not have
+imagined a smoother experience. I've installed Arch on several laptops, and
+this was by far the easiest. Having the wifi driver included in the kernel is
+an especially nice thing that I'm not used to. (Been a victim of broadcom for
+many years.) Also, the integrated graphics works beautifully, although I am not
+doing any compositing beyond xcompmgr transparency.</p>
+<p>The laptop also has excellent ventilation and actually stays cool enough for it
+to be bearable to sit directly on my lap indefinitely. Even when the CPU is
+chugging.</p>
+<p>This laptop also comes with the option of adding nvidia via Optimus. I
+recommend staying away from this unless you're willing to deal with Bumblebee
+or absolutely need a dedicated graphics card. Early reviews seem to indicate
+that Intel's HD 4000 Graphics is quite excellent for integrated graphics,
+particularly compared to the available nvidia option for this laptop (NVIDIA
+NVS 5400M).</p>
+<p>There is also a 1366x768 screen option, and based on preliminary reviews, it
+isn't that great. Go with the 1600x900 screen&mdash;it seems like the sweet spot.</p>
+<p>Finally, this is my first Thinkpad. Incidentally, this is the first time that
+the T-series has had a &ldquo;chiclet style&rdquo; keyboard. Personally, I love it and have
+been partial to chiclet style keyboards in the past. The reviews already out
+there are not lying when they speak highly of its quality; it's on the
+best-feeling keyboards I've ever typed on.</p>
+<p>With that said, it seems like most of the complaints revolve around the layout.
+The one bugger that has got me so far is the location of the &lsquo;fn&rsquo; and &lsquo;control&rsquo;
+keys. It feels like they should be swapped. <code>xev</code> actually picks up &lsquo;fn&rsquo; key
+releases but not key presses. I was unsuccessful in swapping the keys using
+<code>xmodmap</code>, but perhaps there is a BIOS option somewhere that will allow a swap.
+(<strong>EDIT</strong>: Indeed, there is a BIOS option that successfully swaps the &lsquo;fn&rsquo; and
+control keys.)
+This is my only complaint with the keyboard layout. (But remember, I was never
+used to the old layout!)</p>
+<p>In sum, this appears to be a great laptop to run Linux on.</p>
+      </article>
+
+      
+
+    </div>
+  </div>
+</div>
+    <footer class="footer">
+      <div class="p2 wrap">
+        <div class="measure mt1 center">
+      <nav class="social-icons icons">
+<a class="fa fa-rss rss" href="../index.xml"></a>
+
+</nav>
+
+          <small>
+            All content is dual licensed under the UNLICENSE and MIT licenses.<br>
+            Powered by <a href="http://gohugo.io/" target="_blank">Hugo</a> &amp; <a href="https://github.com/azmelanar/hugo-theme-pixyll" target="_blank">Pixyll</a>
+          </small>
+        </div>
+      </div>
+    </footer>
+</body>
+</html>
+

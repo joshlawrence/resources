@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Introducing NFLGame: Programmatic access to live NFL game statistics - Andrew Gallant&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="I blog mostly about my own programming projects.">
+  
+  <meta name="author" content="">
+  <meta name="keywords" content="">
+  <link rel="canonical" href="index.html">
+
+  
+  <link rel="stylesheet" type="text/css" href="../css/basscss.css">
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/chroma-fruity-light.css">
+  <link rel="stylesheet" type="text/css" href="../css/override.css">
+</head>
+<body class="">
+
+<div class="site-wrap">
+  <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="../index.html" class="site-title">Andrew Gallant&#39;s Blog</a>
+      <nav class="site-nav right">
+      <a href="../about/index.html">About</a>
+<a href="../projects/index.html">Projects</a>
+<a href="https://github.com/BurntSushi">GitHub</a>
+
+
+      </nav>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</header>
+
+  <div class="post p2 p-responsive wrap" role="main">
+    <div class="measure">
+      <div class="post-header mb2">
+        <h1>Introducing NFLGame: Programmatic access to live NFL game statistics</h1>
+        <span class="post-meta">Aug 30, 2012</span><br>
+        
+      </div>
+
+      <article class="post-content">
+      <p>As a programmer and a fantasy football addict, I am embarassed by the means
+through which we must expend ourselves to get data in a machine readable form.
+This lack of open source software cripples the community with sub-standard
+tools, and most importantly, detracts from some really cool and fun things that
+could be done with easily available statistics. Many tools are either out-dated
+or broken, or if they work, they are closed source and often cost money.</p>
+<p>Yesterday I started work on a new library package that I hope will start to
+improve this sorry state of affairs.</p>
+<p><a href="https://github.com/BurntSushi/nflgame">nflgame</a> is a <a href="http://pypi.python.org/pypi/nflgame/">Python
+package</a> that provides convenient access
+to NFL statistics. This includes games that are currently being played, or
+games as far back as the 2009 season.</p>
+<p>nflgame works by reading <a href="http://www.nfl.com/liveupdate/game-center/2012010101/2012010101_gtd.json">a JSON
+feed</a>
+that powers <a href="http://www.nfl.com/gamecenter/2012010101/2011/REG17/bills@patriots">NFL.com's live
+GameCenter</a>.</p>
+<p>Since game statistics <a href="http://thefanhub.com/posts/detail/117783/NFL-stat-corrections-are-a-joke">never change after a game has been
+played</a>,
+the JSON data is automatically cached and saved to disk if the game is no
+longer being played. The next time statistics for that game are queried, the
+data will be read from disk. (nflgame comes preloaded with data from every game
+in the pre- and regular season since 2009.)</p>
+<p>The <a href="https://burntsushi.net/doc/nflgame/">API</a> for nflgame is small and
+hopefully easy to use—even for those without much or any experience
+programming.</p>
+<h3 id="teaser">Teaser</h3>
+<p>Let's start off with a quick teaser to showcase some of nflgame's power.</p>
+<p>Who lead the league in rushing between weeks 10 and 14 of the 2010 regular
+season?</p>
+<p>I won't make you hunt down the answer. Here's five lines of code that lists the
+top ten rushers in weeks 10-14 of the 2009 season:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="kn">import</span> <span class="nn">nflgame</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">games</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2010</span><span class="p">,</span> <span class="n">week</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">]</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">players</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">games</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">players</span><span class="o">.</span><span class="n">rushing</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">rushing_yds</span><span class="s2">&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="p">:</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_yds</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Jones</span><span class="o">-</span><span class="n">Drew</span> <span class="mi">632</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Turner</span> <span class="mi">480</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Foster</span> <span class="mi">466</span>
+<span class="n">F</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">462</span>
+<span class="n">K</span><span class="o">.</span><span class="n">Moreno</span> <span class="mi">462</span>
+<span class="n">J</span><span class="o">.</span><span class="n">Charles</span> <span class="mi">458</span>
+<span class="n">P</span><span class="o">.</span><span class="n">Hillis</span> <span class="mi">426</span>
+<span class="n">C</span><span class="o">.</span><span class="n">Johnson</span> <span class="mi">416</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">405</span>
+<span class="n">B</span><span class="o">.</span><span class="n">Green</span><span class="o">-</span><span class="n">Ellis</span> <span class="mi">401</span>
+</code></pre></div><h3 id="back-to-basics">Back to basics</h3>
+<p>If you are a beginning programmer (or don't have any experience programming), I
+<strong>strongly</strong> urge you to read my <a href="https://github.com/BurntSushi/nflgame/wiki/Tutorial-for-non-programmers:-Installation-and-examples">Tutorial for non programmers: Installation
+and
+examples</a>.
+What follows is a condensed version of the tutorial that might be a
+bit too confusing for those without programming experience.</p>
+<p>nflgame is designed around three core concepts: games, players and lists of
+players (that are implemented as Python generators). Games can be selected
+based on season, week and team. Players in each game can then be accessed by
+name, statistical categories (i.e., passing, rushing, defense, etc.), or even
+statistical values—such as finding all players in a list with at least
+one receiving touchdown.</p>
+<p>Games can be selected one at a time:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="kn">import</span> <span class="nn">nflgame</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">buf_at_ne</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="mi">2011</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">NE</span><span class="s2">&#34;</span><span class="p">,</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">BUF</span><span class="s2">&#34;</span><span class="p">)</span>
+</code></pre></div><p>Or in bulk (every game in the 2009 season):</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="kn">import</span> <span class="nn">nflgame</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">season09</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2009</span><span class="p">)</span>
+</code></pre></div><p>Each game comes with its own <code>players</code> attribute that holds player statistics
+for every player that participated in the game. Additionally, games have
+attributes like <code>winner</code>, <code>home</code>, <code>away</code>, <code>score_home</code>, <code>score_away</code> and
+<code>clock</code> that report meta-information about the game itself.</p>
+<p>So to get every player with at least one passing statistic in a game:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="kn">import</span> <span class="nn">nflgame</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">game</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="mi">2011</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">NE</span><span class="s2">&#34;</span><span class="p">,</span> <span class="sa"></span><span class="s2">&#34;</span><span class="s2">BUF</span><span class="s2">&#34;</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">print</span> <span class="n">game</span><span class="o">.</span><span class="n">players</span><span class="o">.</span><span class="n">passing</span><span class="p">(</span><span class="p">)</span>
+<span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Hoyer</span><span class="p">,</span> <span class="n">T</span><span class="o">.</span><span class="n">Brady</span><span class="p">,</span> <span class="n">R</span><span class="o">.</span><span class="n">Fitzpatrick</span><span class="p">]</span>
+</code></pre></div><p>And the same thing can be done with rushing, receiving, defense, kicking, etc.,
+by simply replacing <code>passing</code> with one of the aforementioned.</p>
+<p>Each player comes with his own grouping of statistics. To extend upon the
+previous example, consider printing out some passing statistics associated with
+each passer in the game:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">game</span><span class="o">.</span><span class="n">players</span><span class="o">.</span><span class="n">passing</span><span class="p">(</span><span class="p">)</span><span class="p">:</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">passing_cmp</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">passing_att</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">passing_yds</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">B</span><span class="o">.</span><span class="n">Hoyer</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">22</span>
+<span class="n">T</span><span class="o">.</span><span class="n">Brady</span> <span class="mi">23</span> <span class="mi">35</span> <span class="mi">338</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Fitzpatrick</span> <span class="mi">29</span> <span class="mi">46</span> <span class="mi">307</span>
+</code></pre></div><h3 id="filtering-sorting-and-combiningmdashoh-my">Filtering, sorting and combining—oh my!</h3>
+<p>No data API would be complete without a means of filtering the data according
+to its values.</p>
+<p>To find all players on the home team of the current game:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">print</span> <span class="n">game</span><span class="o">.</span><span class="n">players</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">home</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="p">[</span><span class="n">B</span><span class="o">.</span><span class="n">Hoyer</span><span class="p">,</span> <span class="n">T</span><span class="o">.</span><span class="n">Brady</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Green</span><span class="o">-</span><span class="n">Ellis</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">Hernandez</span><span class="p">,</span> <span class="n">J</span><span class="o">.</span><span class="n">Edelman</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">Ridley</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">Woodhead</span><span class="p">,</span> <span class="n">R</span><span class="o">.</span><span class="n">Gronkowski</span><span class="p">,</span> <span class="n">W</span><span class="o">.</span><span class="n">Welker</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">Gostkowski</span><span class="p">,</span> <span class="n">Z</span><span class="o">.</span><span class="n">Mesko</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">Slater</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">Arrington</span><span class="p">,</span> <span class="n">M</span><span class="o">.</span><span class="n">Anderson</span><span class="p">,</span> <span class="n">J</span><span class="o">.</span><span class="n">Mayo</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">Molden</span><span class="p">,</span> <span class="n">N</span><span class="o">.</span><span class="n">Jones</span><span class="p">,</span> <span class="n">P</span><span class="o">.</span>
+<span class="n">Chung</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Deaderick</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">Fletcher</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">McCourty</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">Wilfork</span><span class="p">,</span> <span class="n">N</span><span class="o">.</span><span class="n">Koutouvides</span><span class="p">,</span> <span class="n">R</span><span class="o">.</span><span class="n">Ninkovich</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">Love</span><span class="p">,</span> <span class="n">L</span><span class="o">.</span><span class="n">Polite</span><span class="p">,</span> <span class="n">B</span><span class="o">.</span><span class="n">Spikes</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">Moore</span><span class="p">]</span>
+</code></pre></div><p>In this case, New England is the home team, so only players on the Patriots are
+returned.</p>
+<p>A more advanced use of <code>filter</code> is to use predicates to determine whether a
+particular stat should be filtered or not. For example, here we look at every
+player in the game on the home team with <em>at least</em> one interception:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">print</span> <span class="n">game</span><span class="o">.</span><span class="n">players</span><span class="o">.</span><span class="n">defense</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">home</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">defense_int</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span><span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">[</span><span class="n">A</span><span class="o">.</span><span class="n">Molden</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">McCourty</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">Moore</span><span class="p">]</span>
+</code></pre></div><p>Any player list can be sorted according to a statistical field. For example, we
+might want to see a list of rushing leaders in the game by yards:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">game</span><span class="o">.</span><span class="n">players</span><span class="o">.</span><span class="n">rushing</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">rushing_yds</span><span class="s2">&#34;</span><span class="p">)</span><span class="p">:</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_att</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_yds</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Ridley</span> <span class="mi">15</span> <span class="mi">81</span>
+<span class="n">C</span><span class="o">.</span><span class="n">Spiller</span> <span class="mi">13</span> <span class="mi">60</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Fitzpatrick</span> <span class="mi">5</span> <span class="mi">36</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Hernandez</span> <span class="mi">2</span> <span class="mi">26</span>
+<span class="n">B</span><span class="o">.</span><span class="n">Green</span><span class="o">-</span><span class="n">Ellis</span> <span class="mi">7</span> <span class="mi">22</span>
+<span class="n">J</span><span class="o">.</span><span class="n">Edelman</span> <span class="mi">1</span> <span class="mi">6</span>
+<span class="n">G</span><span class="o">.</span><span class="n">Wilson</span> <span class="mi">1</span> <span class="mi">6</span>
+<span class="n">D</span><span class="o">.</span><span class="n">Woodhead</span> <span class="mi">1</span> <span class="mi">5</span>
+<span class="n">T</span><span class="o">.</span><span class="n">Choice</span> <span class="mi">1</span> <span class="mi">4</span>
+<span class="n">B</span><span class="o">.</span><span class="n">Hoyer</span> <span class="mi">3</span> <span class="o">-</span><span class="mi">2</span>
+</code></pre></div><p>Player statistics for the same player from different games can be combined to
+represent statistics from multiple games. Additionally, player generators can
+be concatenated. This combination allows one to construct searchable player
+generators of any makeup: from only games in a certain week, to all games
+in a season (or multiple seasons!).</p>
+<p>For example, to find the top ten rushing leaders from week 2 of the 2009
+season, we simply select all games from that week, combine the games into a
+single player list, and use our familiar searching methods exemplified above to
+get our answer:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">week2</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2009</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">players</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">week2</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">players</span><span class="o">.</span><span class="n">rushing</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">rushing_yds</span><span class="s2">&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="p">:</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_att</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_yds</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rushing_tds</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">F</span><span class="o">.</span><span class="n">Gore</span> <span class="mi">16</span> <span class="mi">207</span> <span class="mi">2</span>
+<span class="n">C</span><span class="o">.</span><span class="n">Johnson</span> <span class="mi">16</span> <span class="mi">197</span> <span class="mi">2</span>
+<span class="n">F</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">28</span> <span class="mi">163</span> <span class="mi">0</span>
+<span class="n">C</span><span class="o">.</span><span class="n">Benson</span> <span class="mi">29</span> <span class="mi">141</span> <span class="mi">0</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Brown</span> <span class="mi">24</span> <span class="mi">136</span> <span class="mi">2</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Barber</span> <span class="mi">18</span> <span class="mi">124</span> <span class="mi">1</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Turner</span> <span class="mi">28</span> <span class="mi">105</span> <span class="mi">1</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">17</span> <span class="mi">104</span> <span class="mi">0</span>
+<span class="n">F</span><span class="o">.</span><span class="n">Jones</span> <span class="mi">7</span> <span class="mi">96</span> <span class="mi">1</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Peterson</span> <span class="mi">15</span> <span class="mi">92</span> <span class="mi">1</span>
+</code></pre></div><p>What if you wanted to see who passed for the most touchdowns in the first five
+weeks of the 2011 season?</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">games1_5</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2011</span><span class="p">,</span> <span class="n">week</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">players</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">games1_5</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">players</span><span class="o">.</span><span class="n">passing</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">passing_tds</span><span class="s2">&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="p">:</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">passing_tds</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">T</span><span class="o">.</span><span class="n">Brady</span> <span class="mi">13</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Rodgers</span> <span class="mi">12</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Stafford</span> <span class="mi">11</span>
+<span class="n">D</span><span class="o">.</span><span class="n">Brees</span> <span class="mi">10</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Fitzpatrick</span> <span class="mi">9</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Hasselbeck</span> <span class="mi">8</span>
+<span class="n">E</span><span class="o">.</span><span class="n">Manning</span> <span class="mi">8</span>
+<span class="n">K</span><span class="o">.</span><span class="n">Orton</span> <span class="mi">8</span>
+<span class="n">J</span><span class="o">.</span><span class="n">Flacco</span> <span class="mi">7</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Schaub</span> <span class="mi">7</span>
+</code></pre></div><p>Or how about the receiving leaders for the entire 2009 season?</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">season2009</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2009</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">players</span> <span class="o">=</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">season2009</span><span class="p">)</span>
+<span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">players</span><span class="o">.</span><span class="n">receiving</span><span class="p">(</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">receiving_yds</span><span class="s2">&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">15</span><span class="p">)</span><span class="p">:</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>     <span class="k">print</span> <span class="n">p</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">receiving_yds</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">receiving_rec</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">receiving_tds</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="o">.</span><span class="o">.</span><span class="o">.</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Johnson</span> <span class="mi">1504</span> <span class="mi">95</span> <span class="mi">9</span>
+<span class="n">W</span><span class="o">.</span><span class="n">Welker</span> <span class="mi">1336</span> <span class="mi">122</span> <span class="mi">4</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Holmes</span> <span class="mi">1243</span> <span class="mi">78</span> <span class="mi">4</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Wayne</span> <span class="mi">1243</span> <span class="mi">95</span> <span class="mi">10</span>
+<span class="n">M</span><span class="o">.</span><span class="n">Austin</span> <span class="mi">1230</span> <span class="mi">74</span> <span class="mi">11</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Rice</span> <span class="mi">1200</span> <span class="mi">78</span> <span class="mi">6</span>
+<span class="n">R</span><span class="o">.</span><span class="n">Moss</span> <span class="mi">1189</span> <span class="mi">78</span> <span class="mi">13</span>
+<span class="n">S</span><span class="o">.</span><span class="n">Smith</span> <span class="mi">1163</span> <span class="mi">97</span> <span class="mi">7</span>
+<span class="n">A</span><span class="o">.</span><span class="n">Gates</span> <span class="mi">1145</span> <span class="mi">78</span> <span class="mi">7</span>
+<span class="n">D</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">1120</span> <span class="mi">60</span> <span class="mi">9</span>
+<span class="n">H</span><span class="o">.</span><span class="n">Ward</span> <span class="mi">1106</span> <span class="mi">87</span> <span class="mi">6</span>
+<span class="n">V</span><span class="o">.</span><span class="n">Jackson</span> <span class="mi">1097</span> <span class="mi">63</span> <span class="mi">9</span>
+<span class="n">G</span><span class="o">.</span><span class="n">Jennings</span> <span class="mi">1091</span> <span class="mi">66</span> <span class="mi">4</span>
+<span class="n">R</span><span class="o">.</span><span class="n">White</span> <span class="mi">1087</span> <span class="mi">79</span> <span class="mi">10</span>
+<span class="n">B</span><span class="o">.</span><span class="n">Marshall</span> <span class="mi">1081</span> <span class="mi">93</span> <span class="mi">10</span>
+</code></pre></div><p>Finally, with any of the above examples, you can export the statistics to a
+CSV file that can be read by Excel. For example, to export the entire 2011
+season in just a single line:</p>
+<div class="highlight"><pre class="chroma"><code class="language-python" data-lang="python"><span class="o">&gt;&gt;</span><span class="o">&gt;</span> <span class="n">nflgame</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">nflgame</span><span class="o">.</span><span class="n">games</span><span class="p">(</span><span class="mi">2011</span><span class="p">)</span><span class="p">)</span><span class="o">.</span><span class="n">csv</span><span class="p">(</span><span class="sa"></span><span class="s2">&#34;</span><span class="s2">2011.csv</span><span class="s2">&#34;</span><span class="p">)</span>
+</code></pre></div><h3 id="whats-next">What's next?</h3>
+<p>For the short-term, I'd really like to come up with an easy and elegant way of
+providing alerts (emails and texts) for your fantasy football team. For
+example, whenever a player on your team—or your opponent's
+team—scores a lot of points like a touchdown or a field goal. I did
+something like this last year using a cobbled together hack-job that I'm
+ashamed of, and it was a lot of fun. (I did screen scraping on the ESPN fantasy
+web site for all the statistics.)</p>
+<p>The real problem here is keeping your roster up to date. It's pretty easy if
+you're using Yahoo because of their <a href="http://developer.yahoo.com/fantasysports/guide/">Fantasy Sports
+API</a>, but I don't think any
+other league web site offers such amenities.</p>
+<p>In the long-term, nflgame could certainly be the statistical back-bone for
+fantasy football league software. But I don't think that's on my personal radar
+any time soon.</p>
+<p>I am aware of <a href="http://www.phpffl.com/forums/index.php">phpFFL</a>, which purports
+to be open source fantasy football league software—but development seems
+to have stalled. (It also looks like they are screen scraping CBS Sports for
+statistics, which I really want to avoid.) Plus, I vowed a long time ago never
+to take up another serious project in PHP again. I value my mental health too
+highly.</p>
+<h3 id="links">Links</h3>
+<ul>
+<li><a href="https://github.com/BurntSushi/nflgame/wiki/Tutorial-for-non-programmers:-Installation-and-examples">Tutorial for non programmers: Installation and examples</a></li>
+<li><a href="http://pypi.python.org/pypi/nflgame/">PyPI package page</a></li>
+<li><a href="https://github.com/BurntSushi/nflgame">github project page</a></li>
+<li><a href="https://aur.archlinux.org/packages.php?ID=62381">Archlinux user repository package page</a></li>
+</ul>
+      </article>
+
+      
+
+    </div>
+  </div>
+</div>
+    <footer class="footer">
+      <div class="p2 wrap">
+        <div class="measure mt1 center">
+      <nav class="social-icons icons">
+<a class="fa fa-rss rss" href="../index.xml"></a>
+
+</nav>
+
+          <small>
+            All content is dual licensed under the UNLICENSE and MIT licenses.<br>
+            Powered by <a href="http://gohugo.io/" target="_blank">Hugo</a> &amp; <a href="https://github.com/azmelanar/hugo-theme-pixyll" target="_blank">Pixyll</a>
+          </small>
+        </div>
+      </div>
+    </footer>
+</body>
+</html>
+

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Writing type parametric functions in Go - Andrew Gallant&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="I blog mostly about my own programming projects.">
+  
+  <meta name="author" content="">
+  <meta name="keywords" content="">
+  <link rel="canonical" href="index.html">
+
+  
+  <link rel="stylesheet" type="text/css" href="../css/basscss.css">
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/chroma-fruity-light.css">
+  <link rel="stylesheet" type="text/css" href="../css/override.css">
+</head>
+<body class="">
+
+<div class="site-wrap">
+  <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="../index.html" class="site-title">Andrew Gallant&#39;s Blog</a>
+      <nav class="site-nav right">
+      <a href="../about/index.html">About</a>
+<a href="../projects/index.html">Projects</a>
+<a href="https://github.com/BurntSushi">GitHub</a>
+
+
+      </nav>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</header>
+
+  <div class="post p2 p-responsive wrap" role="main">
+    <div class="measure">
+      <div class="post-header mb2">
+        <h1>Writing type parametric functions in Go</h1>
+        <span class="post-meta">Apr 6, 2013</span><br>
+        
+      </div>
+
+      <article class="post-content">
+      <p>Go's only method of compile time safe polymorphism is structural subtyping, and
+this article will do nothing to change that. Instead, I'm going to present a
+package <code>ty</code> with facilities to write type parametric functions in Go that
+maintain <strong>run time</strong> type safety, while also being convenient for the
+caller to use.</p>
+<p>By <strong>run time type safety</strong>, I mean that the types of a function's arguments
+are consistent with its parametric type <em>or else the function predictably
+fails at run time</em> with a reasonable error message. Stated differently, a lack
+of run time type safety would permit arguments that are inconsistent with the
+function's parametric type at the call site, but might fail with unrelated
+and hard to debug errors (or worse, not fail at all). Thus, run time type
+safety in this context is a statement about failure modes.</p>
+<p>I will provide examples that clarify run time type safety later in the article.</p>
+<h3 id="warm-up">Warm up</h3>
+<p>Briefly, type parametric functions operate on their inputs without explicit
+knowledge of the types of their inputs. That is, they are parameterized on the
+types of their arguments.</p>
+<p>If Go had parametric polymorphism available to users, here's what a <code>Map</code>
+function <em>might</em> look like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Forall A, B ...
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">(</span><span class="nx">A</span><span class="p">)</span> <span class="nx">B</span><span class="p">,</span> <span class="nx">xs</span> <span class="p">[</span><span class="p">]</span><span class="nx">A</span><span class="p">)</span> <span class="p">[</span><span class="p">]</span><span class="nx">B</span> <span class="p">{</span>
+    <span class="nx">ys</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">B</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">xs</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">x</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">xs</span> <span class="p">{</span>
+        <span class="nx">ys</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">ys</span>
+<span class="p">}</span>
+<span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">x</span> <span class="o">*</span> <span class="nx">x</span> <span class="p">}</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span>
+<span class="o">/</span><span class="o">/</span> <span class="nx">Returns</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">]</span></code></pre></div>
+<p>Note: Go has several built in functions that use parametric polymorphism:
+<a href="http://golang.org/pkg/builtin/#append">append</a>,
+<a href="http://golang.org/pkg/builtin/#close">close</a>,
+<a href="http://golang.org/pkg/builtin/#delete">delete</a>,
+<a href="http://golang.org/pkg/builtin/#copy">copy</a>,
+<a href="http://golang.org/pkg/builtin/#cap">cap</a>
+and
+<a href="http://golang.org/pkg/builtin/#len">len</a>.</p>
+<h3 id="purpose">Purpose</h3>
+<p>The purpose of the <code>ty</code> package is to give the programmer the ability to write
+the aforementioned <code>Map</code> function such that</p>
+<ul>
+<li>It is easy for the caller to use.</li>
+<li>The <code>Map</code> function is not overly difficult to write.</li>
+<li>Type safety is maintained at run time.</li>
+</ul>
+<h3 id="motivation">Motivation</h3>
+<p>Let's skip the brouhaha and <em>assume</em> you buy into the notion that type
+parametric functions are useful in the hands of the user. The question remains:
+why is such an addition useful when Go already has powerful reflection tools?
+The answer is: working with reflection can be terribly inconvenient, and
+verifying the consistency of types can be complex and error prone.</p>
+<p>I will attempt to convince you of this with code samples using the familiar
+<code>Map</code> function.</p>
+<h3 id="an-attempt-without-using-reflection">An attempt without using reflection</h3>
+<p>In Go, the type <code>interface{}</code> corresponds to the set of types that implement
+the empty interface. Stated differently: all Go types. It is appropriate to
+think of an <code>interface{}</code> type as conceptually analogous to a <!-- raw HTML omitted -->void
+*<!-- raw HTML omitted --> in C, but there are important operational differences. For
+example, Go is memory safe, which prevents arbitrary conversion of a value from
+one type to another.  This limitation in particular makes a <code>Map</code> function
+without reflection more clumsy than how you might write and use it in C.
+Also, in Go, a value with <code>interface{}</code> type still contains information about
+the value's underlying type, which we will exploit later.</p>
+<p>Let's start with writing <code>Map</code> using <code>interface{}</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">(</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">xs</span> <span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">ys</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">xs</span><span class="p">)</span><span class="p">)</span>
+  <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">x</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">xs</span> <span class="p">{</span>
+    <span class="nx">ys</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nf">f</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">ys</span>
+<span class="p">}</span></code></pre></div>
+<p>This part isn't so bad, but the burden on the caller is outrageous:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">square</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">x</span><span class="p">.</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="o">*</span> <span class="nx">x</span><span class="p">.</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="nx">nums</span> <span class="o">:=</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">}</span>
+
+<span class="nx">gnums</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">nums</span><span class="p">)</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">x</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nums</span> <span class="p">{</span>
+  <span class="nx">gnums</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">x</span>
+<span class="p">}</span>
+<span class="nx">gsquared</span> <span class="o">:=</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">square</span><span class="p">,</span> <span class="nx">gnums</span><span class="p">)</span>
+<span class="nx">squared</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">gsquared</span><span class="p">)</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">x</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">gsquared</span> <span class="p">{</span>
+  <span class="nx">squared</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">x</span><span class="p">.</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>Since we can't do arbitrary type conversions, we need to allocate a new slice
+for the arguments, while also allocating a new slice for the return
+value of <code>interface{}</code> and type assert each element individually. (A type
+assertion in Go is a way to state knowledge about the underlying type of an
+interface value. In the above code, the type assertion will crash the program
+if it fails.) Moreover, the function <code>f</code> provided by the caller must <em>also</em> be
+generic. Anything with this much burden on the caller probably isn't worth it.</p>
+<p>With regard to run time type safety, most of it is contained inside the
+user-supplied <code>f</code> function, but error messages don't address the underlying
+cause. For example, the following code</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">a</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">a</span><span class="p">.</span><span class="p">(</span><span class="kt">string</span><span class="p">)</span><span class="p">)</span> <span class="p">}</span><span class="p">,</span>
+    <span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span></code></pre></div>
+<p>fails with a stack trace and an error message: <code>interface conversion: interface is int, not string</code>.</p>
+<h3 id="a-reflective-interlude">A reflective interlude</h3>
+<p>For those that haven't worked with reflection in Go before,
+<a href="http://blog.golang.org/2011/09/laws-of-reflection.html">The Laws of Reflection</a>
+is a great introduction to the topic. It is suitable even if you don't know
+Go.</p>
+<p>I don't consider it to be a necessary read before moving on, but it is
+important to know this (from &ldquo;The Laws of Reflection&rdquo;):</p>
+<blockquote>
+<p>Reflection in computing is the ability of a program to examine its own
+structure, particularly through types; it's a form of metaprogramming.</p>
+</blockquote>
+<p>With that, let us move on to a <code>Map</code> that uses reflection.</p>
+<h3 id="reflection-in-go-10x">Reflection in Go 1.0.x</h3>
+<p>We can make the burden a bit easier on the caller using <code>Map</code> by wielding
+the power of reflection to examine and manipulate the structure of a program.
+We wield this power by exploiting the fact that <code>interface{}</code> values still
+contain information about the underlying type of the value it contains. But
+this exploitation comes with the price of a more painful <code>Map</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">xs</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">vf</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+  <span class="nx">vxs</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">xs</span><span class="p">)</span>
+  <span class="nx">ys</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+
+  <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+    <span class="nx">ys</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">vf</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">Value</span><span class="p">{</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">}</span><span class="p">)</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nf">Interface</span><span class="p">(</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">ys</span>
+<span class="p">}</span></code></pre></div>
+<p>Here are the key differences between this <code>Map</code> and the last one:</p>
+<ul>
+<li>The type of <code>f</code> is now <code>interface{}</code> instead of <code>func(interface{}) interface{}</code>.</li>
+<li>The type of <code>xs</code> is now <code>interface{}</code> instead of <code>[]interface{}</code>.</li>
+<li>The user's <code>f</code> function is now applied using reflection instead of
+a regular Go function application.</li>
+<li>The <code>xs</code> slice is accessed using reflection instead of the regular
+Go indexing operation.</li>
+</ul>
+<p>The differentiating theme here is to move the entire world of <code>Map</code> into
+an <code>interface{}</code> type and rely on the
+<a href="http://golang.org/pkg/reflect">reflect</a>
+package to operate on the structure of those unknown values.
+In particular, we've given up some compile time type safety in exchange for
+lifting some burdens from the caller:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">square</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">x</span> <span class="o">*</span> <span class="nx">x</span>
+<span class="p">}</span>
+<span class="nx">nums</span> <span class="o">:=</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">}</span>
+
+<span class="nx">gsquared</span> <span class="o">:=</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">square</span><span class="p">,</span> <span class="nx">nums</span><span class="p">)</span>
+<span class="nx">squared</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">gsquared</span><span class="p">)</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">x</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">gsquared</span> <span class="p">{</span>
+  <span class="nx">squared</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">x</span><span class="p">.</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>Namely, the client is no longer mandated to write <code>f</code> as a generic function. It
+can use its own types without worrying about type assertions. Moreover, the
+client no longer needs to allocate a new slice for the <em>input</em> of the function.</p>
+<p>But the caller still needs to type assert each element in the returned slice.
+How can we remove such a burden?</p>
+<p>It turns out that it's impossible using reflection in Go 1.0.x.</p>
+<h3 id="reflection-in-go-tip-soon-to-be-go-11">Reflection in Go tip (soon to be Go 1.1)</h3>
+<p>The <a href="http://tip.golang.org/doc/go1.1">release notes for Go 1.1</a> detail many
+welcomed changes, but for this article, we
+<a href="http://tip.golang.org/doc/go1.1#reflect">care about the changes made to the reflect
+package</a>.
+In particular, three new critical functions were added:
+<a href="http://tip.golang.org/pkg/reflect/#ChanOf">ChanOf</a>,
+<a href="http://tip.golang.org/pkg/reflect/#MapOf">MapOf</a> and
+<a href="http://tip.golang.org/pkg/reflect/#SliceOf">SliceOf</a>.
+These functions allow the <em>creation of new types from existing types</em>.
+With Go 1.0.x, such operations were not possible (except with pointer types).</p>
+<p>This now allows us to write a <code>Map</code> function that uses the return type of <code>f</code>
+to construct a new slice type, which we can then populate and return to the
+caller.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">xs</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">vf</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+  <span class="nx">vxs</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">xs</span><span class="p">)</span>
+
+  <span class="nx">tys</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">SliceOf</span><span class="p">(</span><span class="nx">vf</span><span class="p">.</span><span class="nf">Type</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="nf">Out</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="p">)</span>
+  <span class="nx">vys</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">MakeSlice</span><span class="p">(</span><span class="nx">tys</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+
+  <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+    <span class="nx">y</span> <span class="o">:=</span> <span class="nx">vf</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">Value</span><span class="p">{</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">}</span><span class="p">)</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nx">vys</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">y</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">vys</span><span class="p">.</span><span class="nf">Interface</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>Our <code>Map</code> function has gotten a bit more annoying, but after practice with the
+<code>reflect</code> package, it's possible to see how most lines correspond to a regular
+Go operation. On the bright side, the caller's obligations have dropped to
+nearly the level that we saw with the first generic <code>Map</code> example:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">squared</span> <span class="o">:=</span> <span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">x</span> <span class="o">*</span> <span class="nx">x</span> <span class="p">}</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span></code></pre></div>
+<p>The only burden on the caller is to type assert the return value of the
+function.  Indeed, this is the best we can do in this regard: all type
+parametric functions that return a value from now on have this restriction and
+<em>only</em> this restriction unless stated otherwise.</p>
+<h3 id="run-time-type-safety">Run time type safety</h3>
+<p>The most recent iteration of the <code>Map</code> function is annoying to write, but not
+<em>quite</em> painful. Unfortunately, that's about to change. Consider what happens
+when we try to subvert the parametric type of <code>Map</code>
+(which is <code>func(func(A) B, []A) []B</code>) by running this code:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">a</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">a</span><span class="p">)</span> <span class="p">}</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span></code></pre></div>
+<p>The program fails with a stack trace and an error message:
+<code>Call using int as type string</code>.</p>
+<p>Since our program is small, it is easy to see where we went wrong. But in a
+larger program, such an error message can be confusing. Moreover, type failures
+could occur anywhere which might make them more confusing. Even worse, other
+type parametric functions (not <code>Map</code>) might not fail at all—which results
+in a total loss of type safety, even at run time.</p>
+<p>Therefore, to provide useful and consistent error messages, we must check the
+invariants in the parametric type of <code>Map</code>. Why? Because the Go type of <code>Map</code>
+is <code>func(interface{}, interface{}) interface{}</code> while the parametric type of
+<code>Map</code> is <code>func(func(A) B, []A) []B</code>. Since an <code>interface{}</code> type can
+correspond to <em>any</em> type, we need to be exhaustive in our checking:</p>
+<ol>
+<li>Map's first parameter type must be <code>func(A) B</code></li>
+<li>Map's second parameter type must be <code>[]A1</code> where <code>A == A1</code>.</li>
+<li>Map's return type must be <code>[]B1</code> where <code>B == B1</code>.</li>
+</ol>
+<p>Given those invariants, here's a <code>Map</code> function that enforces them and produces
+sane error messages. (I leave it to the reader to imagine better ones.)</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">xs</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">vf</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+  <span class="nx">vxs</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">xs</span><span class="p">)</span>
+
+  <span class="nx">ftype</span> <span class="o">:=</span> <span class="nx">vf</span><span class="p">.</span><span class="nf">Type</span><span class="p">(</span><span class="p">)</span>
+  <span class="nx">xstype</span> <span class="o">:=</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Type</span><span class="p">(</span><span class="p">)</span>
+
+  <span class="c1">// 1) Map&#39;s first parameter type must be `func(A) B`
+</span><span class="c1"></span>  <span class="k">if</span> <span class="nx">ftype</span><span class="p">.</span><span class="nf">Kind</span><span class="p">(</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Func</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Panicf</span><span class="p">(</span><span class="s">&#34;`f` should be %s but got %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Func</span><span class="p">,</span> <span class="nx">ftype</span><span class="p">.</span><span class="nf">Kind</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="nx">ftype</span><span class="p">.</span><span class="nf">NumIn</span><span class="p">(</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Panicf</span><span class="p">(</span><span class="s">&#34;`f` should have 1 parameter but it has %d parameters&#34;</span><span class="p">,</span>
+      <span class="nx">ftype</span><span class="p">.</span><span class="nf">NumIn</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="nx">ftype</span><span class="p">.</span><span class="nf">NumOut</span><span class="p">(</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Panicf</span><span class="p">(</span><span class="s">&#34;`f` should return 1 value but it returns %d values&#34;</span><span class="p">,</span>
+      <span class="nx">ftype</span><span class="p">.</span><span class="nf">NumOut</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c1">// 2) Map&#39;s second parameter type must be `[]A1` where `A == A1`.
+</span><span class="c1"></span>  <span class="k">if</span> <span class="nx">xstype</span><span class="p">.</span><span class="nf">Kind</span><span class="p">(</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Slice</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Panicf</span><span class="p">(</span><span class="s">&#34;`xs` should be %s but got %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Slice</span><span class="p">,</span> <span class="nx">xstype</span><span class="p">.</span><span class="nf">Kind</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="nx">xstype</span><span class="p">.</span><span class="nf">Elem</span><span class="p">(</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">ftype</span><span class="p">.</span><span class="nf">In</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nf">Panicf</span><span class="p">(</span><span class="s">&#34;type of `f`&#39;s parameter should be %s but xs contains %s&#34;</span><span class="p">,</span>
+      <span class="nx">ftype</span><span class="p">.</span><span class="nf">In</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="p">,</span> <span class="nx">xstype</span><span class="p">.</span><span class="nf">Elem</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c1">// 3) Map&#39;s return type must be `[]B1` where `B == B1`.
+</span><span class="c1"></span>  <span class="nx">tys</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">SliceOf</span><span class="p">(</span><span class="nx">vf</span><span class="p">.</span><span class="nf">Type</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="nf">Out</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="p">)</span>
+
+  <span class="nx">vys</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">MakeSlice</span><span class="p">(</span><span class="nx">tys</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+  <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+    <span class="nx">y</span> <span class="o">:=</span> <span class="nx">vf</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">Value</span><span class="p">{</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">}</span><span class="p">)</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nx">vys</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">y</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">vys</span><span class="p">.</span><span class="nf">Interface</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>The result is a lot of pain, but when one tries to subvert its type</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">a</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">a</span><span class="p">)</span> <span class="p">}</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span></code></pre></div>
+<p>you'll get a stack trace with a better error message:
+<code>type of f's parameter should be string but xs contains int</code>.
+The error message is better than what we've seen, but the type checking
+in <code>Map</code> has dwarfed the actual function of <code>Map</code>.</p>
+<p>Fortunately, this pain can be avoided through abstraction.</p>
+<h3 id="unification">Unification</h3>
+<p>Recall the type constraints for <code>Map</code>, which has parametric
+type <code>func(func(A) B, []A) []B</code>:</p>
+<ol>
+<li>Map's first parameter type must be <code>func(A) B</code></li>
+<li>Map's second parameter type must be <code>[]A1</code> where <code>A == A1</code>.</li>
+<li>Map's return type must be <code>[]B1</code> where <code>B == B1</code>.</li>
+</ol>
+<p>We can interpret the above constraints as a <em>unification</em> problem, which in
+this case is the problem of finding a set of valid Go types that can replace
+all instances of <code>A</code>, <code>A1</code>, <code>B</code> and <code>B1</code> in the type of <code>Map</code>. We can view
+these Go types as a set of <em>substitutions</em>.</p>
+<p>More generally, given a <em>parametric</em> type of a function and the
+<em>non-parametric</em> types of the function's arguments at run time, find a set of
+substitutions that <em>unifies</em> the parametric type with its arguments. As a
+bonus, we can use those substitutions to construct new types that <code>Map</code> may
+use to make new values.</p>
+<p>To be concrete, let's restate the constraints of <code>Map</code> in terms of a
+unification problem. (Note that this isn't really a traditional unification
+problem, since the types of the arguments are not allowed to be parametric.)</p>
+<p>Assume that all types with the <code>Go</code> prefix are real Go types like <code>int</code>,
+<code>string</code> or <code>[]byte</code>.</p>
+<ol>
+<li>Unify the type <code>func(A) B</code> with the first argument.
+The result is a substitution from <code>A</code> to <code>GoA</code> and a
+substitution from <code>B</code> to <code>GoB</code>.</li>
+<li>Unify the type <code>[]A</code> with the second argument.
+The result is a substitution from <code>A</code> to <code>GoA1</code> <strong>such that <code>GoA1 == GoA</code></strong>.</li>
+<li>Substitute <code>GoB</code> into <code>[]B</code> to get <code>[]GoB</code>.</li>
+</ol>
+<p>So that if <code>Map</code> is invoked like so</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">strlen</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">s</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">}</span>
+<span class="nx">lens</span> <span class="o">:=</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">strlen</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;abc&#34;</span><span class="p">,</span> <span class="s">&#34;ab&#34;</span><span class="p">,</span> <span class="s">&#34;a&#34;</span><span class="p">}</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span></code></pre></div>
+<p>then <code>A = string</code> and <code>B = int</code>.</p>
+<p>A generalized version of this algorithm is implemented in
+<a href="https://github.com/BurntSushi/ty/blob/master/type-check.go#L130">ty.Check</a>,
+which is too big to list here.
+The input of <code>ty.Check</code> is a pointer to the type of a parametric function and
+every argument. The output is a slice of reflection values of the arguments,
+a slice of reflection types of the return values and a type environment
+containing the substitutions.</p>
+<h3 id="writing-map-with-tycheck">Writing <code>Map</code> with <code>ty.Check</code></h3>
+<p>Here's the code:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Map has a parametric type:
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">//  func Map(f func(A) B, xs []A) []B
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">// Map returns the list corresponding to the return value of applying
+</span><span class="c1"></span><span class="c1">// `f` to each element in `xs`.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Map</span><span class="p">(</span><span class="nx">f</span><span class="p">,</span> <span class="nx">xs</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">chk</span> <span class="o">:=</span> <span class="nx">ty</span><span class="p">.</span><span class="nf">Check</span><span class="p">(</span>
+    <span class="nb">new</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">)</span> <span class="nx">ty</span><span class="p">.</span><span class="nx">B</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">)</span> <span class="p">[</span><span class="p">]</span><span class="nx">ty</span><span class="p">.</span><span class="nx">B</span><span class="p">)</span><span class="p">,</span>
+    <span class="nx">f</span><span class="p">,</span> <span class="nx">xs</span><span class="p">)</span>
+  <span class="nx">vf</span><span class="p">,</span> <span class="nx">vxs</span><span class="p">,</span> <span class="nx">tys</span> <span class="o">:=</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">,</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="p">,</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Returns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="nx">xsLen</span> <span class="o">:=</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span>
+  <span class="nx">vys</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">MakeSlice</span><span class="p">(</span><span class="nx">tys</span><span class="p">,</span> <span class="nx">xsLen</span><span class="p">,</span> <span class="nx">xsLen</span><span class="p">)</span>
+  <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">xsLen</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+    <span class="nx">vy</span> <span class="o">:=</span> <span class="nx">vf</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">Value</span><span class="p">{</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">}</span><span class="p">)</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nx">vys</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">vy</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">vys</span><span class="p">.</span><span class="nf">Interface</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>The latter half of the function is something you ought to be deeply familiar
+with by now. But the first parts of the function are new and worth inspection:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">chk</span> <span class="o">:=</span> <span class="nx">ty</span><span class="p">.</span><span class="nf">Check</span><span class="p">(</span>
+  <span class="nb">new</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">)</span> <span class="nx">ty</span><span class="p">.</span><span class="nx">B</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">)</span> <span class="p">[</span><span class="p">]</span><span class="nx">ty</span><span class="p">.</span><span class="nx">B</span><span class="p">)</span><span class="p">,</span>
+  <span class="nx">f</span><span class="p">,</span> <span class="nx">xs</span><span class="p">)</span></code></pre></div>
+<p>The first argument to <code>ty.Check</code> is a <code>nil</code> function pointer with a parametric
+type. Even though it doesn't point to a valid function, the <code>Check</code> function
+can still query the type information.</p>
+<p>But wait. How am I writing a parametric type in Go? The trick is to define
+a type that can never be equal to any other type unless explicitly declared to
+be:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">TypeVariable</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">noImitation</span> <span class="kd">struct</span><span class="p">{</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">A</span> <span class="nx">TypeVariable</span>
+<span class="kd">type</span> <span class="nx">B</span> <span class="nx">TypeVariable</span></code></pre></div>
+<p>And by convention, the <code>ty.Check</code> function interprets those types (and only
+those types) to be parametric. You may define your own type variables too:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">K</span> <span class="nx">ty</span><span class="p">.</span><span class="nx">TypeVariable</span>
+<span class="kd">type</span> <span class="nx">V</span> <span class="nx">ty</span><span class="p">.</span><span class="nx">TypeVariable</span></code></pre></div>
+<p><code>ty.Check</code> has the following useful invariant:
+If <code>Check</code> returns, then the types of the arguments are consistent with
+the parametric type of the function, <em>and</em> the parametric return types of the
+function were made into valid Go types that are not parametric. Otherwise,
+there is a bug in <code>ty.Check</code>.</p>
+<p>Let's test that invariant. Using the above definition of <code>Map</code>, if one tries to
+run this code</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">Map</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">a</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span> <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nx">a</span><span class="p">)</span> <span class="p">}</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">}</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span></code></pre></div>
+<p>then you'll get a stack trace and a descriptive error message</p>
+<div class="highlight"><pre class="chroma"><code class="language-text" data-lang="text">Error type checking
+        func(func(ty.A) ty.B, []ty.A) []ty.B
+with argument types
+        (func(string) int, []int)
+Type error when unifying type &#39;[]ty.A&#39; and &#39;[]int&#39;: Type variable A expected
+type &#39;string&#39; but got &#39;int&#39;.</code></pre></div>
+<h3 id="can-we-write-functions-other-than-map">Can we write functions other than <code>Map</code>?</h3>
+<p>Sure. Let's take a look at how to shuffle <em>any</em> slice in place.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Shuffle has a parametric type:
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">//  func Shuffle(xs []A)
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">// Shuffle shuffles `xs` in place using a default random number
+</span><span class="c1"></span><span class="c1">// generator.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Shuffle</span><span class="p">(</span><span class="nx">xs</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">chk</span> <span class="o">:=</span> <span class="nx">ty</span><span class="p">.</span><span class="nf">Check</span><span class="p">(</span>
+    <span class="nb">new</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">)</span><span class="p">)</span><span class="p">,</span>
+    <span class="nx">xs</span><span class="p">)</span>
+  <span class="nx">vxs</span> <span class="o">:=</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="c1">// Used for swapping in the loop.
+</span><span class="c1"></span>  <span class="c1">// Equivalent to `var tmp A`.
+</span><span class="c1"></span>  <span class="nx">tmp</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Type</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="nf">Elem</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">.</span><span class="nf">Elem</span><span class="p">(</span><span class="p">)</span>
+
+  <span class="c1">// Implements the Fisher-Yates shuffle: http://goo.gl/Hb9vg
+</span><span class="c1"></span>  <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nx">vxs</span><span class="p">.</span><span class="nf">Len</span><span class="p">(</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span><span class="o">--</span> <span class="p">{</span>
+    <span class="nx">j</span> <span class="o">:=</span> <span class="nx">rand</span><span class="p">.</span><span class="nf">Intn</span><span class="p">(</span><span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1">// Swapping is a bit painful.
+</span><span class="c1"></span>    <span class="nx">tmp</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">)</span>
+    <span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">j</span><span class="p">)</span><span class="p">)</span>
+    <span class="nx">vxs</span><span class="p">.</span><span class="nf">Index</span><span class="p">(</span><span class="nx">j</span><span class="p">)</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">tmp</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></div>
+<p>Or an implementation of set union, where a set is a map from any type that
+can be a key to a bool:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Union has a parametric type:
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">//  func Union(a map[A]bool, b map[A]bool) map[A]bool
+</span><span class="c1"></span><span class="c1">//
+</span><span class="c1"></span><span class="c1">// Union returns the union of two sets, where a set is represented as a
+</span><span class="c1"></span><span class="c1">// `map[A]bool`. The sets `a` and `b` are not modified.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Union</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{</span><span class="p">}</span> <span class="p">{</span>
+  <span class="nx">chk</span> <span class="o">:=</span> <span class="nx">ty</span><span class="p">.</span><span class="nf">Check</span><span class="p">(</span>
+    <span class="nb">new</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">]</span><span class="kt">bool</span><span class="p">,</span> <span class="kd">map</span><span class="p">[</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span> <span class="kd">map</span><span class="p">[</span><span class="nx">ty</span><span class="p">.</span><span class="nx">A</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span><span class="p">,</span>
+    <span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+  <span class="nx">va</span><span class="p">,</span> <span class="nx">vb</span><span class="p">,</span> <span class="nx">tc</span> <span class="o">:=</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">,</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="p">,</span> <span class="nx">chk</span><span class="p">.</span><span class="nx">Returns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="nx">vtrue</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="nx">vc</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">MakeMap</span><span class="p">(</span><span class="nx">tc</span><span class="p">)</span>
+  <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">vkey</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">va</span><span class="p">.</span><span class="nf">MapKeys</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">vc</span><span class="p">.</span><span class="nf">SetMapIndex</span><span class="p">(</span><span class="nx">vkey</span><span class="p">,</span> <span class="nx">vtrue</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">vkey</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">vb</span><span class="p">.</span><span class="nf">MapKeys</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">vc</span><span class="p">.</span><span class="nf">SetMapIndex</span><span class="p">(</span><span class="nx">vkey</span><span class="p">,</span> <span class="nx">vtrue</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">vc</span><span class="p">.</span><span class="nf">Interface</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span></code></pre></div>
+<p>Which can be used like so:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">A</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">{</span>
+  <span class="s">&#34;springsteen&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="s">&#34;j. geils&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="s">&#34;seger&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nx">B</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">{</span>
+  <span class="s">&#34;petty&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="s">&#34;seger&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nx">AandB</span> <span class="o">:=</span> <span class="nf">Union</span><span class="p">(</span><span class="nx">A</span><span class="p">,</span> <span class="nx">B</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span></code></pre></div>
+<h3 id="sorts-parallel-map-memoization-channels-without-a-fixed-buffer">Sorts, parallel map, memoization, channels without a fixed buffer&hellip;</h3>
+<p>&hellip; and more can be
+[found in the documentation of the <code>ty/fun</code> package]
+(<a href="http://godoc.org/github.com/BurntSushi/ty/fun)">http://godoc.org/github.com/BurntSushi/ty/fun)</a>.</p>
+<p>Here's a quick example of memoizing a recursive function that I think is
+pretty cool:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Memoizing a recursive function like `fibonacci`:
+</span><span class="c1"></span><span class="c1">// Write it like normal.
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">fib</span> <span class="kd">func</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="kt">int64</span>
+<span class="nx">fib</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int64</span><span class="p">)</span> <span class="kt">int64</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">n</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">0</span>
+  <span class="k">case</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">1</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nf">fib</span><span class="p">(</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="nf">fib</span><span class="p">(</span><span class="nx">n</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// Wrap it with a memoizing function.
+</span><span class="c1"></span><span class="c1">// The type assert here is the *only* burden on the caller.
+</span><span class="c1"></span><span class="nx">fib</span> <span class="p">=</span> <span class="nx">fun</span><span class="p">.</span><span class="nf">Memo</span><span class="p">(</span><span class="nx">fib</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="kt">int64</span><span class="p">)</span> <span class="kt">int64</span><span class="p">)</span>
+
+<span class="c1">// Will keep your CPU busy for a long time
+</span><span class="c1"></span><span class="c1">// without memoization.
+</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nf">fib</span><span class="p">(</span><span class="mi">80</span><span class="p">)</span><span class="p">)</span></code></pre></div>
+<p>And here's the
+[definition of <code>Memo</code>]
+(<a href="https://github.com/BurntSushi/ty/blob/master/fun/func.go#L16)">https://github.com/BurntSushi/ty/blob/master/fun/func.go#L16)</a>.</p>
+<h3 id="back-to-reality">Back to reality</h3>
+<p>There's no such thing as a free lunch. The price one must pay to write
+type parametric functions in Go is rather large:</p>
+<ol>
+<li>Type parametric functions are <em><strong>SLOW</strong></em>.</li>
+<li>Absolutely <em>zero</em> compile time type safety.</li>
+<li>Writing type parametric functions is annoying.</li>
+<li>Unidiomatic Go.</li>
+</ol>
+<p>I think that items <code>2</code>, <code>3</code> and <code>4</code> are fairly self-explanatory if you've been
+reading along. But I have been coy about <code>1</code>: the performance of type
+parametric functions.</p>
+<p>As a general rule, they are slow because reflection in Go is slow. In most
+cases, slow means <em>at least an order of magnitude</em> slower than an equivalent
+implementation that is not type parametric (i.e., hard coded for a particular
+Go type). But, there is hope yet.  Let's take a look at some benchmarks
+comparing non-parametric (<strong>builtin</strong>) functions with their type parametric
+(<strong>reflect</strong>) counterparts.</p>
+<div class="highlight"><pre class="chroma"><code class="language-text" data-lang="text">benchmark                    builtin ns/op  reflect ns/op        delta
+BenchmarkFibonacciMemo-12             5895          43896     +644.63%
+BenchmarkFibonacciNoMemo-12        6827001        6829859       +0.04%
+BenchmarkParMapSquare-12            408320         572307      +40.16%
+BenchmarkParMapPrime-12            5289594        5510075       +4.17%
+BenchmarkMapSquare-12                 8499         457844    +5287.03%
+BenchmarkMapPrime-12              34265372       32220176       -5.97%
+BenchmarkShuffle-12                 240036        1018408     +324.27%
+BenchmarkSample-12                  262565         271122       +3.26%
+BenchmarkSort-12                    137293        7716737    +5520.63%
+BenchmarkQuickSort-12                 6325        6051563   +95576.89%</code></pre></div>
+<p>Benchmarks were run on an Intel i7 3930K (12 threads), 32GB of memory,
+Linux 3.8.4 and Go tip on commit <code>c879a45c3389</code> with <code>GOMAXPROCS=12</code>.
+Code for all benchmarks can be found in
+<a href="https://github.com/BurntSushi/ty/tree/master/fun">*test.go</a> files.</p>
+<p>There is a lot of data in these benchmarks, so I won't talk about everything.
+However, it is interesting to see that there are several data points where
+type parametric functions don't perform measurably worse. For example, let's
+look at our old friend <code>Map</code>. The type parametric version gets blown away in
+the <code>MapSquare</code> benchmark, which just squares a slice of integers. But the
+<code>MapPrime</code> benchmark has them performing similarly.</p>
+<p>The key is what the benchmark <code>MapPrime</code> is doing: performing a very naive
+algorithm to find the prime factorization of every element in a slice of large
+integers. The operation itself ends up dwarfing the overhead of using
+reflection. From a performance perspective, this means <code>Map</code> is only useful
+when either performance doesn't matter or when you know the operation being
+performed isn't trivial.</p>
+<p>But what about <code>ParMap</code>? <code>ParMap</code> is a function that spawns <code>N</code> goroutines and
+computes <code>f</code> over the slice concurrently. Even when not using reflection this
+approach bears a lot of overhead because of synchronization. Indeed, the
+<code>ParMapSquare</code> benchmark shows that the type parametric version is only
+slightly slower than the built in version. And of course, it is comparable in
+the <code>ParMapPrime</code> benchmark as well. This suggests that, from a performance
+perspective, the decision procedure for using a builtin <code>ParMap</code> is the same as
+the decision procedure for using a reflective <code>ParMap</code>.</p>
+<p>If you have any questions about the benchmarks, I'd be happy to answer them in
+the comments.</p>
+<h3 id="whats-next">What's next?</h3>
+<p>Tumbling down the rabbit hole with
+[parametric data types]
+(<a href="http://godoc.org/github.com/BurntSushi/ty/data)">http://godoc.org/github.com/BurntSushi/ty/data)</a>.</p>
+<h3 id="show-me-the-code-dammit">Show me the code, dammit.</h3>
+<ul>
+<li>Working examples of all code in this article can be found
+<a href="https://gist.github.com/BurntSushi/5298812">in a gist</a>.
+(Although you will need Go tip to run most of them.)</li>
+<li><a href="https://github.com/BurntSushi/ty">Repository</a> for the
+<code>ty</code> package, which includes <code>ty/fun</code> and <code>ty/data</code>.</li>
+<li><a href="http://godoc.org/github.com/BurntSushi/ty">Documentation</a>
+with many more details and examples than were provided in this article.</li>
+</ul>
+      </article>
+
+      
+
+    </div>
+  </div>
+</div>
+    <footer class="footer">
+      <div class="p2 wrap">
+        <div class="measure mt1 center">
+      <nav class="social-icons icons">
+<a class="fa fa-rss rss" href="../index.xml"></a>
+
+</nav>
+
+          <small>
+            All content is dual licensed under the UNLICENSE and MIT licenses.<br>
+            Powered by <a href="http://gohugo.io/" target="_blank">Hugo</a> &amp; <a href="https://github.com/azmelanar/hugo-theme-pixyll" target="_blank">Pixyll</a>
+          </small>
+        </div>
+      </div>
+    </footer>
+</body>
+</html>
+

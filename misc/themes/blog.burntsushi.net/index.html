@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="generator" content="Hugo 0.62.0" />
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Andrew Gallant&#39;s Blog - Andrew Gallant&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="I blog mostly about my own programming projects.">
+  
+  <meta name="author" content="">
+  <meta name="keywords" content="">
+  <link rel="canonical" href="index.html">
+
+  
+  <link rel="stylesheet" type="text/css" href="css/basscss.css">
+  <link rel="stylesheet" type="text/css" href="css/main.css">
+  <link rel="stylesheet" type="text/css" href="css/chroma-fruity-light.css">
+  <link rel="stylesheet" type="text/css" href="css/override.css">
+</head>
+<body class="">
+
+<div class="site-wrap">
+    <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="index.html" class="site-title">Andrew Gallant&#39;s Blog</a>
+      <nav class="site-nav right">
+      <a href="about/index.html">About</a>
+<a href="projects/index.html">Projects</a>
+<a href="https://github.com/BurntSushi">GitHub</a>
+
+
+      </nav>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</header>
+
+    <div class="post p2 p-responsive wrap" role="main">
+        <div class="measure">
+            <div class="home">
+                <div class="posts">
+                    
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="foss/index.html">
+    My FOSS Story 
+  </a></h2>
+  <p class="post-meta left">Jan 19, 2020</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>I'd like to break from my normal tradition of focusing almost strictly on
+technical content and share a bit of my own personal relationship with Free
+and Open Source Software (FOSS). While everyone is different, my hope is that
+sharing my perspective will help build understanding, empathy and trust.</p>
+<p>This is not meant to be a direct response to the behavior of any other
+maintainer. Nor should it be read as a prescription on the ideal behavior of
+someone in FOSS. This is meant more as a personal reflection with the hope that
+others will use it to reflect on their own relationship with FOSS. There is no
+one true path to being a good FOSS maintainer. We all have our own coping
+mechanisms.</p>
+<p>This is also emphatically not meant as a call for help. This is about
+understanding. This is not about a plea to change the economics of FOSS. This
+is not about brainstorming ways to improve my mental health. This is not about
+bringing on more maintainers. It's about sharing my story and attempting to
+increase empathy among the denizens of FOSS.</p>
+<p><strong>Target audience</strong>: Anyone involved in FOSS.</p></p>
+  <p><a href="foss/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="csv/index.html">
+    Rust and CSV parsing 
+  </a></h2>
+  <p class="post-meta left">May 22, 2017</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>With <code>csv 1.0</code> just released, the time is ripe for a tutorial on how to read
+and write CSV data in Rust. This tutorial is targeted toward beginning Rust
+programmers, and is therefore full of examples and spends some time on basic
+concepts. Experienced Rust programmers may find parts of this useful, but would
+probably be happier with a quick skim.</p>
+<p>For an introduction to Rust, please see the
+<a href="https://doc.rust-lang.org/book/second-edition/">official book</a>.
+If you haven't written any Rust code yet but have written code in another
+language, then this tutorial might be accessible to you without needing to read
+the book first.</p>
+<p>The CSV library is
+<a href="https://github.com/BurntSushi/rust-csv">available on Github</a>
+and has
+<a href="https://docs.rs/csv">comprehensive API documentation</a>.</p>
+<p>Finally, a version of this blog post is included as a
+<a href="https://docs.rs/csv/1.0.0/csv/tutorial/index.html">tutorial</a>
+in the API documentation, and is more likely to be updated as time passes.</p>
+<p><strong>Target audience</strong>: Beginning Rust programmers.</p></p>
+  <p><a href="csv/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="ripgrep/index.html">
+    ripgrep is faster than {grep, ag, git grep, ucg, pt, sift} 
+  </a></h2>
+  <p class="post-meta left">Sep 23, 2016</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>In this article I will introduce a new command line search tool,
+<a href="https://github.com/BurntSushi/ripgrep"><code>ripgrep</code></a>,
+that combines the usability of
+<a href="https://github.com/ggreer/the_silver_searcher">The Silver Searcher</a>
+(an <a href="http://beyondgrep.com/"><code>ack</code></a> clone) with the
+raw performance of GNU grep. <code>ripgrep</code> is fast, cross platform (with binaries
+available for Linux, Mac and Windows) and written in
+<a href="https://www.rust-lang.org">Rust</a>.</p>
+<p><code>ripgrep</code> is available on
+<a href="https://github.com/BurntSushi/ripgrep">Github</a>.</p>
+<p>We will attempt to do the impossible: a fair benchmark comparison between
+several popular code search tools. Specifically, we will dive into a series of
+25 benchmarks that substantiate the following claims:</p>
+<ul>
+<li>For both searching single files <em>and</em> huge directories of files, no other
+tool obviously stands above <code>ripgrep</code> in either performance or correctness.</li>
+<li><code>ripgrep</code> is the only tool with proper Unicode support that doesn't make
+you pay dearly for it.</li>
+<li>Tools that search many files at once are generally <em>slower</em> if they use
+memory maps, not faster.</li>
+</ul>
+<p>As someone who has worked on text search in Rust in their free time for the
+last 2.5 years, and as the author of both <code>ripgrep</code> and
+<a href="https://github.com/rust-lang-nursery/regex">the underlying regular expression engine</a>,
+I will use this opportunity to provide detailed insights into the performance
+of each code search tool. No benchmark will go unscrutinized!</p>
+<p><strong>Target audience</strong>: Some familiarity with Unicode, programming and some
+experience with working on the command line.</p>
+<p><strong>NOTE</strong>: I'm hearing reports from some people that <code>rg</code> isn't as fast as I've
+claimed on their data. I'd love to help explain what's going on, but to do
+that, I'll need to be able to reproduce your results. If you
+<a href="https://github.com/BurntSushi/ripgrep/issues">file an issue</a>
+with something I can reproduce, I'd be happy to try and explain it.</p></p>
+  <p><a href="ripgrep/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="transducers/index.html">
+    Index 1,600,000,000 Keys with Automata and Rust 
+  </a></h2>
+  <p class="post-meta left">Nov 11, 2015</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>It turns out that finite state machines are useful for things other than
+expressing computation. Finite state machines can also be used to compactly
+represent ordered sets or maps of strings that can be searched very quickly.</p>
+<p>In this article, I will teach you about finite state machines as a <em>data
+structure</em> for representing ordered sets and maps. This includes introducing
+an implementation written in Rust called the
+<a href="https://github.com/BurntSushi/fst"><code>fst</code> crate</a>.
+It comes with
+<a href="https://burntsushi.net/rustdoc/fst/">complete API documentation</a>.
+I will also show you how to build them using a simple command line tool.
+Finally, I will discuss a few experiments culminating in indexing over
+1,600,000,000 URLs (134 GB) from the
+<a href="http://blog.commoncrawl.org/2015/08/july-2015-crawl-archive-available/">July 2015 Common Crawl Archive</a>.</p>
+<p>The technique presented in this article is also how
+<a href="http://blog.mikemccandless.com/2010/12/using-finite-state-transducers-in.html">Lucene represents a part of its inverted
+index</a>.</p>
+<p>Along the way, we will talk about memory maps, automaton intersection with
+regular expressions, fuzzy searching with Levenshtein distance and streaming
+set operations.</p>
+<p><strong>Target audience</strong>: Some familiarity with programming and fundamental data
+structures. No experience with automata theory or Rust is required.</p></p>
+  <p><a href="transducers/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="rust-error-handling.html">
+    Error Handling in Rust 
+  </a></h2>
+  <p class="post-meta left">May 14, 2015</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>Like most programming languages, Rust encourages the programmer to handle
+errors in a particular way. Generally speaking, error handling is divided into
+two broad categories: exceptions and return values. Rust opts for return
+values.</p>
+<p>In this article, I intend to provide a comprehensive treatment of how to deal
+with errors in Rust. More than that, I will attempt to introduce error handling
+one piece at a time so that you'll come away with a solid working knowledge of
+how everything fits together.</p>
+<p>When done naively, error handling in Rust can be verbose and annoying. This
+article will explore those stumbling blocks and demonstrate how to use the
+standard library to make error handling concise and ergonomic.</p>
+<p><strong>Target audience</strong>: Those new to Rust that don't know its error handling
+idioms yet. Some familiarity with Rust is helpful. (This article makes heavy
+use of some standard traits and some very light use of closures and macros.)</p>
+<p><strong>Update (2018/04/14)</strong>: Examples were converted to <code>?</code>, and some text was
+added to give historical context on the change.</p>
+<p><strong>Update (2020/01/03)</strong>: A recommendation to use
+<a href="https://crates.io/crates/failure"><code>failure</code></a> was removed and replaced with
+a recommendation to use either <code>Box&lt;Error + Send + Sync&gt;</code> or
+<a href="https://crates.io/crates/anyhow"><code>anyhow</code></a>.</p></p>
+  <p><a href="rust-error-handling.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="rust-regex-syntax-extensions.html">
+    Syntax extensions and regular expressions for Rust 
+  </a></h2>
+  <p class="post-meta left">Apr 21, 2014</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p><strong>WARNING:</strong> <!-- raw HTML omitted -->2018-04-12<!-- raw HTML omitted -->: The code snippets for this post are no longer
+available. This is just as well anyway, since they all depended on an unstable
+internal compiler interface, which hasn't existed for years.</p>
+<p>A few weeks ago, I set out to add regular expressions to the
+<a href="http://www.rust-lang.org/">Rust</a>
+distribution with an implementation and feature set heavily inspired by
+<a href="http://swtch.com/~rsc/regexp/">Russ Cox's RE2</a>.
+It was just recently added to the
+<a href="http://static.rust-lang.org/doc/master/regex/index.html">Rust distribution</a>.</p>
+<p>This regex crate includes a syntax extension that compiles a regular expression
+to native Rust code <em>when a Rust program is compiled</em>. This can be thought of
+as &ldquo;ahead of time&rdquo; compilation or
+something similar to <a href="http://en.wikipedia.org/wiki/Compile_time_function_execution">compile time function
+execution</a>.
+These special natively compiled regexes have the <em>same exact</em> API as regular
+expressions compiled at runtime.</p>
+<p>In this article, I will outline my implementation strategy&mdash;including code
+samples on how to write a Rust syntax extension&mdash;and describe how I was able
+to achieve an identical API between regexes compiled at compile time and
+regexes compiled at runtime.</p></p>
+  <p><a href="rust-regex-syntax-extensions.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="type-parametric-functions-golang/index.html">
+    Writing type parametric functions in Go 
+  </a></h2>
+  <p class="post-meta left">Apr 6, 2013</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>Go's only method of compile time safe polymorphism is structural subtyping, and
+this article will do nothing to change that. Instead, I'm going to present a
+package <code>ty</code> with facilities to write type parametric functions in Go that
+maintain <strong>run time</strong> type safety, while also being convenient for the
+caller to use.</p></p>
+  <p><a href="type-parametric-functions-golang/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="nfl-live-statistics-with-python/index.html">
+    Introducing NFLGame: Programmatic access to live NFL game statistics 
+  </a></h2>
+  <p class="post-meta left">Aug 30, 2012</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>As a programmer and a fantasy football addict, I am embarassed by the means
+through which we must expend ourselves to get data in a machine readable form.
+This lack of open source software cripples the community with sub-standard
+tools, and most importantly, detracts from some really cool and fun things that
+could be done with easily available statistics. Many tools are either out-dated
+or broken, or if they work, they are closed source and often cost money.</p>
+<p>Yesterday I started work on a new library package that I hope will start to
+improve this sorry state of affairs.</p></p>
+  <p><a href="nfl-live-statistics-with-python/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="lenovo-thinkpad-t430-archlinux/index.html">
+    Running Archlinux on the Lenovo Thinkpad T430 
+  </a></h2>
+  <p class="post-meta left">Jul 1, 2012</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>In sum, Archlinux is working beautifully. What follows is a rough run down of
+my notes while installing, configuring, tuning and using Archlinux on the
+Lenovo Thinkpad T430.</p></p>
+  <p><a href="lenovo-thinkpad-t430-archlinux/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="golang-daemonize-bsd/index.html">
+    Daemonizing Go Programs (with a BSD-style rc.d example) 
+  </a></h2>
+  <p class="post-meta left">Apr 27, 2012</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>Go, by its very nature, is multithreaded. This makes a traditional approach of
+daemonizing Go programs by forking a bit difficult.</p>
+<p>To get around this, you could try something as simple as backgrounding your Go
+program and instructing it to <a href="http://en.wikipedia.org/wiki/Nohup">ignore the HUP
+signal</a>:</p></p>
+  <p><a href="golang-daemonize-bsd/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="thread-safety-x-go-binding/index.html">
+    Adding Thread Safety to the X Go Binding 
+  </a></h2>
+  <p class="post-meta left">Apr 21, 2012</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>The <a href="http://code.google.com/p/x-go-binding/">X Go Binding (XGB)</a> is a low level
+library that provides an API to interact with running X servers. One can only
+communicate with an X server by sending data over a network connection;
+protocol requests, replies and errors need to be perfectly constructed down to
+the last byte. Xlib did precisely this, and then some. As a result, Xlib became
+huge and difficult to maintain.</p>
+<p>In recent years, the <a href="http://xcb.freedesktop.org/">XCB project</a> made things a
+bit more civilized by generating C code from <a href="http://cgit.freedesktop.org/xcb/proto/tree/src">XML
+files</a> describing the X client
+protocol using Python. While <a href="http://cgit.freedesktop.org/xcb/libxcb/tree/src/c_client.py">the Python to generate said
+code</a> is no walk
+in the park, it is typically preferred to the alternative: keeping the X core
+protocol up to date along with any number of extensions that exist as well.
+(There are other benefits to XCB, like easier asynchronicity, but that is
+beyond the scope of this post.)</p>
+<p>XGB proceeds in a similar vain; <a href="http://code.google.com/r/jamslam-x-go-binding/source/browse/xgb/go_client.py">Python is used to generate Go
+code</a>
+that provides an API to interact with the X protocol. Unlike its sister project
+XCB, it is not thread safe. In particular, if X requests are made in parallel,
+the best case scenario is a jumbled request or reply and the worst case
+scenario is an X server crash. Parallel requests can be particularly useful
+when images are being sent to the X server to be painted on the screen; other
+useful work could be done in the interim.</p></p>
+  <p><a href="thread-safety-x-go-binding/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                            
+                                <div class="post">
+  <h2 class="post-title"><a class="post-link" href="dynamic-workspaces/index.html">
+    Dynamic desktop workspaces 
+  </a></h2>
+  <p class="post-meta left">Apr 21, 2012</p>
+  <div class="clearfix"></div>
+  <p class="post-summary"><p>Do you have dynamic workspaces in your window manager?</p>
+<p>You might be wondering: what in the world are dynamic workspaces?
+A dynamic workspace model allows one to add, remove or rename workspaces on the
+fly.
+Comparatively, in a typical window manager (or desktop environment)
+configuration, you tell the window manager to have <strong>x</strong> number of workspaces.
+When you start your window manager, you'll have <strong>x</strong> workspaces, and you can
+typically cycle between them using some variation of &ldquo;next workspace&rdquo; or
+&ldquo;previous workspace&rdquo; commands.
+The disadvantage with this model is that it's difficult to have a large number
+of workspaces&mdash;else you might forget which window is on each workspace.</p></p>
+  <p><a href="dynamic-workspaces/index.html">Read more...</a></p>
+</div>
+
+                            
+                        
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <footer class="footer">
+      <div class="p2 wrap">
+        <div class="measure mt1 center">
+      <nav class="social-icons icons">
+<a class="fa fa-rss rss" href="index.xml"></a>
+
+</nav>
+
+          <small>
+            All content is dual licensed under the UNLICENSE and MIT licenses.<br>
+            Powered by <a href="http://gohugo.io/" target="_blank">Hugo</a> &amp; <a href="https://github.com/azmelanar/hugo-theme-pixyll" target="_blank">Pixyll</a>
+          </small>
+        </div>
+      </div>
+    </footer>
+</body>
+</html>
+

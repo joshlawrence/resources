@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Adding Thread Safety to the X Go Binding - Andrew Gallant&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="I blog mostly about my own programming projects.">
+  
+  <meta name="author" content="">
+  <meta name="keywords" content="">
+  <link rel="canonical" href="index.html">
+
+  
+  <link rel="stylesheet" type="text/css" href="../css/basscss.css">
+  <link rel="stylesheet" type="text/css" href="../css/main.css">
+  <link rel="stylesheet" type="text/css" href="../css/chroma-fruity-light.css">
+  <link rel="stylesheet" type="text/css" href="../css/override.css">
+</head>
+<body class="">
+
+<div class="site-wrap">
+  <header class="site-header px2 px-responsive">
+  <div class="mt2 wrap">
+    <div class="measure">
+      <a href="../index.html" class="site-title">Andrew Gallant&#39;s Blog</a>
+      <nav class="site-nav right">
+      <a href="../about/index.html">About</a>
+<a href="../projects/index.html">Projects</a>
+<a href="https://github.com/BurntSushi">GitHub</a>
+
+
+      </nav>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</header>
+
+  <div class="post p2 p-responsive wrap" role="main">
+    <div class="measure">
+      <div class="post-header mb2">
+        <h1>Adding Thread Safety to the X Go Binding</h1>
+        <span class="post-meta">Apr 21, 2012</span><br>
+        
+      </div>
+
+      <article class="post-content">
+      <p>The <a href="http://code.google.com/p/x-go-binding/">X Go Binding (XGB)</a> is a low level
+library that provides an API to interact with running X servers. One can only
+communicate with an X server by sending data over a network connection;
+protocol requests, replies and errors need to be perfectly constructed down to
+the last byte. Xlib did precisely this, and then some. As a result, Xlib became
+huge and difficult to maintain.</p>
+<p>In recent years, the <a href="http://xcb.freedesktop.org/">XCB project</a> made things a
+bit more civilized by generating C code from <a href="http://cgit.freedesktop.org/xcb/proto/tree/src">XML
+files</a> describing the X client
+protocol using Python. While <a href="http://cgit.freedesktop.org/xcb/libxcb/tree/src/c_client.py">the Python to generate said
+code</a> is no walk
+in the park, it is typically preferred to the alternative: keeping the X core
+protocol up to date along with any number of extensions that exist as well.
+(There are other benefits to XCB, like easier asynchronicity, but that is
+beyond the scope of this post.)</p>
+<p>XGB proceeds in a similar vain; <a href="http://code.google.com/r/jamslam-x-go-binding/source/browse/xgb/go_client.py">Python is used to generate Go
+code</a>
+that provides an API to interact with the X protocol. Unlike its sister project
+XCB, it is not thread safe. In particular, if X requests are made in parallel,
+the best case scenario is a jumbled request or reply and the worst case
+scenario is an X server crash. Parallel requests can be particularly useful
+when images are being sent to the X server to be painted on the screen; other
+useful work could be done in the interim.</p>
+<p>For example, in <a href="https://github.com/BurntSushi/wingo">Wingo</a> (a window manager
+written purely in Go; still in development), it would be great to do something
+like this when first managing a client:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">manage</span><span class="p">(</span><span class="nx">windowId</span> <span class="nx">xgb</span><span class="p">.</span><span class="nx">Id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// load window icon images
+</span><span class="c1"></span>        <span class="c1">// and turn them into X pixmaps
+</span><span class="c1"></span>    <span class="p">}</span><span class="p">(</span><span class="p">)</span>
+
+    <span class="c1">// the rest of the code to manage a client
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>Assuming <code>GOMAXPROCS</code> has been set appropriately, this would allow Wingo to show
+and map a window without regard to the time required to prep images associated
+with each client.
+(i.e., icons, images containing the title of the window, alt-tab cylcing icons,
+etc.)
+Such parallelism is particularly useful when the user has configured Wingo to
+use large images&mdash;which noticeably results in lag when first managing a
+window.
+Without thread safety in XGB, this sort of parallelism is impossible.
+Since drawing images to X windows is a common task, parallelism can be
+particularly useful.
+Thus, thread safety in XGB&mdash;being the only barrier to this sort of
+parallelism&mdash;is certainly desirable.</p>
+<p>This is a perfect opportunity for <a href="http://golang.org">Go</a> to shine.
+But before we get into the juicy tidbits, I must discuss a few low-level and
+nasty details of X.</p>
+<p>As said previously, we communicate with X over a network connection.
+As a client, we send requests and we read replies, events and errors.
+In particular, replies, events and errors all come to us on the same wire&mdash;XGB
+must deduce which kind of thing its reading by looking at the value of the
+first byte of each 32 byte block.
+(Sometimes replies can be longer than 32 bytes, but we can safely skip over
+that detail for this post.)</p>
+<p>On a conceptual level, events are inherently separate from replies and errors.
+In particular, when a request expects a response (not all requests do!), it
+will either get a reply <em>or</em> an error from X.
+Thus, when issuing a request that expects a response, we are implicitly
+creating a contract with the X server that we'll receive something
+corresponding to that request.
+We will revisit this <strong>response contract</strong> later; remember it!</p>
+<p>(In this post, I'll be focusing on the thread safety of receiving <em>responses</em>.
+Some amount of work also had to be done to ensure thread safe writing and
+reading of events&mdash;among other things.
+But the thread safety of receiving responses is much more interesting.)</p>
+<p>You may be wondering: how do requests and responses match up?
+Both X and XGB keep track of how many requests have been sent.
+Each request we send, therefore, has a unique serial identifier associated with
+it.
+This identifier is also known as a cookie&mdash;and it's included in every single
+reply and error sent to us from the X server.
+Therefore, whenever we send a request that expects a response, we need some way
+to store the cookie so we know when we've received the response (which will
+either be a reply or an error).
+Naively, this could be a simple map from cookie identifiers to responses. Here
+are the types:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Cookies</span> <span class="kd">map</span><span class="p">[</span><span class="kt">uint16</span><span class="p">]</span><span class="o">*</span><span class="nx">Response</span>
+<span class="kd">type</span> <span class="nx">Response</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">reply</span> <span class="p">[</span><span class="p">]</span><span class="kt">byte</span>
+    <span class="nx">err</span> <span class="kt">error</span>
+<span class="p">}</span>
+</code></pre></div><p>The types say that we have a map of cookie identifiers (unsigned 16-bit
+integers) to responses&mdash;where responses are either a reply (some slice of
+bytes) or an error. We could then populate this map by reading from our X
+connection with something like (excuse some pseudo code to keep it brief):</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">cookies</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="nx">Cookies</span><span class="p">)</span>
+
+<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">io</span><span class="p">.</span><span class="nf">ReadFull</span><span class="p">(</span><span class="nx">xConn</span><span class="p">,</span> <span class="nx">responseBytes</span><span class="p">)</span>
+        <span class="nx">cookieId</span> <span class="o">:=</span> <span class="nf">getCookieFromBytes</span><span class="p">(</span><span class="nx">responseBytes</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">cookies</span><span class="p">[</span><span class="nx">cookieId</span><span class="p">]</span><span class="p">;</span> <span class="nx">ok</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">responseBytes</span> <span class="nx">is</span> <span class="nx">reply</span> <span class="p">{</span>
+                <span class="nx">cookies</span><span class="p">[</span><span class="nx">cookieId</span><span class="p">]</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">Response</span><span class="p">{</span><span class="nx">reply</span><span class="p">:</span> <span class="nx">responseBytes</span><span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">responseBytes</span> <span class="nx">is</span> <span class="kt">error</span> <span class="p">{</span>
+                <span class="nx">cookies</span><span class="p">[</span><span class="nx">cookieId</span><span class="p">]</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">Response</span><span class="p">{</span><span class="nx">err</span><span class="p">:</span> <span class="nf">errorFromBytes</span><span class="p">(</span><span class="nx">responseBytes</span><span class="p">)</span><span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;unreachable&#34;</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;Got unexpected response&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span><span class="p">(</span><span class="p">)</span>
+</code></pre></div><p>But now what? If we're waiting for a particular reply (i.e., with some
+particular cookie identifier), we could try something like:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">WaitForReply</span><span class="p">(</span><span class="nx">cookieId</span> <span class="kt">uint16</span><span class="p">)</span> <span class="o">*</span><span class="nx">Response</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">response</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">cookies</span><span class="p">[</span><span class="nx">cookieId</span><span class="p">]</span><span class="p">;</span> <span class="nx">ok</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">response</span>
+        <span class="p">}</span>
+        <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="err">?</span><span class="err">?</span><span class="err">?</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>But how much time should we wait between checks?
+If it's too short, we'll end up spinning and if it's too long we'll be blocking
+when we should be handling a response.</p>
+<p>The underlying problem here is that replies may not come in the order that we
+need them.
+We can't wait on a single channel for responses to come in, because we
+may be waiting for more than one reply and we can't be sure of the order
+they'll arrive in.</p>
+<p>Another way to think about this problem is in terms of the <strong>response
+contract</strong> I mentioned earlier.
+The response contract is quite specific: whenever a request is sent that
+expects a response (we know which requests expect a response ahead of time), it
+<em>must</em> get either a reply or an error from the X server.</p>
+<p>This is a perfect situation for goroutines and channels.
+Instead of thinking about the cookie as some identifier yielding a response, we
+can think about a cookie as an identifier with a &ldquo;promise&rdquo; it will return
+either a reply or an error in the future.
+That &ldquo;promise&rdquo; can be represented as a pair of channels: one channel gets a
+reply and the other gets an error.
+Let's revisit our types:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Cookies</span> <span class="kd">map</span><span class="p">[</span><span class="kt">uint16</span><span class="p">]</span><span class="o">*</span><span class="nx">Cookie</span>
+<span class="kd">type</span> <span class="nx">Cookie</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">replyChan</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="nx">errChan</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>So that <code>replyChan</code> and <code>errChan</code> are the pieces that will fulfill the cookie's
+promise (they are buffered so they don't block the X read loop).
+The promise is fullfilled in the code that reads from the X connection.
+Instead of creating a response that has either a reply or an error, we can use
+the cookie's channels to send either a reply or an error.
+Only two lines need changing:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">cookies</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="nx">Cookies</span><span class="p">)</span>
+
+<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">io</span><span class="p">.</span><span class="nf">ReadFull</span><span class="p">(</span><span class="nx">xConn</span><span class="p">,</span> <span class="nx">responseBytes</span><span class="p">)</span>
+        <span class="nx">cookieId</span> <span class="o">:=</span> <span class="nf">getCookieFromBytes</span><span class="p">(</span><span class="nx">responseBytes</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nx">cookie</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">cookies</span><span class="p">[</span><span class="nx">cookieId</span><span class="p">]</span><span class="p">;</span> <span class="nx">ok</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">responseBytes</span> <span class="nx">is</span> <span class="nx">reply</span> <span class="p">{</span>
+<span class="o">--</span><span class="p">&gt;</span>             <span class="nx">cookie</span><span class="p">.</span><span class="nx">replyChan</span> <span class="o">&lt;-</span> <span class="nx">responseBytes</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">responseBytes</span> <span class="nx">is</span> <span class="kt">error</span> <span class="p">{</span>
+<span class="o">--</span><span class="p">&gt;</span>             <span class="nx">cookie</span><span class="p">.</span><span class="nx">errChan</span> <span class="o">&lt;-</span> <span class="nf">errorFromBytes</span><span class="p">(</span><span class="nx">responseBytes</span><span class="p">)</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;unreachable&#34;</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;Got unexpected response&#34;</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span><span class="p">(</span><span class="p">)</span>
+</code></pre></div><p>Our WaitForReply code also becomes much better, and will always do just the
+right amount of blocking:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">WaitForReply</span><span class="p">(</span><span class="nx">cookie</span> <span class="o">*</span><span class="nx">Cookie</span><span class="p">)</span> <span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">select</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nx">reply</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">cookie</span><span class="p">.</span><span class="nx">replyChan</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nx">reply</span><span class="p">,</span> <span class="kc">nil</span>
+        <span class="k">case</span> <span class="nx">err</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">cookie</span><span class="p">.</span><span class="nx">errChan</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;unreachable&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>So that we now have thread safe&mdash;and parallel&mdash;responses.</p>
+<p>You can find my work in a clone of XGB called
+<a href="http://code.google.com/r/jamslam-x-go-binding">jamslam-x-go-binding</a>.
+In addition to thead safety, several bugs have been fixed (most notably with
+using ChangeProperty on 32 bit values) and support for the Xinerama extension
+has been added. Support for other extensions is on the roadmap.</p>
+<p>Any comments or criticisms on my approach are greatly appreciated.</p>
+      </article>
+
+      
+
+    </div>
+  </div>
+</div>
+    <footer class="footer">
+      <div class="p2 wrap">
+        <div class="measure mt1 center">
+      <nav class="social-icons icons">
+<a class="fa fa-rss rss" href="../index.xml"></a>
+
+</nav>
+
+          <small>
+            All content is dual licensed under the UNLICENSE and MIT licenses.<br>
+            Powered by <a href="http://gohugo.io/" target="_blank">Hugo</a> &amp; <a href="https://github.com/azmelanar/hugo-theme-pixyll" target="_blank">Pixyll</a>
+          </small>
+        </div>
+      </div>
+    </footer>
+</body>
+</html>
+

@@ -5,3 +5,4 @@ textutil -convert html yourfile.txt
 textutil -font 'something' -fontsize 14 -convert yourfile.txt
 
 cupsfilter file.html > file.pdf
+
