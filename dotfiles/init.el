@@ -29,11 +29,23 @@ There are two things you can do about this warning:
 ;; No need to out 'ensure' everywhere, since we don't use anything else to install packages.
 (setq use-package-always-ensure t)
 
+(require 'evil)
+(evil-mode 1)
+
+(require 'neotree)
+(setq neo-theme 'nerd)
+(global-set-key [f8] 'neotree-toggle)
+
+(ranger-override-dired-mode 1)
+(setq ranger-cleanup-on-disable t)
+(setq ranger-show-hidden t)
+(setq ranger-dont-show-binary t)
+
 ;(add-to-list 'load-path "~/.emacs.d/local/")
-(setq custom-theme-directory (concat user-emacs-directory "themes"))
+;(setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
+;(add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Smoother and nicer scrolling
 (setq scroll-margin 10
@@ -53,7 +65,7 @@ There are two things you can do about this warning:
 (setq make-backup-files nil)
 
 ;; Warn only when opening files bigger than 100MB
-(setq large-file-warning-threshold 100000000)
+;(setq large-file-warning-threshold 100000000)
 
 (setq
  inhibit-startup-message t         ; Don't show the startup message...
@@ -103,9 +115,12 @@ There are two things you can do about this warning:
 ;(set-face-attribute 'mode-line nil :background "SlateGray1")
 ;(set-face-attribute 'mode-line-inactive nil :background "grey93")
 
+(use-package doom-themes)
+(load-theme 'doom-one t)
+
 ;; (set-default-font "Menlo 10")
 ;; (set-default-font "Fira Code 12")
-(set-default-font "IBM Plex Mono 12")
+(set-default-font "IBM Plex Mono 16")
 
 ;; Hide toolbar and scroll bar
 (tool-bar-mode -1)
@@ -115,10 +130,9 @@ There are two things you can do about this warning:
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-safe-themes
+ '(package-selected-packages
    (quote
-    ("9b59e147dbbde5e638ea1cde5ec0a358d5f269d27bd2b893a0947c4a867e14c1" default)))
- '(package-selected-packages (quote (use-package))))
+    (ranger all-the-icons neotree doom-themes evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
