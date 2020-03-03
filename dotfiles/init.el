@@ -32,9 +32,9 @@ There are two things you can do about this warning:
 (require 'evil)
 (evil-mode 1)
 
-(require 'neotree)
-(setq neo-theme 'nerd)
-(global-set-key [f8] 'neotree-toggle)
+;(require 'neotree)
+;(setq neo-theme 'nerd)
+;(global-set-key [f8] 'neotree-toggle)
 
 (ranger-override-dired-mode 1)
 (setq ranger-cleanup-on-disable t)
@@ -45,7 +45,7 @@ There are two things you can do about this warning:
 ;(setq custom-theme-directory (concat user-emacs-directory "themes"))
 
 ;; defaults
-;(add-to-list 'default-frame-alist '(fullscreen . maximized))
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Smoother and nicer scrolling
 (setq scroll-margin 10
@@ -58,7 +58,7 @@ There are two things you can do about this warning:
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
 
 ;; Use ESC as universal get me out of here command
-(define-key key-translation-map (kbd "ESC") (kbd "C-g"))
+;(define-key key-translation-map (kbd "ESC") (kbd "C-g"))
 
 ;; Don't bother with auto save and backups.
 (setq auto-save-default nil)
@@ -101,6 +101,7 @@ There are two things you can do about this warning:
 (line-number-mode 1)
 (column-number-mode 1)
 
+;(add-hook 'text-mode-hook 'org-mode)
 (add-hook 'text-mode-hook 'auto-fill-mode)
 (setq-default fill-column 80)
 

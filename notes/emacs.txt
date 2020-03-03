@@ -1,6 +1,10 @@
-A quick guide to emacs shortcuts.
+-*- mode: org; -*-
+
+Emacs Setup and Notes
 
 https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
+
+https://orgmode.org/worg/orgcard.html
 
 * Basics
 
@@ -77,6 +81,9 @@ on auto-fill-mode by default. It should be turned on manually when needed.
 
 M-x package-install RET (type package name) RET
 
+- evil
+- neotree
 - doom-themes
-- neotree (remember to M-x all-the-icons-install-fonts)
-- markdown-mode
+- all-the-icons
+- all-the-icons-install-fonts
+- ranger
