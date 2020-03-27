@@ -1,6 +1,15 @@
+# nanorc for icarus
+# nano version 3.2
+
 set autoindent
-set breaklonglines
-set fill 72
-set tabstospaces
+set fill 80
 set mouse
+set smarthome
+set smooth
+set softwrap
+set tabsize 4
+set tabstospaces
 set unix
+set wordbounds
+set constantshow
+include "/usr/share/nano/*.nanorc"
