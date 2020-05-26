@@ -33,31 +33,32 @@ export EDITOR=/usr/local/bin/vim
 export VISUAL="$EDITOR"
 
 # aliases
-# quoting is HARD
-alias afk='pmset displaysleepnow'
-alias cleanup="find . -type f -name '.DS_Store' -print -delete"
 alias gam="$HOME/bin/gam/gam"
-alias ls='ls -1G'
-alias tb='nc termbin.com 9999'
-alias getip='curl http://icanhazip.com'
+alias ls="ls -1G"
+alias tb="nc termbin.com 9999"
+alias getip="curl http://icanhazip.com"
+alias projects="cd ~/projects"
 
-# source ~/.bash_aliases if it exists
-#if [ -f ~/.bash_aliases ]; then
-#  source ~/.bash_aliases
+# os-specific
+if [[ $OSTYPE == darwin* ]]; then
+  alias afk="pmset displaysleepnow"
+  alias cleanup="find . -type f -name '.DS_Store' -print -delete"
+  timestamp () {
+    date +"%F %r" | tr -d "\n" | pbcopy
+  }
+  pman () {
+    man -t "$1" | open -fa /Applications/Preview.app
+  }
+  # iterm2 bash completion
+  test -e "$HOME/.iterm2_shell_integration.bash" && source "$HOME/.iterm2_shell_integration.bash"
+  [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+  # google cloud sdk
+  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc'
+  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.bash.inc'
+fi
+
+#if [[ $OSTYPE == linux-gnu* ]]; then
 #fi
-
-# functions
-timestamp () {
-  date +"%F %r" | tr -d "\n" | pbcopy
-}
-
-dtree () {
-  tree -h -C -L 1 "$1"
-}
-
-pman () {
-  man -t "$1" | open -fa /Applications/Preview.app
-}
 
 reload () {
   unalias -a
@@ -66,16 +67,13 @@ reload () {
 
 genpass () {
   pwgen -N "$1" -cn -1 12
+  #python3 -c "import secrets; print(secrets.token_urlsafe(16))"
 }
 
 fup () {
   #ffsend upload --downloads 1 --archive --copy "$1"
   ffsend upload --downloads 1 --copy "$1"
 }
-
-# completion
-test -e "$HOME/.iterm2_shell_integration.bash" && source "$HOME/.iterm2_shell_integration.bash"
-[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 
 # source ~/.bashrc if it exists
 #if [ -f ~/.bashrc ]; then
