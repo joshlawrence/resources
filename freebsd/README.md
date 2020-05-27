@@ -1,3 +1,47 @@
-dotfiles taken from here:
+FREEBSD 12.1 INSTALL NOTES
+--------------------------
+scratch install notes for a fresh freebsd install.
 
-https://www.c0ffee.net/blog/freebsd-on-a-laptop/
+handbook:
+    https://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/
+
+follow the defaults for the install, choose UFS, enable powerd, moused (ntpd?)
+
+on boot:
+    freebsd-update fetch
+    freebsd-update install
+
+bootstrap the pkg utility:
+    pkg
+    pkg update -f
+
+some packages for graphics:
+    pkg install drm-kmod
+    sysrc kld_list="/boot/modules/i915kms.ko"
+    reboot
+
+basic packages to get by:
+    pkg install nano bash tmux irssi lynx wget curl vim sudo
+
+change your shell to bash:
+    chsh -s /usr/local/bin/bash
+
+xorg
+    pkg install xorg
+    pw groupmod video -m yourusername
+    pkg install xfce (be sure to review the output of pkg info -D xfce4-session)
+    add dbus_enable="YES" to /etc/rc.conf
+    _possibly_ add moused_enable="YES" to /etc/rc.conf
+    echo ". /usr/local/etc/xdg/xfce4/xinitrc" > ~/.xinitrc
+
+shut the system down:
+    shutdown -p now
+
+misc resources
+--------------
+dotfiles taken from here:
+    https://www.c0ffee.net/blog/freebsd-on-a-laptop/
+
+more links:
+    https://genneko.github.io/playing-with-bsd/hardware/freebsd-on-thinkpad-t480/ (xfce stuff here)
+    https://www.vultr.com/docs/category/bsd/
