@@ -33,6 +33,11 @@ xorg
     add dbus_enable="YES" to /etc/rc.conf
     _possibly_ add moused_enable="YES" to /etc/rc.conf
     echo ". /usr/local/etc/xdg/xfce4/xinitrc" > ~/.xinitrc
+    see below...
+
+more xfce power notes
+    https://forums.freebsd.org/threads/xfce-shutdown-reboot-options-disabled.75357/
+
 
 shut the system down:
     shutdown -p now
