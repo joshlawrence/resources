@@ -67,6 +67,15 @@ done
 MY_TMPFILE="$(mktemp "${TMPDIR:-/tmp/}$(basename "$0").XXXXXXXXXX")"
 trap 'rm -f "$MY_TMPFILE"' EXIT
 
+TMPROOT=/tmp;
+TMPDIR=$(mktemp -d $TMPROOT/somedir.XXXXXX);
+TMPFILE=$(mktemp $TMPROOT/somefile.XXXXXX);
+trap "rm -rf $TMPDIR $TMPFILE; exit" INT TERM EXIT; some treatment using $TMPDIR and $TMPFILE; exit 0
+
+tempfoo=`basename $0`
+TMPFILE=`mktemp /tmp/${tempfoo}.XXXXXX` || exit 1
+echo "program output" >> $TMPFILE
+
 ## finding a script's absolute path:
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
