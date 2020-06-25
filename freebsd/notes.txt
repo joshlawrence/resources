@@ -15,6 +15,12 @@ bootstrap the pkg utility:
     pkg
     pkg update -f
 
+move to the latest pkg repo:
+    copy /etc/pkg/FreeBSD.conf to /usr/local/etc/pkg/repos/FreeBSD.conf
+    change quarterly to latest
+    pkg update -f
+    pkg upgrade
+
 some packages for graphics:
     pkg install drm-kmod
     sysrc kld_list="/boot/modules/i915kms.ko"
@@ -23,7 +29,7 @@ some packages for graphics:
 basic packages to get by:
     pkg install nano bash tmux irssi lynx wget curl vim sudo
 
-change your shell to bash:
+change your shell to bash (or not?):
     chsh -s /usr/local/bin/bash
 
 xorg
@@ -37,7 +43,6 @@ xorg
 
 more xfce power notes
     https://forums.freebsd.org/threads/xfce-shutdown-reboot-options-disabled.75357/
-
 
 shut the system down:
     shutdown -p now

@@ -1,43 +1,17 @@
-#!/bin/sh
+#!/usr/bin/env bash
+#
+# script to get battery status in freebsd for tmux
+# taken and adapted from here:
+# https://github.com/richo/battery/blob/master/bin/battery
 
-HEART_FULL=♥
-HEART_EMPTY=♡
-[ -z "$NUM_HEARTS" ] &&
-    NUM_HEARTS=5
-
-cutinate()
-{
-    perc=$1
-    inc=$(( 100 / $NUM_HEARTS))
-
-
-    for i in `seq $NUM_HEARTS`; do
-        if [ $perc -lt 100 ]; then
-            echo $HEART_EMPTY
-        else
-            echo $HEART_FULL
-        fi
-        perc=$(( $perc + $inc ))
-    done
-}
-
-linux_get_bat ()
-{
-    echo $(( $BAT_TOTAL / $BAT_COUNT ))
-}
-
-
-openbsd_get_bat ()
-{
-    bf=$(sysctl -n hw.sensors.acpibat0.amphour0 |  cut -d ' ' -f 1)
-    bn=$(sysctl -n hw.sensors.acpibat0.amphour3 |  cut -d ' ' -f 1)
-    echo "(($bn * 100) / $bf)" | bc -l | awk -F '.' '{ print $1 }';
-}
-
-freebsd_get_bat ()
-{
-    sysctl -n hw.acpi.battery.life
-}
+# output of sysctl -d hw.acpi.battery:
+# hw.acpi.battery: battery status and info
+# hw.acpi.battery.info_expire: time in seconds until info is refreshed
+# hw.acpi.battery.units: number of batteries
+# hw.acpi.battery.state: current status flags
+# hw.acpi.battery.rate: present rate in mW
+# hw.acpi.battery.time: remaining time in minutes
+# hw.acpi.battery.life: percent capacity remaining
 
 battery_status()
 {
