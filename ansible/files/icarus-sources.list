@@ -1,0 +1,19 @@
+deb http://mirrors.linode.com/debian buster main contrib non-free
+#deb-src http://mirrors.linode.com/debian buster main
+
+deb http://mirrors.linode.com/debian-security buster/updates main contrib non-free
+#deb-src http://mirrors.linode.com/debian-security buster/updates main
+
+# buster-updates, previously known as 'volatile'
+deb http://mirrors.linode.com/debian buster-updates main contrib non-free
+#deb-src http://mirrors.linode.com/debian buster-updates main
+
+# This system was installed using small removable media
+# (e.g. netinst, live or single CD). The matching "deb cdrom"
+# entries were disabled at the end of the installation process.
+# For information about how to configure apt package sources,
+# see the sources.list(5) manual.
+
+deb http://packages.icinga.com/debian icinga-buster main
+
+deb http://mirrors.linode.com/debian buster-backports main

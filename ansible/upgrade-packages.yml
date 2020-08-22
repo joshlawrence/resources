@@ -1,0 +1,21 @@
+---
+# runs the equivalent of apt-get update && apt-get dist-upgrade
+
+- hosts: all
+  become: true
+
+  tasks:
+    - ping:
+    - name: update package cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+
+    - name: update system packages
+      apt:
+        upgrade: dist
+        force_apt_get: yes
+    
+    - name: remove useless packages from the cache
+      apt:
+        autoclean: yes
