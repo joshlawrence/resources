@@ -1,17 +1,19 @@
-Leslie Hookup Notes
--------------------
+26-1 Hookup Notes
+-----------------
 
-How to wire a leslie socket from an A-100 to a 147 without using the 26-1 kit (running off the preamp):
+http://www.captain-foldback.com/Leslie_sub/tips5.htm
 
-PIN 6: RED - signal hot
-PIN 1: BLACK - signal ground
-PIN 3: GREY - AC common (terminals 3 and 4) / CONNECT TO LESLIE SWITCH FAT TERMINAL
-PIN 4: BLUE - AC switched (terminal 7)
-PIN 2: YELLOW - JUMPER TO GREY (PIN 3)
-PIN 5: BROWN - CONNECT TO LESLIE SWITCH SMALL TERMINAL
+26-1 5-pin harness:
 
-Notes:
+1 - black signal common
+2 - grey AC
+3 - green console speaker
+4 - blue AC
+5 - red console amp
 
-http://www.zeni.net/pipermail/hammond/2008-February/055754.html
+- remove green wire from 1st terminal on the speaker amp in the a100 (terminal 1 is now empty)
+- connect wire you just removed to 3 (green console speaker)
+- connect 5 (red console amp) to terminal 1
+- connect 1 (black signal common) to terminal 2 of amp
 
-Check the wiring between the switch and the Leslie 6-pin connector.  Pins 2 and 5 go straight the relay coil.  Pins 3 and 4 supply the AC to the Leslie amp.  Pins 2 and 3 should be jumpered together and pins 4 and 5 connect to the switch and complete the circuit to send the AC supply to the relay coil via pins 2 and 5.  When the switch is in it's closed position, it is in the chorale position and sends voltage to the relay.  When you switch to tremolo, the switch opens and the realy returns to it's normal off state which is the fast motors to operate.
+this works like a charm.
