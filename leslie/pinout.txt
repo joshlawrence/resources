@@ -1,6 +1,8 @@
 26-1 Hookup Notes
 -----------------
 
+# OPTION 1 (DEFAULT)
+
 http://www.captain-foldback.com/Leslie_sub/tips5.htm
 
 26-1 5-pin harness:
@@ -16,4 +18,22 @@ http://www.captain-foldback.com/Leslie_sub/tips5.htm
 - connect 5 (red console amp) to terminal 1
 - connect 1 (black signal common) to terminal 2 of amp
 
+load resistor is set to middle option.
+
 this works like a charm.
+
+# OPTION 2
+
+http://www.dairiki.org/HammondWiki/Leslie147Hookup
+
+another option is to take audio signal from the AO-28 preamp.
+
+IMPORTANT NOTE: leslie load resistor MUST be open to do this
+
+- same as above
+- same as above
+- DID YOU SET THE LOAD RESISTOR TO OPEN?
+- connect 5 (red console amp) to RD *OR* BK G terminal on preamp
+- connect 1 (black signal common) to BN GND on preamp
+
+results: bass response is reduced and seems smoother.
