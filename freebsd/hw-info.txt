@@ -2,3 +2,4 @@ dmesg > dmesg.out.txt
 pciconf -lv > pciconf.out.txt
 devinfo -v > devinfo.out.txt
 acpidump -dt > acpidump.out.txt
+
