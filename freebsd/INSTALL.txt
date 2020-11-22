@@ -1,11 +1,9 @@
-FREEBSD 12.1 INSTALL NOTES
+FREEBSD 12.x INSTALL NOTES
 --------------------------
 scratch install notes for a fresh freebsd install.
 
-handbook:
-    https://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/
-
-follow the defaults for the install, choose UFS, enable powerd, moused (ntpd?)
+follow the defaults for the install, choose UFS (ZFS?), enable powerd, moused, ntpd.
+add yourself to wheel and operator groups.
 
 disable the damn bell:
     add hw.syscons.bell=0 to /etc/sysctl.conf
@@ -30,12 +28,12 @@ enable pf:
     https://www.freebsd.org/doc/handbook/firewalls-pf.html
 
 some packages for graphics:
-    pkg install drm-kmod
+    pkg install drm-kmod # this is broken in 12.2
     sysrc kld_list="/boot/modules/i915kms.ko"
     reboot
 
 basic packages to get by:
-    pkg install nano bash bash-completion tmux irssi lynx wget curl vim sudo
+    pkg install nano bash tmux irssi lynx wget curl vim sudo rsync
 
 change your shell to bash (or not?):
     chsh -s /usr/local/bin/bash
@@ -57,22 +55,3 @@ more xfce power notes
 
 shut the system down:
     shutdown -p now
-
-misc resources
---------------
-dotfiles taken from here:
-    https://www.c0ffee.net/blog/freebsd-on-a-laptop/
-
-good initial setup notes:
-    https://unixsheikh.com/tutorials/how-to-setup-freebsd-with-a-riced-desktop-part-1-basic-setup.html
-
-dwm:
-    https://artnoi.wordpress.com/2019/08/06/freebsd-x230-dwm/
-
-i3:
-    https://unixsheikh.com/tutorials/how-to-setup-freebsd-with-a-riced-desktop-part-3-i3.html
-
-more links:
-    https://genneko.github.io/playing-with-bsd/hardware/freebsd-on-thinkpad-t480/ (xfce stuff here)
-    https://www.vultr.com/docs/category/bsd/
-    https://www.freebsd.org/doc/handbook/sound-setup.html
