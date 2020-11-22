@@ -27,6 +27,11 @@ move to the latest pkg repo:
 enable pf:
     https://www.freebsd.org/doc/handbook/firewalls-pf.html
 
+add these lines to the end of the default class in /etc/login.conf:
+    :charset=UTF-8:\
+    :lang=en_US.UTF-8:
+    then run cap_mkdb /etc/login.conf
+
 some packages for graphics:
     pkg install drm-kmod # this is broken in 12.2
     sysrc kld_list="/boot/modules/i915kms.ko"
@@ -47,11 +52,6 @@ if xfce:
     pkg install xfce (be sure to review the output of pkg info -D xfce4-session)
     add dbus_enable="YES" to /etc/rc.conf
     echo ". /usr/local/etc/xdg/xfce4/xinitrc" > ~/.xinitrc
-if dwm/i3:
-    see below...
-
-more xfce power notes
-    https://forums.freebsd.org/threads/xfce-shutdown-reboot-options-disabled.75357/
 
 shut the system down:
     shutdown -p now
