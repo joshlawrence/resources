@@ -1,4 +1,4 @@
-FREEBSD 12.x INSTALL NOTES
+FREEBSD 12.2 INSTALL NOTES
 --------------------------
 scratch install notes for a fresh freebsd install.
 
@@ -6,7 +6,7 @@ follow the defaults for the install, choose UFS (ZFS?), enable powerd, moused, n
 add yourself to wheel and operator groups.
 
 disable the damn bell:
-    add hw.syscons.bell=0 to /etc/sysctl.conf
+    # add hw.syscons.bell=0 to /etc/sysctl.conf
     NOTE: this didn't work for me, try this:
     add allscreens_kbdflags="-b quiet.off" to /etc/rc.conf
 
@@ -38,7 +38,7 @@ some packages for graphics:
     reboot
 
 basic packages to get by:
-    pkg install nano bash tmux irssi lynx wget curl vim sudo rsync
+    pkg install nano bash tmux irssi lynx wget curl vim-console sudo rsync git
 
 change your shell to bash (or not?):
     chsh -s /usr/local/bin/bash
