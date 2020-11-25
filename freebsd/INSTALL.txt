@@ -33,15 +33,20 @@ add these lines to the end of the default class in /etc/login.conf:
     then run cap_mkdb /etc/login.conf
 
 some packages for graphics:
-    pkg install drm-kmod # this is broken in 12.2
+    # pkg install drm-kmod is broken in 12.2
+    # install drm-fbsd12 and drm-kmod from ports
     sysrc kld_list="/boot/modules/i915kms.ko"
     reboot
 
 basic packages to get by:
     pkg install nano bash tmux irssi lynx wget curl vim-console sudo rsync git
 
-change your shell to bash (or not?):
+change your shell to bash:
     chsh -s /usr/local/bin/bash
+
+mount usb devices as a normal user:
+    https://www.freebsd.org/doc/handbook/usb-disks.html
+    see 17.4.2. Automounting Removable Media
 
 xorg:
     pkg install xorg
