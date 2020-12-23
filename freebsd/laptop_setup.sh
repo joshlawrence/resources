@@ -45,6 +45,7 @@ setup_wifi() {
 
 setup_misc() {
     sysrc kld_list+="acpi_ibm"
+    # or add acpi_ibm_load="YES" to /boot/loader.conf
     sysrc kld_list+="mmc"
     sysrc kld_list+="mmcsd"
     sysrc kld_list+="sdhci"
