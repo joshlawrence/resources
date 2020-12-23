@@ -2,6 +2,8 @@
 # laptop_setup.sh
 # an attempt at scripting my freebsd setup, inspiration taken from:
 # https://github.com/nicholasbernstein/install-fbsd-desktop/blob/main/installx.sh
+# ...and here:
+# https://gist.github.com/JeremyMorgan/cb5d6fc5ffd14c9fde5b38646ff67496
 
 update_os() {
     freebsd-update fetch
@@ -59,7 +61,7 @@ setup_misc() {
 # }
 
 # setup_xorg() {
-#     pkg install -y xorg xfce firefox
+#     pkg install -y xorg xfce firefox vscode
 #     sysrc dbus_enable=YES
 # }
 
