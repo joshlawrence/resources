@@ -10,11 +10,25 @@ update_os() {
 
 setup_pkg() {
     pkg bootstrap
+    mkdir -p /usr/local/etc/pkg/repos
+    cat <<EOF >/usr/local/etc/pkg/repos/FreeBSD.conf
+FreeBSD: {
+    url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest",
+    mirror_type: "srv",
+    signature_type: "fingerprints",
+    fingerprints: "/usr/share/keys/pkg",
+    enabled: yes
+}
+EOF
     pkg update -f
     pkg upgrade
 }
 
 enable_pf() {
+    cat <<EOF >/etc/pf.conf
+block in all
+pass out all keep state
+EOF
     touch /var/log/pf.log
     sysrc pf_enable=YES
     sysrc pf_flags=""
@@ -59,18 +73,6 @@ setup_misc() {
 grep -q "kern.vty" /boot/loader.conf || echo "kern.vty=vt" >> /boot/loader.conf
 
 update_os
-
-# setup the package manager
-mkdir -p /usr/local/etc/pkg/repos
-cat <<EOF >/usr/local/etc/pkg/repos/FreeBSD.conf
-FreeBSD: {
-    url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest",
-    mirror_type: "srv",
-    signature_type: "fingerprints",
-    fingerprints: "/usr/share/keys/pkg",
-    enabled: yes
-}
-EOF
 setup_pkg
 
 # install packages
@@ -87,13 +89,7 @@ pkg install -y nano \
     git \
     python3
 
-# setup system firewall
-cat <<EOF >/etc/pf.conf
-block in all
-pass out all keep state
-EOF
 enable_pf
-
 setup_pwr_mgmt
 setup_wifi
 setup_misc
