@@ -47,6 +47,7 @@ setup_misc() {
 # setup_drm_kmod() {
 #     # drm-kmod pkg is currently broken
 #     # install drm-fbsd12 and drm-kmod from ports
+#     # sysrc kld_list+="i915kms"
 # }
 
 # setup_xorg() {
@@ -60,6 +61,7 @@ grep -q "kern.vty" /boot/loader.conf || echo "kern.vty=vt" >> /boot/loader.conf
 update_os
 
 # setup the package manager
+mkdir -p /usr/local/etc/pkg/repos
 cat <<EOF >/usr/local/etc/pkg/repos/FreeBSD.conf
 FreeBSD: {
     url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest",
@@ -145,5 +147,7 @@ root:\
 
 EOF
 cap_mkdb /etc/login.conf
+
+echo "NOTE: add your user to the wheel, operator, and video groups!"
 
 # EOF
