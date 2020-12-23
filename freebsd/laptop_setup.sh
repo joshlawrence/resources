@@ -11,15 +11,8 @@ update_os() {
 setup_pkg() {
     pkg bootstrap
     mkdir -p /usr/local/etc/pkg/repos
-    cat <<EOF >/usr/local/etc/pkg/repos/FreeBSD.conf
-FreeBSD: {
-    url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest",
-    mirror_type: "srv",
-    signature_type: "fingerprints",
-    fingerprints: "/usr/share/keys/pkg",
-    enabled: yes
-}
-EOF
+    cp /etc/pkg/FreeBSD.conf /usr/local/etc/pkg/repos/
+    sed -i '' 's/quarterly/latest/' /usr/local/etc/pkg/repos/FreeBSD.conf
     pkg update -f
     pkg upgrade
 }
@@ -143,7 +136,5 @@ root:\
 
 EOF
 cap_mkdb /etc/login.conf
-
-echo "NOTE: add your user to the wheel, operator, and video groups!"
 
 # EOF
