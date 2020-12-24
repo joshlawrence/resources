@@ -36,7 +36,6 @@ EOF
 setup_pwr_mgmt() {
     sysrc powerd_enable=YES
     sysrc powerd_flags="-a hiadaptive -b adaptive"
-    sysrc kld_list+="coretemp"
 }
 
 setup_wifi() {
@@ -45,13 +44,41 @@ setup_wifi() {
     create_args_wlan0="country US regdomain FCC"
 }
 
-setup_misc() {
-    sysrc kld_list+="acpi_ibm"
-    # or add acpi_ibm_load="YES" to /boot/loader.conf
-    sysrc kld_list+="mmc"
-    sysrc kld_list+="mmcsd"
-    sysrc kld_list+="sdhci"
+setup_usb() {
+    cat <<EOF >/etc/devfs.rules
+[localrules=5]
+add path 'da*' mode 0660 group operator
+EOF
+    sysrc devfs_system_ruleset="localrules"
+    echo "vfs.usermount=1" >> /etc/sysctl.conf
+    sysrc autofs_enable=YES
+}
+
+disable_bell() {
     sysrc allscreens_kbdflags="-b quiet.off"
+}
+
+setup_loader() {
+    cat <<EOF >/boot/loader.conf
+kern.vty=vt
+acpi_ibm_load="YES"
+coretemp_load="YES"
+EOF
+}
+
+install_pkgs() {
+    pkg install -y nano \
+        bash bash-completion \
+        tmux \
+        irssi \
+        lynx \
+        wget \
+        curl \
+        vim-console \
+        sudo \
+        rsync \
+        git \
+        python3
 }
 
 # setup_drm_kmod() {
@@ -66,29 +93,15 @@ setup_misc() {
 # }
 
 # main
-grep -q "kern.vty" /boot/loader.conf || echo "kern.vty=vt" >> /boot/loader.conf
-
 update_os
 setup_pkg
-
-# install packages
-pkg install -y nano \
-    bash bash-completion \
-    tmux \
-    irssi \
-    lynx \
-    wget \
-    curl \
-    vim-console \
-    sudo \
-    rsync \
-    git \
-    python3
-
 enable_pf
 setup_pwr_mgmt
-setup_wifi
-setup_misc
+#setup_wifi
+setup_usb
+disable_bell
+setup_loader
+install_pkgs
 
 # setup default login class
 cat <<EOF >/etc/login.conf
