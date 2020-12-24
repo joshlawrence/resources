@@ -22,3 +22,6 @@ more links:
 - https://www.freebsd.org/doc/handbook/sound-setup.html
 - https://old.reddit.com/r/freebsd/
 - https://download.freebsd.org/ftp/doc/
+
+older, but may be useful:
+- https://cooltrainer.org/a-freebsd-desktop-howto/

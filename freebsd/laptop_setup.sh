@@ -58,6 +58,7 @@ EOF
 setup_misc() {
     sysrc allscreens_kbdflags="-b quiet.off"
     echo "kern.evdev.rcpt_mask=6" >> /etc/sysctl.conf
+    sysrc ntpd_enable=YES
 }
 
 setup_loader() {
