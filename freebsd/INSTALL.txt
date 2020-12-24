@@ -1,13 +1,11 @@
-FREEBSD 12.2 INSTALL NOTES
---------------------------
+FREEBSD 12 INSTALL NOTES
+------------------------
 scratch install notes for a fresh freebsd install.
 
 follow the defaults for the install, choose UFS (ZFS?), enable powerd, moused, ntpd.
 add yourself to wheel and operator groups.
 
 disable the damn bell:
-    # add hw.syscons.bell=0 to /etc/sysctl.conf
-    NOTE: this didn't work for me, try this:
     add allscreens_kbdflags="-b quiet.off" to /etc/rc.conf
 
 on boot:
@@ -60,3 +58,8 @@ if xfce:
 
 shut the system down:
     shutdown -p now
+
+get the source tree:
+    fetch http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/RELEASE/src.txz
+    where RELEASE is the output of freebsd-release -k
+    tar -xvzf src.txz -C /

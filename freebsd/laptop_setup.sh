@@ -40,7 +40,7 @@ setup_pwr_mgmt() {
 
 setup_wifi() {
     sysrc wlans_iwn0=wlan0
-    sysrc ifconfig_wlan0="WPA SYNCDHCP"
+    sysrc ifconfig_wlan0="WPA DHCP"
     create_args_wlan0="country US regdomain FCC"
 }
 
@@ -52,6 +52,7 @@ EOF
     sysrc devfs_system_ruleset="localrules"
     echo "vfs.usermount=1" >> /etc/sysctl.conf
     sysrc autofs_enable=YES
+    # edit /etc/auto_master
 }
 
 disable_bell() {
@@ -78,19 +79,26 @@ install_pkgs() {
         sudo \
         rsync \
         git \
-        python3
+        python3 \
+        en-freebsd-doc \
+        rtv
 }
 
 # setup_drm_kmod() {
 #     # drm-kmod pkg is currently broken
-#     # install drm-fbsd12 and drm-kmod from ports
-#     # sysrc kld_list+="i915kms"
+#     # install graphics/drm-fbsd12 and graphics/drm-kmod from ports
+#     # sysrc kld_list="/boot/modules/i915kms.ko"
 # }
 
-# setup_xorg() {
-#     pkg install -y xorg xfce firefox vscode
-#     sysrc dbus_enable=YES
-# }
+setup_xorg() {
+    pkg install -y xorg \
+        xfce \
+        xfce4-goodies \
+        firefox \
+        vscode \
+        google-fonts
+    sysrc dbus_enable=YES
+}
 
 # main
 update_os
@@ -104,53 +112,13 @@ setup_loader
 install_pkgs
 
 # setup default login class
-cat <<EOF >/etc/login.conf
-default:\
-	:passwd_format=sha512:\
-	:copyright=/etc/COPYRIGHT:\
-	:welcome=/etc/motd:\
-	:setenv=MAIL=/var/mail/$,BLOCKSIZE=K:\
-	:path=/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin ~/bin:\
-	:nologin=/var/run/nologin:\
-	:cputime=unlimited:\
-	:datasize=unlimited:\
-	:stacksize=unlimited:\
-	:memorylocked=64K:\
-	:memoryuse=unlimited:\
-	:filesize=unlimited:\
-	:coredumpsize=unlimited:\
-	:openfiles=unlimited:\
-	:maxproc=unlimited:\
-	:sbsize=unlimited:\
-	:vmemoryuse=unlimited:\
-	:swapuse=unlimited:\
-	:pseudoterminals=unlimited:\
-	:priority=0:\
-	:ignoretime@:\
-	:umask=022:\
-	:charset=UTF-8:\
-	:lang=en_US.UTF-8:
+# in /etc/login.conf
+# default:\
+# ...
+#     :umask=022:\
+#     :charset=UTF-8:\
+#     :lang=en_US.UTF-8:
 
-standard:\
-	:tc=default:
-xuser:\
-	:tc=default:
-staff:\
-	:tc=default:
-daemon:\
-	:memorylocked=128M:\
-	:tc=default:
-news:\
-	:tc=default:
-dialer:\
-	:tc=default:
-
-root:\
-	:ignorenologin:\
-	:memorylocked=unlimited:\
-	:tc=default:
-
-EOF
-cap_mkdb /etc/login.conf
+# then run: cap_mkdb /etc/login.conf
 
 # EOF
