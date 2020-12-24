@@ -55,8 +55,9 @@ EOF
     # edit /etc/auto_master
 }
 
-disable_bell() {
+setup_misc() {
     sysrc allscreens_kbdflags="-b quiet.off"
+    echo "kern.evdev.rcpt_mask=6" >> /etc/sysctl.conf
 }
 
 setup_loader() {
@@ -92,8 +93,6 @@ install_pkgs() {
 
 setup_xorg() {
     pkg install -y xorg \
-        xfce \
-        xfce4-goodies \
         firefox \
         vscode \
         google-fonts
@@ -107,7 +106,7 @@ enable_pf
 setup_pwr_mgmt
 #setup_wifi
 setup_usb
-disable_bell
+setup_misc
 setup_loader
 install_pkgs
 
