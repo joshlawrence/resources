@@ -83,6 +83,7 @@ install_pkgs() {
         git \
         python3 \
         en-freebsd-doc \
+        powerdxx \
         rtv
 }
 
@@ -104,9 +105,9 @@ setup_xorg() {
 update_os
 setup_pkg
 enable_pf
-setup_pwr_mgmt
+#setup_pwr_mgmt
 #setup_wifi
-setup_usb
+#setup_usb
 setup_misc
 setup_loader
 install_pkgs
