@@ -97,8 +97,12 @@ setup_xorg() {
     pkg install -y xorg \
         firefox \
         vscode \
-        google-fonts
+        google-fonts \
+        plasma5-plasma \
+        sddm
     sysrc dbus_enable=YES
+    sysrc hald_enable=YES
+    sysrc sddm_enable=YES
 }
 
 # main
