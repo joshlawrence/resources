@@ -4,7 +4,7 @@
 # dumps all links on a webpage to a text file
 
 # check for lynx
-command -v lynx >/dev/null 2>&1 || { echo "This script requires lynx." >&2; }
+command -v lynx >/dev/null 2>&1 || { echo "This script requires lynx." >&2; exit 1; }
 
 # variables
 lynxopts=( -dump -listonly -nonumbers -notitle )
