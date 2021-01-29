@@ -42,7 +42,7 @@ done
 
 #!/usr/bin/env bash
 for i in *.md; do
-    mv "$i" "${i%.md}.txt
+    mv "$i" "${i%.md}.txt"
 done
 
 find and rename files recursively:
