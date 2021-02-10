@@ -1,0 +1,11 @@
+# zsh on macos
+
+https://carlosroso.com/the-right-way-to-migrate-your-bash-profile-to-zsh/
+
+* .zshenv: Sourced on all invocations of the shell. It often contains exported variables that should be available to other programs. For example, $PATH.
+
+* .zshrc: Sourced in interactive shells only. It should contain commands to set up aliases, functions, options, key bindings, etc.
+
+Your $PATH and any other important ENV variable should be set in .zshenv. The rest can go into .zshrc.
+
+http://zsh.sourceforge.net/Intro/intro_3.html
