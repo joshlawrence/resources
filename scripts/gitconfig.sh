@@ -32,7 +32,7 @@ git config --global init.defaultBranch master
 
 # create git commit.template
 cat << EOF > "$HOME/.gitmessage.txt"
-SUBJECT: explaining the commit in one line
+SUBJECT: 
 
 The body of the commit message can be several paragraphs, and
 please do proper word-wrap and keep columns shorter than about
