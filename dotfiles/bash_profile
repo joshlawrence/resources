@@ -33,7 +33,6 @@ export EDITOR=/usr/local/bin/vim
 export VISUAL="$EDITOR"
 
 # aliases
-alias gam="$HOME/bin/gam/gam"
 alias ls="ls -1G"
 alias tb="nc termbin.com 9999"
 alias getip="curl http://icanhazip.com"
@@ -42,15 +41,20 @@ alias projects="cd ~/projects"
 
 # os-specific
 if [[ $OSTYPE == darwin* ]]; then
+  # aliases
   alias afk="pmset displaysleepnow"
   alias cleanup="find . -type f -name '.DS_Store' -print -delete"
+  # functions
+  gam() {
+    "/Users/josh/bin/gam/gam" "$@" ;
+  }
   timestamp () {
     date +"%F %r" | tr -d "\n" | pbcopy
   }
   pman () {
     man -t "$1" | open -fa /Applications/Preview.app
   }
-  # iterm2 bash completion
+  # iterm2 and bash completion
   test -e "$HOME/.iterm2_shell_integration.bash" && source "$HOME/.iterm2_shell_integration.bash"
   [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
   # google cloud sdk
@@ -61,22 +65,21 @@ fi
 #if [[ $OSTYPE == linux-gnu* ]]; then
 #fi
 
+# more functions
+mkcd() {
+  mkdir -p "$@" && cd "$@"
+}
+
+mkrandir() {
+  dir="$(openssl rand -hex 8)"
+  mkdir -p "$dir" && cd "$dir"
+}
+
+genpass () {
+  python3 -c "import secrets; print(secrets.token_urlsafe(16))"
+}
+
 reload () {
   unalias -a
   source "$HOME/.bash_profile"
 }
-
-genpass () {
-  pwgen -N "$1" -cn -1 12
-  #python3 -c "import secrets; print(secrets.token_urlsafe(16))"
-}
-
-fup () {
-  #ffsend upload --downloads 1 --archive --copy "$1"
-  ffsend upload --downloads 1 --copy "$1"
-}
-
-# source ~/.bashrc if it exists
-#if [ -f ~/.bashrc ]; then
-#  source ~/.bashrc
-#fi 
