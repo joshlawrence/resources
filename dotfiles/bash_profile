@@ -1,3 +1,4 @@
+#!/bin/env/bash
 # ~/.bash_profile
 
 # Test for an interactive shell.  There is no need to set anything
@@ -33,46 +34,56 @@ export EDITOR=/usr/local/bin/vim
 export VISUAL="$EDITOR"
 
 # aliases
+alias date="date +"%F %r"
+alias du="du -ach | sort -h"
 alias ls="ls -1G"
 alias tb="nc termbin.com 9999"
-alias getip="curl http://icanhazip.com"
-alias rsync="rsync -P"
-alias projects="cd ~/projects"
+alias getip="curl -4 icanhazip.com"
+alias projects="cd "$HOME"/projects"
+alias exitcode="echo $?"
+alias gityolo="git commit -a -m "$(curl http://whatthecommit.com)" && git push"
 
-# os-specific
-if [[ $OSTYPE == darwin* ]]; then
+alias youtube-dl="youtube-dl --external-downloader aria2c --external-downloader-args '-c -j 3 -x 3 -s 3 -k 1M' "$0" -o"
+
+# os-specific aliases and functions
+if [[ $(uname -s) == Darwin ]]; then
   # aliases
   alias afk="pmset displaysleepnow"
   alias cleanup="find . -type f -name '.DS_Store' -print -delete"
+  alias flushdns='sudo killall -HUP mDNSResponder'
+
   # functions
   gam() {
     "/Users/josh/bin/gam/gam" "$@" ;
   }
+
   timestamp () {
     date +"%F %r" | tr -d "\n" | pbcopy
   }
-  pman () {
-    man -t "$1" | open -fa /Applications/Preview.app
-  }
-  # iterm2 and bash completion
-  test -e "$HOME/.iterm2_shell_integration.bash" && source "$HOME/.iterm2_shell_integration.bash"
-  [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+
+  # completion
+  [[ -r "$HOME/.iterm2_shell_integration.bash" ]] && source "$HOME/.iterm2_shell_integration.bash"
+  [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && source "/usr/local/etc/profile.d/bash_completion.sh"
+
   # google cloud sdk
-  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc'
-  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.bash.inc'
+  source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc" \
+    || { echo 'Could not source google-cloud-bash-includes!' >&2; exit 1; }
+  source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.bash.inc" \
+    || { echo 'Could not source google-cloud-bash-completion!' >&2; exit 1; }
 fi
 
-#if [[ $OSTYPE == linux-gnu* ]]; then
-#fi
+if [[ $(uname -s) == Linux ]]; then
+  true
+fi
 
-# more functions
+# functions
 mkcd() {
-  mkdir -p "$@" && cd "$@"
+  mkdir -p "$@" && cd "$@" || exit
 }
 
 mkrandir() {
   dir="$(openssl rand -hex 8)"
-  mkdir -p "$dir" && cd "$dir"
+  mkdir -p "$dir" && cd "$dir" || exit
 }
 
 genpass () {

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+ssh db1.xmlleads.com
+ssh db3.xmlleads.com
+ssh db4.xmlleads.com
+ssh db5.xmlleads.com
+ssh etl.xmlleads.com
+ssh leads.xmlleads.com
+ssh boost.xmlleads.com
+ssh helios.xmlleads.com
+ssh ols2.xmlleads.com
+ssh rbc2.xmlleads.com
+ssh rbpsg.xmlleads.com
+ssh rpsg.xmlleads.com
+ssh stc2.xmlleads.com
+ssh analytics.xmlleads.com
+ssh clamd.xmlleads.com
+ssh dev2.xmlleads.com
+ssh five9.xmlleads.com
+ssh mgmt.xmlleads.com
+ssh pmm.xmlleads.com
+ssh rnr.xmlleads.com
+ssh wazuh.xmlleads.com
