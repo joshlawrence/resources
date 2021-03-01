@@ -41,3 +41,5 @@ nicely even when it's indented.
 EOF
 
 git config --global commit.template "$HOME/.gitmessage.txt"
+
+git config --global alias.yolo '!git commit -m "$(curl -s whatthecommit.com/index.txt)"'
