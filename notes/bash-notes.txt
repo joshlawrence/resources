@@ -1,5 +1,9 @@
 # -- bash resources -- #
 
+BE SURE TO SHELLCHECK ANYTHING IN THIS FILE.
+
+https://www.shellcheck.net/
+
 ## opendirs
 
 wget -e robots=off -r -nc -nH --cut-dirs=3 -np "URL"
@@ -140,3 +144,13 @@ fail and bail:
 are you root?
 
 [[ $EUID -ne 0 ]] && { echo "This script must be run as root!" >&2; exit 1; }
+
+[[ $USER != "root" ]] && { echo You must be root; exit 1; }
+
+testing
+
+test -f FILE && source $_ || { echo "FILE not sourced" >&2 }
+
+or...
+
+test -f FILE && source "$_" || { echo "${_##*/} was not sourced" >&2 }
