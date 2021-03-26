@@ -1,6 +1,5 @@
--*- mode: org; -*-
-
-Emacs Setup and Notes
+#+TITLE: Emacs Setup and Notes
+#+STARTUP: nofold
 
 https://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 
@@ -77,13 +76,15 @@ on auto-fill-mode by default. It should be turned on manually when needed.
 | Search forward  | C-s (repeat for next result) |
 | Search backward | C-r (repeat for next result) |
 
-* Setup
+* DOOM shortcuts
 
-M-x package-install RET (type package name) RET
+current as of March 2021.
 
-- evil
-- neotree
-- doom-themes
-- all-the-icons
-- all-the-icons-install-fonts
-- ranger
+| Action           | Command |
+|------------------+---------|
+| Find file        | SPC .   |
+| Switch to buffer | SPC <   |
+| Switch to buffer | SPC ,   |
+|                  |         |
+
+TODO...
