@@ -1,9 +1,12 @@
-FREEBSD 12 INSTALL NOTES
-------------------------
+# -- FREEBSD INSTALL NOTES -- #
+
 scratch install notes for a fresh freebsd install.
 
-follow the defaults for the install, choose UFS (ZFS?), enable powerd, moused, ntpd.
-add yourself to wheel and operator groups.
+UPDATE 2021-04-27: freebsd 13 is out!  WOO-HOO!
+
+## INSTALL
+
+do the install, use "root on zfs", don't bother with src or ports.  add yourself to the wheel and operator groups.
 
 disable the damn bell:
     add allscreens_kbdflags="-b quiet.off" to /etc/rc.conf
@@ -13,8 +16,7 @@ on boot:
     freebsd-update install
 
 bootstrap the pkg utility:
-    pkg
-    pkg update -f
+    pkg bootstrap
 
 move to the latest pkg repo:
     copy /etc/pkg/FreeBSD.conf to /usr/local/etc/pkg/repos/FreeBSD.conf
@@ -24,37 +26,64 @@ move to the latest pkg repo:
 
 enable pf:
     https://www.freebsd.org/doc/handbook/firewalls-pf.html
+    add to /etc/pf.conf:
+        set skip on lo0
+        block in all
+        pass in proto tcp to port { 22 }
+        pass out all keep state
+    touch /var/log/pf.log
+    sysrc pf_enable=YES
+    sysrc pf_flags=""
+    sysrc pf_rules="/etc/pf.conf"
+    sysrc pflog_enable=YES
+    sysrc pflog_flags=""
+    sysrc pflog_logfile="/var/log/pf.log"
 
-add these lines to the end of the default class in /etc/login.conf:
-    :charset=UTF-8:\
-    :lang=en_US.UTF-8:
-    then run cap_mkdb /etc/login.conf
+power management:
+    https://vermaden.wordpress.com/2018/11/28/the-power-to-serve-freebsd-power-management/
+
+    pkg install powerdxx
+
+    powerdxx_enable="YES"
+    powerdxx_flags="-n adaptive -a hiadaptive -b adaptive -m 800 -M 1600"
+    performance_cx_lowest=C1
+    economy_cx_lowest=Cmax
+
+    "For CPU scaling feature you may use the powerd(8) daemon available in the FreeBSD base system or powerdxx(8) from the FreeBSD Ports or packages. The powerdxx(8) daemon aims to better scale multicore systems and not turning all cores to high state when there is moderate load on the system but some people may prefer that approach to have full power available when they do anything and to save power when they do nothing. Thus powerd(8) is not better then powerdxx(8) or vice versa. They are just different so that gives you more options for your needs."
+
+no need to edit /etc/login.conf anymore, fbsd13 has it by default.
 
 some packages for graphics:
-    # pkg install drm-kmod is broken in 12.2
-    # install drm-fbsd12 and drm-kmod from ports
     sysrc kld_list="/boot/modules/i915kms.ko"
     reboot
 
-basic packages to get by:
-    pkg install nano bash tmux irssi lynx wget curl vim-console sudo rsync git
+possible CPU tweaks, taken from http://box.matto.nl/freebsd-13-on-a-12-year-old-laptop.html:
+    # is this really needed?
+    cpu_microcode_load="YES"
+    cpu_microcode_name="/boot/firmware/intel-ucode.bin"
 
-change your shell to bash:
+basic packages to get by:
+    pkg install nano bash bash-completion tmux irssi lynx wget curl vim-console sudo rsync git python3 en-freebsd-doc
+
+change your shell to bash (or don't):
     chsh -s /usr/local/bin/bash
 
 mount usb devices as a normal user:
-    https://www.freebsd.org/doc/handbook/usb-disks.html
+    https://docs.freebsd.org/en/books/handbook/disks/#usb-disks
     see 17.4.2. Automounting Removable Media
+    # also see: https://vermaden.wordpress.com/2018/10/11/freebsd-desktop-part-17-automount-removable-media/
 
 xorg:
-    pkg install xorg
+    pkg install xorg firefox vscode google-fonts
     pw groupmod video -m yourusername
-    NOTE: something about EVDEV_SUPPORT in the message, need to look into this
-    # add kern.evdev.rcpt_mask=6 to /etc/sysctl.conf
 if xfce:
     pkg install xfce (be sure to review the output of pkg info -D xfce4-session)
     add dbus_enable="YES" to /etc/rc.conf
     echo ". /usr/local/etc/xdg/xfce4/xinitrc" > ~/.xinitrc
+if kde:
+    uhhh...
+    https://community.kde.org/FreeBSD/Setup#Quick_start
+    https://docs.freebsd.org/en_US.ISO8859-1/books/handbook/x11-wm.html
 
 shut the system down:
     shutdown -p now
@@ -63,3 +92,17 @@ get the source tree:
     fetch http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/RELEASE/src.txz
     where RELEASE is the output of freebsd-release -k
     tar -xvzf src.txz -C /
+
+## MISC
+
+add to `/boot/loader.conf`:
+    acpi_video_load="YES" # is this needed with acpi_ibm_load?
+    acpi_ibm_load="YES"
+    coretemp_load="YES"
+    # more about this here: https://felixhanley.info/posts/2020/08/how-i-set-up-freebsd/
+
+mta:
+    https://docs.freebsd.org/en_US.ISO8859-1/books/handbook/mail-changingmta.html
+
+various tweaks (zfs, etc.), appears to be old:
+    https://vermaden.wordpress.com/2018/08/28/silent-fanless-freebsd-server-diy-backup/

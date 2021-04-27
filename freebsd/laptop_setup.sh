@@ -21,7 +21,9 @@ setup_pkg() {
 
 enable_pf() {
     cat <<EOF >/etc/pf.conf
+set skip on lo0
 block in all
+pass in proto tcp to port { 22 }
 pass out all keep state
 EOF
     touch /var/log/pf.log
@@ -33,10 +35,11 @@ EOF
     sysrc pflog_logfile="/var/log/pf.log"
 }
 
-setup_pwr_mgmt() {
-    sysrc powerd_enable=YES
-    sysrc powerd_flags="-a hiadaptive -b adaptive"
-}
+# there's no point in doing this if you're installing powerdxx
+# setup_pwr_mgmt() {
+#     sysrc powerd_enable=YES
+#     sysrc powerd_flags="-a hiadaptive -b adaptive"
+# }
 
 setup_wifi() {
     sysrc wlans_iwn0=wlan0
@@ -63,7 +66,6 @@ setup_misc() {
 
 setup_loader() {
     cat <<EOF >/boot/loader.conf
-kern.vty=vt
 acpi_ibm_load="YES"
 coretemp_load="YES"
 EOF
@@ -71,7 +73,8 @@ EOF
 
 install_pkgs() {
     pkg install -y nano \
-        bash bash-completion \
+        bash \
+        bash-completion \
         tmux \
         irssi \
         lynx \
@@ -98,11 +101,11 @@ setup_xorg() {
         firefox \
         vscode \
         google-fonts \
-        plasma5-plasma \
         sddm
     sysrc dbus_enable=YES
     sysrc hald_enable=YES
     sysrc sddm_enable=YES
+    echo "DONT FORGET ABOUT /proc IN FSTAB!"
 }
 
 # main
