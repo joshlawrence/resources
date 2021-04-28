@@ -2,6 +2,7 @@
 # setup-base.sh
 #
 # runs basic setup tasks for a new freebsd 13 system
+# fetch https://git.io/J3TqG -o setup-base.sh
 
 # update the os
 update_os() {
@@ -24,7 +25,6 @@ enable_pf() {
     cat <<EOF >/etc/pf.conf
 set skip on lo0
 block in all
-pass in proto tcp to port { 22 }
 pass out all keep state
 EOF
     touch /var/log/pf.log
@@ -38,7 +38,7 @@ EOF
 
 # install useful packages
 install_base() {
-    pkg install nano \
+    pkg install -y nano \
         bash \
         bash-completion \
         tmux \
@@ -54,7 +54,8 @@ install_base() {
         en-freebsd-doc \
         devcpu-data \
         ripgrep \
-        powerdxx
+        powerdxx \
+        drm-kmod
 }
 
 # update intel cpu microcode
@@ -87,8 +88,9 @@ EOF
 
 # disable the console bell and increase the font
 setup_console_misc() {
+    sysrc kld_list="/boot/modules/i915kms.ko"
     sysrc allscreens_kbdflags="-b quiet.off"
-    allscreens_flags="-f terminus-b32"
+    sysrc allscreens_flags="-f terminus-b32"
     cat <<EOF >>/boot/loader.conf
 acpi_ibm_load="YES"
 coretemp_load="YES"
@@ -110,10 +112,14 @@ this script will do the following on a fresh freebsd 13 install:
     - setup power managment
     - allow operators to automatically mount usb devices
 
+note that this script contains some thinkpad-specific features, please
+edit the script to match your setup before using.
+
 EOF
 
-read -p "do you wish to continue? (y/n): " REPLY
-if [ "$REPLY" != "y" ]; then
+# give the user a chance to bail out
+read -p "do you wish to continue? (y/n): " MY_REPLY
+if [ "$MY_REPLY" != "y" ]; then
     echo "exiting..."
     exit 1
 fi
@@ -136,4 +142,10 @@ echo "setting up console..."
 setup_console_misc
 
 # complete setup
-echo "setup is complete, reboot your system to activate the changes."
+read -p "setup is complete, would you like to reboot? (y/n): " MY_REBOOT
+if [ "$MY_REBOOT" = "y" ]; then
+    echo "ok, rebooting the system!"
+    reboot
+else
+    echo "reboot declined, setup complete."
+fi
