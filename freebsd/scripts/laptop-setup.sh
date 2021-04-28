@@ -35,12 +35,6 @@ EOF
     sysrc pflog_logfile="/var/log/pf.log"
 }
 
-# there's no point in doing this if you're installing powerdxx
-# setup_pwr_mgmt() {
-#     sysrc powerd_enable=YES
-#     sysrc powerd_flags="-a hiadaptive -b adaptive"
-# }
-
 setup_wifi() {
     sysrc wlans_iwn0=wlan0
     sysrc ifconfig_wlan0="WPA DHCP"
@@ -48,7 +42,7 @@ setup_wifi() {
 }
 
 setup_usb() {
-    cat <<EOF >/etc/devfs.rules
+    cat <<EOF >>/etc/devfs.rules
 [localrules=5]
 add path 'da*' mode 0660 group operator
 EOF

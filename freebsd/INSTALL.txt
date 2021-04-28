@@ -8,9 +8,6 @@ UPDATE 2021-04-27: freebsd 13 is out!  WOO-HOO!
 
 do the install, use "root on zfs", don't bother with src or ports.  add yourself to the wheel and operator groups.
 
-disable the damn bell:
-    add allscreens_kbdflags="-b quiet.off" to /etc/rc.conf
-
 on boot:
     freebsd-update fetch
     freebsd-update install
@@ -39,31 +36,31 @@ enable pf:
     sysrc pflog_flags=""
     sysrc pflog_logfile="/var/log/pf.log"
 
+packages:
+    pkg install nano bash bash-completion tmux irssi lynx wget curl vim-console sudo rsync git python3 en-freebsd-doc devcpu-data ripgrep
+
 power management:
     https://vermaden.wordpress.com/2018/11/28/the-power-to-serve-freebsd-power-management/
-
     pkg install powerdxx
-
-    powerdxx_enable="YES"
-    powerdxx_flags="-n adaptive -a hiadaptive -b adaptive -m 800 -M 1600"
-    performance_cx_lowest=C1
-    economy_cx_lowest=Cmax
+    /etc/rc.conf:
+    sysrc powerdxx_enable="YES"
+    sysrc powerdxx_flags="-n adaptive -a hiadaptive -b adaptive -m 800 -M 1600"
 
     "For CPU scaling feature you may use the powerd(8) daemon available in the FreeBSD base system or powerdxx(8) from the FreeBSD Ports or packages. The powerdxx(8) daemon aims to better scale multicore systems and not turning all cores to high state when there is moderate load on the system but some people may prefer that approach to have full power available when they do anything and to save power when they do nothing. Thus powerd(8) is not better then powerdxx(8) or vice versa. They are just different so that gives you more options for your needs."
 
 no need to edit /etc/login.conf anymore, fbsd13 has it by default.
 
 some packages for graphics:
+    pkg install drm-kmod
     sysrc kld_list="/boot/modules/i915kms.ko"
     reboot
 
-possible CPU tweaks, taken from http://box.matto.nl/freebsd-13-on-a-12-year-old-laptop.html:
-    # is this really needed?
+intel CPU microcode:
+    pkg install devcpu-data
+    /boot/loader.conf:
     cpu_microcode_load="YES"
     cpu_microcode_name="/boot/firmware/intel-ucode.bin"
-
-basic packages to get by:
-    pkg install nano bash bash-completion tmux irssi lynx wget curl vim-console sudo rsync git python3 en-freebsd-doc
+    reboot
 
 change your shell to bash (or don't):
     chsh -s /usr/local/bin/bash
@@ -77,11 +74,10 @@ xorg:
     pkg install xorg firefox vscode google-fonts
     pw groupmod video -m yourusername
 if xfce:
-    pkg install xfce (be sure to review the output of pkg info -D xfce4-session)
-    add dbus_enable="YES" to /etc/rc.conf
+    pkg install xfce xfce4-goodies
+    sysrc dbus_enable="YES"
     echo ". /usr/local/etc/xdg/xfce4/xinitrc" > ~/.xinitrc
 if kde:
-    uhhh...
     https://community.kde.org/FreeBSD/Setup#Quick_start
     https://docs.freebsd.org/en_US.ISO8859-1/books/handbook/x11-wm.html
 
@@ -95,14 +91,12 @@ get the source tree:
 
 ## MISC
 
-add to `/boot/loader.conf`:
-    acpi_video_load="YES" # is this needed with acpi_ibm_load?
+add to /boot/loader.conf:
     acpi_ibm_load="YES"
     coretemp_load="YES"
-    # more about this here: https://felixhanley.info/posts/2020/08/how-i-set-up-freebsd/
+    hw.vga.textmode=1
+    kern.vt.fb.default_mode="1280x800"
 
-mta:
-    https://docs.freebsd.org/en_US.ISO8859-1/books/handbook/mail-changingmta.html
-
-various tweaks (zfs, etc.), appears to be old:
-    https://vermaden.wordpress.com/2018/08/28/silent-fanless-freebsd-server-diy-backup/
+add to /etc/rc.conf:
+    allscreens_kbdflags="-b quiet.off"
+    allscreens_flags="-f terminus-b32"
