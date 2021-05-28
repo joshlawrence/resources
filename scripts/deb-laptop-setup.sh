@@ -5,10 +5,10 @@
 
 setup_apt() {
     cat <<EOF >/etc/apt/sources.list
-deb http://mirrors.linode.com/debian buster main contrib non-free
+deb http://deb.debian.org/debian buster main contrib non-free
 deb http://security.debian.org/debian-security buster/updates main contrib non-free
-deb http://mirrors.linode.com/debian buster-updates main contrib non-free
-#deb http://mirrors.linode.com/debian buster-backports main
+deb http://deb.debian.org/debian buster-updates main contrib non-free
+#deb http://deb.debian.org/debian buster-backports main
 EOF
     apt-get update
     apt-get -y install \
