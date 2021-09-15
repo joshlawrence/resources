@@ -1,8 +1,0 @@
-aliases! (and scripts)
-======================
-
-https://github.com/mathiasbynens/dotfiles/blob/master/.aliases
-https://medium.com/@nirali0/nifty-tricks-to-quickly-set-up-your-bash-terminal-f788f3bd92cb
-https://hackernoon.com/handy-docker-aliases-4bd85089a3b8
-
-alias emptytrash="sudo rm -rfv /Volumes/*/.Trashes; sudo rm -rfv ~/.Trash; sudo rm -rfv /private/var/log/asl/*.asl; sqlite3 ~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV* 'delete from LSQuarantineEvent'"
