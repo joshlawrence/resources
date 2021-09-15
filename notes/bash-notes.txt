@@ -4,6 +4,12 @@ BE SURE TO SHELLCHECK ANYTHING IN THIS FILE.
 
 https://www.shellcheck.net/
 
+## memory
+
+see how much memory each process is using:
+
+ps aux | awk '{print $6/1024 " MB\t\t" $11}' | sort -n
+
 ## opendirs
 
 wget -e robots=off -r -nc -nH --cut-dirs=3 -np "URL"
