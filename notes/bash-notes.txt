@@ -135,6 +135,19 @@ find . -type f -name '*ROOM*' -print0 | while IFS= read -r -d '' i; do afplay "$
 
 `-a` means and and `-o` means or.
 
+## reading lines from a file into an array
+
+mapfile -t arrayname < file
+
+or
+
+mapfile -t arrayname < <(some cmd);
+
+mapfile -t hosts < dmp-hosts.ini
+for i in "${hosts[@]}"; do
+    ssh "$i"
+done
+
 ## script template ideas
 
 fail and bail:
