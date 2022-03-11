@@ -9,4 +9,3 @@ for f in "$G_DIR"/*; do
 		git remote update --prune
 	fi
 done
-
