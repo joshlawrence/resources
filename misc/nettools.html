@@ -3,24 +3,12 @@
     <head>
         <meta charset="utf-8">
         <title>Network Tools</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&family=Roboto&display=swap" rel="stylesheet"> 
-        <style>
-            h1 {
-                font-family: 'Roboto', Helvetica, sans-serif;
-                font-size: 30px;
-            }
-            body {
-                font-family: 'Noto Sans JP', sans-serif;
-                font-size: 16px;
-            }
-            a {
-                outline: none;
-                text-decoration: none;
-            }
-        </style>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+        <!-- <script type="text/javascript" id="zsiqchat">var $zoho=$zoho || {};$zoho.salesiq = $zoho.salesiq || {widgetcode: "siqd5dafec84072596b6b8f7171a48efb70572760f9d76d5991b2ae9f19df72593d", values:{},ready:function(){}};var d=document;s=d.createElement("script");s.type="text/javascript";s.id="zsiqscript";s.defer=true;s.src="https://salesiq.zohopublic.com/widget";t=d.getElementsByTagName("script")[0];t.parentNode.insertBefore(s,t);</script> -->
     </head>
     <body>
-        <h1>Internet Speed Tests</h1>
+	<h1>Network Tools</h1>
+        <h2>Internet Speed Tests</h2>
         <p>Note: The Digital Ocean speed test offers selectable endpoints and test file sizes.</p>
         <ul>
             <li><a target="_blank" rel="noopener noreferrer" href="https://speed.cloudflare.com/">Cloudflare</a></li>
@@ -30,16 +18,21 @@
             <li><a target="_blank" rel="noopener noreferrer" href="http://speedtest-nyc1.digitalocean.com/">DigitalOcean</a></li>
             <li><a target="_blank" rel="noopener noreferrer" href="http://speedtest.googlefiber.net/">Google</a></li>
         </ul>
-        <h1>Other Tools</h1>
+        <h2>Other Tools</h2>
         <ul>
             <li><a target="_blank" rel="noopener noreferrer" href="http://ipv4.icanhazip.com/">IPv4 Address</a></li>
             <li><a target="_blank" rel="noopener noreferrer" href="http://ipv6.icanhazip.com/">IPv6 Address</a></li>
             <li><a target="_blank" rel="noopener noreferrer" href="http://icanhaztrace.com/">Traceroute</a></li>
         </ul>
-        <h1>DNS Tools</h1>
+        <h2>DNS Tools</h2>
         <ul>
             <li><a target="_blank" rel="noopener noreferrer" href="https://toolbox.googleapps.com/apps/dig/">Google Admin Toolbox - Dig</a></li>
         </ul>
-        <p>Last updated 2021-02-24.</p>
+	<p>Last modified:</p>
+        <p id="modTime"></p>
+	<script>
+	const date = new Date(document.lastModified);
+	document.getElementById("modTime").innerHTML = date;
+	</script>
     </body>
 </html>
