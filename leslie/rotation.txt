@@ -1,0 +1,11 @@
+# leslie rotation speed
+
+Leslie Rotation Speed
+
+From the OriginalHammondLeslieFaq:
+
+When developing the PRO-3, ?JohnFisher measured his Leslie147. He found that the top rotor had a rotation speed of 400 RPM on tremolo and 48 RPM on chorale. This was with the belt in the middle pulley position and with a normal belt tension. The lower drum rotated at about 342 RPM on tremolo and 40 RPM on chorale.
+
+SalAzz reports the upper rotor speed (middle pulley) to be 409 rpm, and lower rotor speed to be 396 rpm. Chorale speed is 48-49 rpm, for both upper and lower rotors.
+
+DanDillon states the obvious for those who are stuck with digital simulacrums of the real thing and can't do the math for themselves: the "chorale" speed is about .8 Hz, and the "tremolo" or "lush tibia" speed is 5.7 to 6.8Hz.
